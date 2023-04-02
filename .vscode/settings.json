@@ -1,0 +1,26 @@
+{
+    "C_Cpp.intelliSenseEngine": "Tag Parser",
+    "idf.adapterTargetName": "esp32",
+    "idf.customExtraPaths": "/home/ok-home/.espressif/tools/xtensa-esp-elf-gdb/11.2_20220823/xtensa-esp-elf-gdb/bin:/home/ok-home/.espressif/tools/riscv32-esp-elf-gdb/11.2_20220823/riscv32-esp-elf-gdb/bin:/home/ok-home/.espressif/tools/xtensa-esp32-elf/esp-2022r1-11.2.0/xtensa-esp32-elf/bin:/home/ok-home/.espressif/tools/xtensa-esp32s2-elf/esp-2022r1-11.2.0/xtensa-esp32s2-elf/bin:/home/ok-home/.espressif/tools/xtensa-esp32s3-elf/esp-2022r1-11.2.0/xtensa-esp32s3-elf/bin:/home/ok-home/.espressif/tools/riscv32-esp-elf/esp-2022r1-11.2.0/riscv32-esp-elf/bin:/home/ok-home/.espressif/tools/esp32ulp-elf/2.35_20220830/esp32ulp-elf/bin:/home/ok-home/.espressif/tools/cmake/3.24.0/bin:/home/ok-home/.espressif/tools/openocd-esp32/v0.11.0-esp32-20220706/openocd-esp32/bin:/home/ok-home/.espressif/tools/ninja/1.10.2",
+    "idf.customExtraVars": {
+        "OPENOCD_SCRIPTS": "/home/ok-home/.espressif/tools/openocd-esp32/v0.11.0-esp32-20220706/openocd-esp32/share/openocd/scripts"
+    },
+    "idf.espIdfPath": "/home/ok-home/esp/esp-idf",
+    "idf.espAdfPath": "/home/ok-home/.espressif/esp-adf",
+    "idf.openOcdConfigs": [
+        "board/esp32-wrover-kit-3.3v.cfg"
+    ],
+    "idf.pythonBinPath": "/home/ok-home/.espressif/python_env/idf5.0_py3.8_env/bin/python",
+    "idf.toolsPath": "/home/ok-home/.espressif",
+    "files.associations": {
+        "gpio_ll.h": "c",
+        "esp_rom_gpio.h": "c",
+        "gpio_pins.h": "c",
+        "array": "c",
+        "bitset": "c",
+        "string_view": "c",
+        "initializer_list": "c",
+        "regex": "c",
+        "utility": "c"
+    }
+}
