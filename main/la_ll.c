@@ -72,7 +72,7 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
     if (status.in_suc_eof)
     {
 
-    vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
+        vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
     }
     if (HPTaskAwoken == pdTRUE)
     {
@@ -108,7 +108,7 @@ void la_ll_start(la_frame_t *frame)
     I2S0.lc_conf.ahbm_rst = 1;
     I2S0.lc_conf.ahbm_rst = 0;
 
-    I2S0.rx_eof_num = frame->dma[0].length / sizeof(uint32_t);
+    I2S0.rx_eof_num = frame->fb.len / sizeof(uint32_t);
     I2S0.in_link.addr = ((uint32_t) & (frame->dma[0])) & 0xfffff;
 
     I2S0.in_link.start = 1;
@@ -144,7 +144,7 @@ void la_ll_config()
     // Configure clock divider
     I2S0.clkm_conf.clkm_div_a = 0;
     I2S0.clkm_conf.clkm_div_b = 0;
-    I2S0.clkm_conf.clkm_div_num = 4;
+    I2S0.clkm_conf.clkm_div_num = 2;
 
     I2S0.fifo_conf.dscr_en = 1;
     I2S0.fifo_conf.rx_fifo_mod = SM_0A0B_0C0D;
@@ -155,7 +155,7 @@ void la_ll_config()
     I2S0.timing.val = 0;
     I2S0.timing.rx_dsync_sw = 1;
     /**/
-    I2S0.sample_rate_conf.rx_bck_div_num = 8; // TEST - 10 mhz
+    I2S0.sample_rate_conf.rx_bck_div_num = 1;
 }
 
 void la_ll_set_pin(const la_config_t *config)
@@ -176,13 +176,11 @@ void la_ll_set_pin(const la_config_t *config)
         PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[data_pins[i]], PIN_FUNC_GPIO);
         gpio_set_direction(data_pins[i], GPIO_MODE_INPUT);
         gpio_set_pull_mode(data_pins[i], GPIO_FLOATING);
- gpio_matrix_in(0x38, I2S0I_DATA_IN0_IDX + i, false);        
-        //gpio_matrix_in(data_pins[i], I2S0I_DATA_IN0_IDX + i, false);
+            gpio_matrix_in(data_pins[i], I2S0I_DATA_IN0_IDX + i, false);
+        // gpio_matrix_in(data_pins[i], I2S0I_DATA_IN0_IDX + i, false);
     }
- gpio_matrix_in(0x38, I2S0I_DATA_IN0_IDX + 9, false);
- gpio_matrix_in(0x38, I2S0I_DATA_IN0_IDX + 11, false);
- gpio_matrix_in(0x38, I2S0I_DATA_IN0_IDX + 13, false);
-
+    for (int i = 8; i < 16; i++)
+        gpio_matrix_in(0x30, I2S0I_DATA_IN0_IDX + 9, false);
 
     gpio_matrix_in(0x38, I2S0I_V_SYNC_IDX, false);
     gpio_matrix_in(0x38, I2S0I_H_SYNC_IDX, false);
@@ -191,5 +189,5 @@ void la_ll_set_pin(const la_config_t *config)
 
 esp_err_t la_ll_init_isr(TaskHandle_t task)
 {
-    return esp_intr_alloc(ETS_I2S0_INTR_SOURCE, ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM, la_ll_dma_isr, (void*)task, &isr_handle);
+    return esp_intr_alloc(ETS_I2S0_INTR_SOURCE, ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM, la_ll_dma_isr, (void *)task, &isr_handle);
 }

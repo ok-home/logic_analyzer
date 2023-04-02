@@ -48,48 +48,57 @@ la_config_t la_cfg = {
 
 la_frame_t la_frame = {
     .fb.buf = NULL,
-    .fb.len = 1024,
+    .fb.len = 4096 * 2 - 1024, // bytes *** one sample = 2 byte
     .dma = NULL};
 
 TaskHandle_t la_task_handle = 0;
 void la_task(void *p)
 {
-    while(1)
+    while (1)
     {
-        ulTaskNotifyTake(pdFALSE, portMAX_DELAY); 
+        ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
         printf("generate isr - transfer done\n");
+        printf("%d\n", la_frame.fb.len);
+        for (int i = 0; i < la_frame.fb.len + 16; i++)
+        {
+            if (i % 16 == 0)
+                printf("\n %d ", i);
+            printf("%x ", la_frame.fb.buf[i]);
+        }
+        printf("\n");
     }
 }
+#define DMA_FRAME 4092
 
-static lldesc_t *allocate_dma_descriptors(uint32_t count, uint16_t size, uint16_t *buffer)
+static lldesc_t *allocate_dma_descriptors(uint16_t size, uint8_t *buffer)
 {
-    /*lldesc_t *dma = (lldesc_t *)heap_caps_malloc(count * sizeof(lldesc_t), MALLOC_CAP_DMA);
-    if (dma == NULL) {
+    uint32_t count = size / DMA_FRAME;     //  dma frames count
+    uint32_t last_size = size % DMA_FRAME; // last frame bytes
+
+    lldesc_t *dma = (lldesc_t *)heap_caps_malloc((count + 1) * sizeof(lldesc_t), MALLOC_CAP_DMA);
+    if (dma == NULL)
+    {
         return dma;
     }
-
-    for (int x = 0; x < count; x++) {
-        dma[x].size = size;
-        dma[x].length = 0;
+    int x = 0;
+    for (; x < count; x++)
+    {
+        dma[x].size = DMA_FRAME;
+        dma[x].length = DMA_FRAME;
         dma[x].sosf = 0;
         dma[x].eof = 0;
         dma[x].owner = 1;
-        dma[x].buf = (buffer + size * x);
-        dma[x].empty = (uint32_t)&dma[(x + 1) % count];
+        dma[x].buf = buffer + DMA_FRAME * x;
+        dma[x].empty = (uint32_t)&dma[(x + 1)];
     }
-    */
-    // test only one frame
-    count = 1;
-    size = 2048;
 
-    lldesc_t *dma = (lldesc_t *)heap_caps_malloc(count * sizeof(lldesc_t), MALLOC_CAP_DMA);
-    dma[0].size = size & 0xfff;
-    dma[0].length = 8 & 0xfff;
-    dma[0].sosf = 0;
-    dma[0].eof = 1;
-    dma[0].owner = 1;
-    dma[0].buf = (uint8_t*)(buffer);
-    dma[0].empty = 0;
+    dma[x].size = last_size;
+    dma[x].length = last_size;
+    dma[x].sosf = 0;
+    dma[x].eof = 1;
+    dma[x].owner = 1;
+    dma[x].buf = buffer + DMA_FRAME * x;
+    dma[x].empty = 0;
 
     return dma;
 }
@@ -100,7 +109,7 @@ static esp_err_t la_dma_config(la_frame_t *cfg)
     if (cfg->fb.buf == NULL)
         return ESP_FAIL;
 
-    cfg->dma = allocate_dma_descriptors(1, cfg->fb.len, cfg->fb.buf);
+    cfg->dma = allocate_dma_descriptors(cfg->fb.len, cfg->fb.buf);
 
     return ESP_OK;
 }
@@ -159,23 +168,17 @@ void la_start(void)
 {
     la_init(&la_cfg);
     la_config(&la_frame);
-
-    memset(la_frame.fb.buf, 0x33, 32);
-    printf("%d\n", la_frame.fb.len);
-    for (int i = 0; i < 32; i++)
-    {
-        printf("%x ", la_frame.fb.buf[i]);
-    }
-    printf("\n");
-
     la_ll_start(&la_frame);
 
-    printf("done\n");
-    vTaskDelay(100);
-    printf("%d\n", la_frame.fb.len);
-    for (int i = 0; i < 32; i++)
-    {
-        printf("%x ", la_frame.fb.buf[i]);
-    }
-    printf("\n");
+    /*
+        vTaskDelay(100);
+        printf("%d\n", la_frame.fb.len);
+        for (int i = 0; i < la_frame.fb.len+16; i++)
+        {
+            if(i%16==0) printf("\n %d ",i);
+            printf("%x ", la_frame.fb.buf[i]);
+
+        }
+        printf("\n");
+        */
 }

@@ -21,6 +21,8 @@
         "string_view": "c",
         "initializer_list": "c",
         "regex": "c",
-        "utility": "c"
+        "utility": "c",
+        "la.h": "c",
+        "gpio.h": "c"
     }
 }
