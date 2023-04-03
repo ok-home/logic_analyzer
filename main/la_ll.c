@@ -155,7 +155,7 @@ void la_ll_config()
     I2S0.timing.val = 0;
     I2S0.timing.rx_dsync_sw = 1;
     /**/
-    I2S0.sample_rate_conf.rx_bck_div_num = 1;
+    I2S0.sample_rate_conf.rx_bck_div_num = 2;
 }
 
 void la_ll_set_pin(const la_config_t *config)
@@ -173,11 +173,11 @@ void la_ll_set_pin(const la_config_t *config)
     };
     for (int i = 0; i < 8; i++)
     {
+
         PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[data_pins[i]], PIN_FUNC_GPIO);
-        gpio_set_direction(data_pins[i], GPIO_MODE_INPUT);
+        gpio_matrix_in(data_pins[i], I2S0I_DATA_IN0_IDX + i, false);
         gpio_set_pull_mode(data_pins[i], GPIO_FLOATING);
-            gpio_matrix_in(data_pins[i], I2S0I_DATA_IN0_IDX + i, false);
-        // gpio_matrix_in(data_pins[i], I2S0I_DATA_IN0_IDX + i, false);
+        gpio_set_direction(data_pins[i], GPIO_MODE_INPUT);
     }
     for (int i = 8; i < 16; i++)
         gpio_matrix_in(0x30, I2S0I_DATA_IN0_IDX + 9, false);
@@ -185,6 +185,7 @@ void la_ll_set_pin(const la_config_t *config)
     gpio_matrix_in(0x38, I2S0I_V_SYNC_IDX, false);
     gpio_matrix_in(0x38, I2S0I_H_SYNC_IDX, false);
     gpio_matrix_in(0x38, I2S0I_H_ENABLE_IDX, false);
+
 }
 
 esp_err_t la_ll_init_isr(TaskHandle_t task)

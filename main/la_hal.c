@@ -68,6 +68,7 @@ void la_task(void *p)
         printf("\n");
     }
 }
+
 #define DMA_FRAME 4092
 
 static lldesc_t *allocate_dma_descriptors(uint16_t size, uint8_t *buffer)
@@ -170,15 +171,5 @@ void la_start(void)
     la_config(&la_frame);
     la_ll_start(&la_frame);
 
-    /*
-        vTaskDelay(100);
-        printf("%d\n", la_frame.fb.len);
-        for (int i = 0; i < la_frame.fb.len+16; i++)
-        {
-            if(i%16==0) printf("\n %d ",i);
-            printf("%x ", la_frame.fb.buf[i]);
-
-        }
-        printf("\n");
-        */
+   
 }

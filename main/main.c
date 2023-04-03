@@ -36,10 +36,17 @@ static void example_ledc_init(void)
     };
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
 }
-/*
+
+gpio_config_t io_cfg = {
+    .pin_bit_mask = 1ULL<<23,
+    .mode = GPIO_MODE_OUTPUT,
+    .intr_type=GPIO_INTR_DISABLE
+};
+
 void led_blink(void *p)
 {
-    gpio_config(&io_conf);
+    gpio_config(&io_cfg);
+    //gpio_set_direction(23,GPIO_MODE_INPUT_OUTPUT);
     while (1)
     {
         gpio_set_level(23,1);
@@ -48,7 +55,7 @@ void led_blink(void *p)
         vTaskDelay(1);
     }
 }
-*/
+
 void app_main(void)
 {
     printf("hello\n");
@@ -58,7 +65,7 @@ void app_main(void)
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-    //    xTaskCreate(led_blink, "tt", 2048, NULL, 1, NULL);
+//    xTaskCreate(led_blink, "tt", 2048, NULL, 1, NULL);
     la_start();
 };
 /*
