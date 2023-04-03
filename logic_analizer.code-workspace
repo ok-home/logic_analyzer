@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"gpio_ll.h": "c",
+			"esp_rom_gpio.h": "c",
+			"gpio_pins.h": "c",
+			"array": "c",
+			"bitset": "c",
+			"string_view": "c",
+			"initializer_list": "c",
+			"regex": "c",
+			"utility": "c",
+			"la.h": "c",
+			"gpio.h": "c"
+		}
+	}
+}

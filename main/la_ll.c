@@ -15,6 +15,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "soc/i2s_struct.h"
+#include "soc/gpio_struct.h"
+
 #include "esp_idf_version.h"
 #include "hal/gpio_ll.h"
 // #include "xclk.h"
@@ -144,7 +146,7 @@ void la_ll_config()
     // Configure clock divider
     I2S0.clkm_conf.clkm_div_a = 0;
     I2S0.clkm_conf.clkm_div_b = 0;
-    I2S0.clkm_conf.clkm_div_num = 2;
+    I2S0.clkm_conf.clkm_div_num = 255;
 
     I2S0.fifo_conf.dscr_en = 1;
     I2S0.fifo_conf.rx_fifo_mod = SM_0A0B_0C0D;
@@ -155,7 +157,7 @@ void la_ll_config()
     I2S0.timing.val = 0;
     I2S0.timing.rx_dsync_sw = 1;
     /**/
-    I2S0.sample_rate_conf.rx_bck_div_num = 2;
+    I2S0.sample_rate_conf.rx_bck_div_num = 32;
 }
 
 void la_ll_set_pin(const la_config_t *config)
@@ -174,10 +176,18 @@ void la_ll_set_pin(const la_config_t *config)
     for (int i = 0; i < 8; i++)
     {
 
-        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[data_pins[i]], PIN_FUNC_GPIO);
+//        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[data_pins[i]], PIN_FUNC_GPIO);
+        //gpio_input_enable(data_pins[i]);
+        printf("fun out gpio %d val %lx \n",data_pins[i],GPIO.func_out_sel_cfg[data_pins[i]].val);
+        if(GPIO.func_out_sel_cfg[data_pins[i]].val&0x100)
+            gpio_set_direction(data_pins[i], GPIO_MODE_INPUT_OUTPUT);
+        else
+            PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[i]]);
         gpio_matrix_in(data_pins[i], I2S0I_DATA_IN0_IDX + i, false);
-        gpio_set_pull_mode(data_pins[i], GPIO_FLOATING);
-        gpio_set_direction(data_pins[i], GPIO_MODE_INPUT);
+//        PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[i]]);
+//        gpio_set_pull_mode(data_pins[i], GPIO_FLOATING);
+//        gpio_set_direction(data_pins[i], GPIO_MODE_INPUT);
+
     }
     for (int i = 8; i < 16; i++)
         gpio_matrix_in(0x30, I2S0I_DATA_IN0_IDX + 9, false);

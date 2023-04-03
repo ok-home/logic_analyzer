@@ -1144,3 +1144,7 @@ build/log/idf_py_stdout_output_17151
 build/partition_table/partition-table.bin
 .devcontainer/devcontainer.json
 .devcontainer/Dockerfile
+build/log/idf_py_stderr_output_5224
+build/log/idf_py_stderr_output_5391
+build/log/idf_py_stdout_output_5224
+build/log/idf_py_stdout_output_5391
