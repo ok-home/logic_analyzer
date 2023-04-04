@@ -24,14 +24,15 @@ extern "C" {
 
 
 /**
- * @brief 
+ * @brief logic analizer callback
  *
- * @param handle s
+ * @param- uint16_t *samle_buf   - return pointer of samples
+ * @param- int samples           - count of samples in 16 bit word
+ * @param- int sample_rate       - real sample rate in HZ
  *
  * @return
- *     - ESP_OK Success
- *     - ESP_FAIL Uninitialize fail
- */
+*/
+typedef void (logic_analizer_cb_t *)(uint16_t *samle_buf, int samples, int sample_rate); 
 
 typedef struct {
     int pin[16];                // GPIO pin (0-39), -1 - disable
@@ -40,14 +41,10 @@ typedef struct {
     int number_of_samples;      // Number of samples in 16 bit word
     int sample_rate;            // Sample rate in HZ ( 1-20000000 )
     int meashure_timeout;       // MAX meashured time in FreeRtos Tick - call cb function with zero buff&samples on timeout
-    void (logic_analizer_cb *)(uint16_t *samle_buf, int samples, int sample_rate); // logic analizer callback, return pointer of samples, count of samples in 16 bit word, real sample rate in HZ
+    logic_analizer_cb_t logic_analizer_cb ; // logic analizer callback
 } logic_analizer_config_t;
 
 esp_err_t start_logic_analizer(logic_analizer_config_t *config);
-
-
-
-
 
 
 #ifdef __cplusplus
