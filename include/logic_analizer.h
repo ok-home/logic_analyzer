@@ -24,9 +24,9 @@ extern "C" {
 
 
 /**
- * @brief Uninitialize the lcd_cam module
+ * @brief 
  *
- * @param handle Provide handle pointer to release resources
+ * @param handle s
  *
  * @return
  *     - ESP_OK Success
@@ -40,11 +40,11 @@ typedef struct {
     int number_of_samples;      // Number of samples in 16 bit word
     int sample_rate;            // Sample rate in HZ ( 1-20000000 )
     int meashure_timeout;       // MAX meashured time in FreeRtos Tick - call cb function with zero buff&samples on timeout
-    void (logic_analizer_cb *)(uint16_t *samle_buf,uint32_t *samples); // logic analizer callback, return pointer of samples & count of samples in 16 bit word
+    void (logic_analizer_cb *)(uint16_t *samle_buf, int samples, int sample_rate); // logic analizer callback, return pointer of samples, count of samples in 16 bit word, real sample rate in HZ
 } logic_analizer_config_t;
 
-esp_err_t start_logic_analizer(ogic_analizer_config_t *config);
-int get_logic_analizer_sample_rate();
+esp_err_t start_logic_analizer(logic_analizer_config_t *config);
+
 
 
 
