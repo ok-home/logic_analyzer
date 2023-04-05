@@ -39,13 +39,25 @@ typedef struct {
     int pin_trigger;            // trigger GPIO pin, -1 - disable
     int trigger_edge;           // POS_EDGE/NEG_EDGE/ANY_EDGE
     int number_of_samples;      // Number of samples in 16 bit word
-    int sample_rate;            // Sample rate in HZ ( 1-20000000 )
+    int sample_rate;            // Sample rate in HZ ( 4 000-20 000 000 )
     int meashure_timeout;       // MAX meashured time in FreeRtos Tick - call cb function with zero buff&samples on timeout
     logic_analizer_cb_t logic_analizer_cb ; // logic analizer callback
 } logic_analizer_config_t;
-
+/**
+ * @brief Start logic analizer
+ *
+ * @param config Configurations - see logic_analizer_config_t struct
+ *
+ * @return
+ *     - ESP_OK Success
+ *     - ESP_ERR_INVALID_ARG Parameter error
+ *     - ESP_ERR_NO_MEM No memory to initialize logic_analizer
+ *     - ?????????????? - logic_analizer already working
+ *     - ESP_FAIL Initialize fail
+ */
 esp_err_t start_logic_analizer(logic_analizer_config_t *config);
 
+// https://godbolt.org/z/Y39TrhzPT
 
 #ifdef __cplusplus
 }
