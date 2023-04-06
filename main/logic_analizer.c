@@ -208,8 +208,8 @@ esp_err_t start_logic_analizer(logic_analizer_config_t *config)
                 ret = ESP_ERR_NO_MEM;
                 goto _freebuf_ret;
             }
-    // configure I2S  - pin definition, pin trigger, sample frame & dma frame
-    logic_analizer_ll_config(config->pin,config->pin_trigger,&la_frame);
+    // configure I2S  - pin definition, pin trigger, sample frame & dma frame, clock divisor
+    logic_analizer_ll_config(config->pin,config->pin_trigger,config->sample_rate, &la_frame);
     // start main task - check logic analizer get data & call cb
     if (pdPASS != xTaskCreate(logic_analizer_task, "la_task", LA_TASK_STACK, &(configure->meashure_timeout), configMAX_PRIORITIES - 2, &logic_analizer_task_handle))
             {
