@@ -22,6 +22,8 @@ extern "C" {
 
 #define LA_PIN_TRIGGER 25
 
+#define LA_MAX_SAMPLE_RATE 20000000
+#define LA_MIN_SAMPLE_RATE 4000
 
 /**
  * @brief logic analizer callback
