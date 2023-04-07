@@ -36,7 +36,7 @@ void logic_analizer_ll_start();
  *  @brief logic analizer stop meashure
  *
 */
-void IRAM_ATTR logic_analizer_ll_stop();
+void  logic_analizer_ll_stop();
 /**
  *  @brief logic analizer init dma eof isr
  *          isr after full dma transfer

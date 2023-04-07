@@ -68,6 +68,7 @@ void led_blink(void *p)
 
 void la_cb(uint16_t *buf, int cnt, int clk)
 {
+    if(buf==NULL) {printf("ERR timeout ??\n"); return;}
     printf("Data Ready CB\n");
     printf("cnt samples %d clock %d \n", cnt, clk);
     for (int i = 0; i < cnt + 16; i++)
@@ -86,8 +87,8 @@ logic_analizer_config_t la_cfg =
         .pin = {LEDC_OUTPUT_IO, -1, -1, -1, GPIO_BLINK, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         .pin_trigger = -1,
         .trigger_edge = GPIO_INTR_POSEDGE,
-        .number_of_samples = 3000,
-        .sample_rate = 20000000,
+        .number_of_samples = 6000,
+        .sample_rate = 5000000,
         .meashure_timeout = portMAX_DELAY,
         .logic_analizer_cb = la_cb
         };
@@ -101,7 +102,7 @@ void app_main(void)
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-    xTaskCreate(led_blink, "tt", 2048, NULL, 1, NULL);
+    //xTaskCreate(led_blink, "tt", 2048, NULL, 1, NULL);
     int ret = start_logic_analizer(&la_cfg);
     if (ret != ESP_OK)
         printf("ERR %x\n", ret);
