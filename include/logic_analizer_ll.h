@@ -1,19 +1,35 @@
-
 #pragma once
 
-#include <stdint.h>
-#include "sdkconfig.h"
-#include "esp_idf_version.h"
-#include "esp32/rom/lldesc.h"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
 
-#if __has_include("esp_private/periph_ctrl.h")
-# include "esp_private/periph_ctrl.h"
-#endif
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_heap_caps.h"
+#include <driver/gpio.h>
+#include "hal/gpio_types.h"
+#include "hal/gpio_ll.h"
+#include "soc/gpio_struct.h"
+#include "soc/i2s_struct.h"
+#include "esp32/rom/lldesc.h"
+#include "esp_private/periph_ctrl.h"
+
+#define LA_CLK_SAMPLE_RATE 80000000
+#define LA_MAX_SAMPLE_RATE 20000000
+#define LA_MIN_SAMPLE_RATE 4000
+#define LA_TASK_STACK 2048
+#define DMA_FRAME 4092
+
+/**
+ * @brief Data structure of logic analizer frame buffer
+ */
+typedef struct {
+    uint8_t * buf;              //Pointer to the sample data
+    size_t len;                 //Length of the buffer in bytes
+} la_fb_t;
+
+typedef struct {
+    la_fb_t fb;
+    lldesc_t *dma;              //Pointer of dma frame
+} la_frame_t;
 
 /**
  *  @brief logic analizer config i2s

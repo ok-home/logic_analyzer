@@ -1,29 +1,11 @@
 #pragma once
 
+#include "stdint.h"
 #include "esp_err.h"
-#include "sys/time.h"
-#include "sdkconfig.h"
-
-#include "logic_analizer.h"
-
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define LA_PIN_D7 15
-#define LA_PIN_D6 16
-#define LA_PIN_D5 17
-#define LA_PIN_D4 18
-#define LA_PIN_D3 19
-#define LA_PIN_D2 21
-#define LA_PIN_D1 22
-#define LA_PIN_D0 23
-
-#define LA_PIN_TRIGGER 25
-
-#define LA_MAX_SAMPLE_RATE 20000000
-#define LA_MIN_SAMPLE_RATE 4000
 
 /**
  * @brief logic analizer callback
@@ -58,8 +40,6 @@ typedef struct {
  *     - ESP_FAIL Initialize fail
  */
 esp_err_t start_logic_analizer(logic_analizer_config_t *config);
-
-// https://godbolt.org/z/Y39TrhzPT
 
 #ifdef __cplusplus
 }

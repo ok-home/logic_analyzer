@@ -88,7 +88,7 @@ logic_analizer_config_t la_cfg =
         .pin_trigger = -1,
         .trigger_edge = GPIO_INTR_POSEDGE,
         .number_of_samples = 6000,
-        .sample_rate = 5000000,
+        .sample_rate = 2500000,
         .meashure_timeout = portMAX_DELAY,
         .logic_analizer_cb = la_cb
         };
