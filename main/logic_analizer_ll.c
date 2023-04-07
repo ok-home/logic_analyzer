@@ -13,23 +13,21 @@
 // limitations under the License.
 
 #include <stdio.h>
-#include <string.h>
+//#include <string.h>
 #include "soc/i2s_struct.h"
 #include "soc/gpio_struct.h"
-
-#include "esp_idf_version.h"
+//#include "esp_idf_version.h"
 #include "hal/gpio_ll.h"
-// #include "xclk.h"
-
 #include <driver/gpio.h>
-
 #include "esp_rom_gpio.h"
 
-#include "la.h"
-// #include "la_ll.h"
+#include "logic_analizer_hal.h"
+#include "logic_analizer_ll.h"
 
-#define GPIO_PIN_INTR_POSEDGE GPIO_INTR_POSEDGE
-#define GPIO_PIN_INTR_NEGEDGE GPIO_INTR_NEGEDGE
+#define LA_CLK_SAMPLE_RATE 80000000
+//#define GPIO_PIN_INTR_POSEDGE GPIO_INTR_POSEDGE
+//#define GPIO_PIN_INTR_NEGEDGE GPIO_INTR_NEGEDGE
+
 #define gpio_matrix_in(a, b, c) esp_rom_gpio_connect_in_signal(a, b, c)
 
 #define I2S_ISR_ENABLE(i)   \
@@ -42,6 +40,12 @@
         I2S0.int_ena.i = 0; \
         I2S0.int_clr.i = 1; \
     }
+
+typedef struct div_68
+{
+    uint8_t div_8;
+    uint8_t div_6;
+} div_68_t;
 
 typedef enum
 {
@@ -60,6 +64,7 @@ typedef enum
 } i2s_sampling_mode_t;
 
 static intr_handle_t isr_handle;
+
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
 {
     BaseType_t HPTaskAwoken = pdFALSE;
@@ -82,16 +87,7 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
     }
 }
 
-esp_err_t logic_analizer_ll_init_dma_eof_isr(TaskHandle_t task)
-{
-    return esp_intr_alloc(ETS_I2S0_INTR_SOURCE, ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM, la_ll_dma_isr, (void *)task, &isr_handle);
-}
-void logic_analizer_ll_deinit_dma_eof_isr();
-{
-    esp_intr_free(isr_handle);
-}
-
-static void logic_analizer_ll_i2s_reset()
+static void logic_analizer_ll_reset()
 {
     I2S0.conf.rx_reset = 1;
     I2S0.conf.rx_reset = 0;
@@ -104,7 +100,7 @@ static void logic_analizer_ll_i2s_reset()
     I2S0.lc_conf.ahbm_rst = 1;
     I2S0.lc_conf.ahbm_rst = 0;
 }
-static  void logic_analizer_ll_i2s_set_mode()
+static  void logic_analizer_ll_set_mode()
 {
     I2S0.conf.rx_slave_mod = 0; //- master mode
     I2S0.conf.rx_right_first = 0;
@@ -126,16 +122,34 @@ static  void logic_analizer_ll_i2s_set_mode()
     I2S0.timing.rx_dsync_sw = 1;
 }
 
-static  void logic_analizer_ll_i2s_set_clock(sample_rate)
+static div_68_t logic_analizer_ll_convert_sample_rate(int sample_rate)
 {
+        div_68_t ldiv;
+       int cnt_div = LA_CLK_SAMPLE_RATE/sample_rate;
+       if( cnt_div < 64 ) 
+       {
+            ldiv.div_8=2; 
+            ldiv.div_6=cnt_div/2;
+        }
+        else
+        {
+            ldiv.div_8=cnt_div/64+1; 
+            ldiv.div_6=cnt_div/ldiv.div_8;
+        }
+        return ldiv;
+}
+
+static void logic_analizer_ll_set_clock(int sample_rate)
+{
+    div_68_t ldiv = logic_analizer_ll_convert_sample_rate(sample_rate);
     // Configure clock divider
     I2S0.clkm_conf.clkm_div_a = 0;
     I2S0.clkm_conf.clkm_div_b = 0;
-    I2S0.clkm_conf.clkm_div_num = 255; // clk div_8
-    I2S0.sample_rate_conf.rx_bck_div_num = 32; // bclk div_6
+    I2S0.clkm_conf.clkm_div_num = ldiv.div_8; // clk div_8
+    I2S0.sample_rate_conf.rx_bck_div_num = ldiv.div_6; // bclk div_6
 }
 
-void logic_analizer_ll_i2s_set_pin(data_pins,pin_trigger)
+static void logic_analizer_ll_set_pin(int data_pins,int pin_trigger)
 {
     //
     // todo trigger pin
@@ -178,35 +192,49 @@ void logic_analizer_ll_i2s_set_pin(data_pins,pin_trigger)
 
 }
 
-logic_analizer_ll_config(data_pins,pin_trigger,sample_rate,la_frame_t *frame)
+void logic_analizer_ll_config(int data_pins,int pin_trigger,int sample_rate,la_frame_t *frame)
 {
         // Enable and configure I2S peripheral
     periph_module_enable(PERIPH_I2S0_MODULE);
 
-    logic_analizer_ll_i2s_reset();
-    logic_analizer_ll_i2s_set_mode();
-    logic_analizer_ll_i2s_set_clock(sample_rate);
-    logic_analizer_ll_i2s_set_pin(data_pins,pin_trigger);
+    I2S0.conf.rx_start = 0;
+    logic_analizer_ll_reset();
+    logic_analizer_ll_set_mode();
+    logic_analizer_ll_set_clock(sample_rate);
+    logic_analizer_ll_set_pin(data_pins,pin_trigger);
     // set dma descriptor
     I2S0.rx_eof_num = frame->fb.len / sizeof(uint32_t);             // count in 32 bit word
     I2S0.in_link.addr = ((uint32_t) & (frame->dma[0])) & 0xfffff;
 
 }
 
-logic_analizer_ll_start()
+void logic_analizer_ll_start()
 {
     I2S0.conf.rx_start = 0;
     I2S_ISR_ENABLE(in_suc_eof);
-    logic_analizer_ll_i2s_reset();
     I2S0.in_link.start = 1;
     I2S0.conf.rx_start = 1;
 }
 
-void IRAM_ATTR logic_analizer_ll_stop();
+void IRAM_ATTR logic_analizer_ll_stop()
 {
     I2S0.conf.rx_start = 0;
     I2S_ISR_DISABLE(in_suc_eof);
     I2S0.in_link.stop = 1;
 }
 
+int logic_analizer_ll_get_sample_rate(int sample_rate)
+{
+    div_68_t ldiv = logic_analizer_ll_convert_sample_rate(sample_rate);
+    return LA_CLK_SAMPLE_RATE/(ldivider.div_6*ldivider.div_8);
+}
+
+esp_err_t logic_analizer_ll_init_dma_eof_isr(TaskHandle_t task)
+{
+    return esp_intr_alloc(ETS_I2S0_INTR_SOURCE, ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM, la_ll_dma_isr, (void *)task, &isr_handle);
+}
+void logic_analizer_ll_deinit_dma_eof_isr()
+{
+    esp_intr_free(isr_handle);
+}
 

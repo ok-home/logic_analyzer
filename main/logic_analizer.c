@@ -15,13 +15,14 @@
 #include <stdio.h>
 #include <string.h>
 #include "esp_heap_caps.h"
+#include "esp_timer.h"
+#include "esp32/rom/ets_sys.h" // will be removed in idf v5.0 ??
+
 #include "logic_analizer.h"
 #include "logic_analizer_hal.h"
+#include "logic_analizer_ll.h"
 
-#include "esp_timer.h"
-#include "esp32/rom/ets_sys.h" // will be removed in idf v5.0
-
-#define LA_TASK_STACK (2 * 1024)
+#define LA_TASK_STACK 2048
 #define DMA_FRAME 4092
 
 static const char *TAG = "la_hal";
@@ -35,7 +36,7 @@ static la_frame_t la_frame = {
 static TaskHandle_t logic_analizer_task_handle = 0; // main task handle
 static int          logic_analizer_started = 0;  // flag start dma
 
-/*
+/**
  * @brief allocate dma descriptor
  *
  * @param uint16_t size - size of sample frame buffer (bytes)
@@ -76,10 +77,10 @@ static lldesc_t *allocate_dma_descriptors(uint16_t size, uint8_t *buffer)
 
     return dma;
 }
-/*
+/**
 *  @brief  full stop & free all
 */
-void logic_analizer_stop(void)
+static void logic_analizer_stop(void)
 {
     // stop dma transfer
     llogic_analizer_ll_stop();
@@ -103,23 +104,12 @@ void logic_analizer_stop(void)
         la_frame.dma = NULL;
     }
 }
-
-/*
-* @brief Start logic analizer
- *
- * @param config Configurations - see logic_analizer_config_t struct
- *
- * @return
- *     - ESP_OK Success
- *     - ESP_ERR_INVALID_ARG Parameter error
- *     - ESP_ERR_NO_MEM No memory to initialize logic_analizer
- *     - ?????????????? - logic_analizer already working
- *     - ESP_FAIL Initialize fail
+/**
+*  @brief main logic analizer task
+*       call callback function aftr dma transfer
+*       callback param = 0 if timeout 
 */
-/*
-*  main LA task
-*/
-static void logic_analizer_task(arg)
+static void logic_analizer_task(void *arg)
 {
     int noTimeout;
     int timeout =(int) *arg;
@@ -130,16 +120,9 @@ static void logic_analizer_task(arg)
         {
             // test only
         printf("generate isr - transfer done\n");
-        printf("%d\n", la_frame.fb.len);
-        for (int i = 0; i < la_frame.fb.len + 16; i++)
-        {
-            if (i % 16 == 0)
-                printf("\n %d ", i);
-            printf("%x ", la_frame.fb.buf[i]);
-        }
-        printf("\n");
+
             // end test only
-        config->logic_analizer_cb(la_frame.fb.buf,la_frame.fb.len/2,config->sample_rate); // todo config->sample_rate
+        config->logic_analizer_cb(la_frame.fb.buf,la_frame.fb.len/2,logic_analizer_ll_get_sample_rate(config->sample_rate)); 
         logic_analizer_stop(); // todo stop & clear on task or external ??
         }
 
@@ -151,13 +134,23 @@ static void logic_analizer_task(arg)
         }
     }
 }
-
-
+/**
+* @brief Start logic analizer
+ *
+ * @param config Configurations - see logic_analizer_config_t struct
+ *
+ * @return
+ *     - ESP_OK Success
+ *     - ESP_ERR_INVALID_ARG Parameter error
+ *     - ESP_ERR_NO_MEM No memory to initialize logic_analizer
+ *     - ?????????????? - logic_analizer already working (ESP_ERR_INVALID_ARG)
+ *     - ESP_FAIL Initialize fail
+*/
 esp_err_t start_logic_analizer(logic_analizer_config_t *config)
 {
     esp_err_t ret = 0;
     if(logic_analizer_started)
-        return ESP_ERR_INVALID_ARG; // change err code
+        return ESP_ERR_INVALID_ARG; // todo change err code
 
     logic_analizer_started = 1;
     // check cb pointer
@@ -208,7 +201,7 @@ esp_err_t start_logic_analizer(logic_analizer_config_t *config)
                 ret = ESP_ERR_NO_MEM;
                 goto _freebuf_ret;
             }
-    // configure I2S  - pin definition, pin trigger, sample frame & dma frame, clock divisor
+    // configure I2S  - pin definition, pin trigger, sample frame & dma frame, clock divider
     logic_analizer_ll_config(config->pin,config->pin_trigger,config->sample_rate, &la_frame);
     // start main task - check logic analizer get data & call cb
     if (pdPASS != xTaskCreate(logic_analizer_task, "la_task", LA_TASK_STACK, &(configure->meashure_timeout), configMAX_PRIORITIES - 2, &logic_analizer_task_handle))
