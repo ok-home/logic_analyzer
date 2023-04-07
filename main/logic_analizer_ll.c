@@ -149,7 +149,7 @@ static void logic_analizer_ll_set_clock(int sample_rate)
     I2S0.sample_rate_conf.rx_bck_div_num = ldiv.div_6; // bclk div_6
 }
 
-static void logic_analizer_ll_set_pin(int data_pins,int pin_trigger)
+static void logic_analizer_ll_set_pin(int *data_pins,int pin_trigger)
 {
     //
     // todo trigger pin
@@ -192,7 +192,7 @@ static void logic_analizer_ll_set_pin(int data_pins,int pin_trigger)
 
 }
 
-void logic_analizer_ll_config(int data_pins,int pin_trigger,int sample_rate,la_frame_t *frame)
+void logic_analizer_ll_config(int *data_pins,int pin_trigger,int sample_rate,la_frame_t *frame)
 {
         // Enable and configure I2S peripheral
     periph_module_enable(PERIPH_I2S0_MODULE);
@@ -226,7 +226,7 @@ void IRAM_ATTR logic_analizer_ll_stop()
 int logic_analizer_ll_get_sample_rate(int sample_rate)
 {
     div_68_t ldiv = logic_analizer_ll_convert_sample_rate(sample_rate);
-    return LA_CLK_SAMPLE_RATE/(ldivider.div_6*ldivider.div_8);
+    return LA_CLK_SAMPLE_RATE/(ldiv.div_6*ldiv.div_8);
 }
 
 esp_err_t logic_analizer_ll_init_dma_eof_isr(TaskHandle_t task)

@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-/
+
 /**
  * @brief Data structure of logic analizer frame buffer
  */

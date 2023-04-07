@@ -4,8 +4,8 @@
 #include "sys/time.h"
 #include "sdkconfig.h"
 
-#include "la_hal.h"
-#include "la_ll.h"
+#include "logic_analizer.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,7 +34,7 @@ extern "C" {
  *
  * @return
 */
-typedef void (logic_analizer_cb_t *)(uint16_t *samle_buf, int samples, int sample_rate); 
+typedef void (*logic_analizer_cb_t)(uint16_t *samle_buf, int samples, int sample_rate); 
 
 typedef struct {
     int pin[16];                // GPIO pin (0-39), -1 - disable

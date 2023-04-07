@@ -17,6 +17,7 @@
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
 #include "esp32/rom/ets_sys.h" // will be removed in idf v5.0 ??
+#include "hal/gpio_types.h"
 
 #include "logic_analizer.h"
 #include "logic_analizer_hal.h"
@@ -25,7 +26,7 @@
 #define LA_TASK_STACK 2048
 #define DMA_FRAME 4092
 
-static const char *TAG = "la_hal";
+
 
 static la_frame_t la_frame = {
     .fb.buf = NULL,
@@ -83,7 +84,7 @@ static lldesc_t *allocate_dma_descriptors(uint16_t size, uint8_t *buffer)
 static void logic_analizer_stop(void)
 {
     // stop dma transfer
-    llogic_analizer_ll_stop();
+    logic_analizer_ll_stop();
     // deinit dma isr
     logic_analizer_ll_deinit_dma_eof_isr();
 
@@ -112,24 +113,24 @@ static void logic_analizer_stop(void)
 static void logic_analizer_task(void *arg)
 {
     int noTimeout;
-    int timeout =(int) *arg;
+    logic_analizer_config_t *cfg=(logic_analizer_config_t *)arg;
+    
     while (1)
     {
-        noTimeout = ulTaskNotifyTake(pdFALSE, timeout); //portMAX_DELAY
+        noTimeout = ulTaskNotifyTake(pdFALSE, cfg->meashure_timeout); //portMAX_DELAY
         if(noTimeout)
         {
             // test only
         printf("generate isr - transfer done\n");
 
             // end test only
-        config->logic_analizer_cb(la_frame.fb.buf,la_frame.fb.len/2,logic_analizer_ll_get_sample_rate(config->sample_rate)); 
+        cfg->logic_analizer_cb((uint16_t *)la_frame.fb.buf,la_frame.fb.len/2,logic_analizer_ll_get_sample_rate(cfg->sample_rate)); 
         logic_analizer_stop(); // todo stop & clear on task or external ??
         }
 
         else 
         {
-            timeout = portMAX_DELAY;
-            config->logic_analizer_cb(NULL,0,0); // timeout
+            cfg->logic_analizer_cb(NULL,0,0); // timeout
             logic_analizer_stop(); // todo stop & clear on task or external ??
         }
     }
@@ -174,7 +175,7 @@ esp_err_t start_logic_analizer(logic_analizer_config_t *config)
                 ret = ESP_ERR_INVALID_ARG;
                 goto _ret;
             }
-    else if (config->trigger_edge&(GPIO_INTR_NEGEDGE|GPIO_INTR_POSEDGE) == 0) 
+    else if ((config->trigger_edge & (GPIO_INTR_NEGEDGE|GPIO_INTR_POSEDGE)) == 0) 
             {
                 ret = ESP_ERR_INVALID_ARG;
                 goto _ret;
@@ -188,7 +189,7 @@ esp_err_t start_logic_analizer(logic_analizer_config_t *config)
 
     // allocate frame buffer
     la_frame.fb.len = config->number_of_samples*2;
-    la_frame.fb.buf = heap_caps_malloc(la_frame.len, MALLOC_CAP_DMA);
+    la_frame.fb.buf = heap_caps_malloc(la_frame.fb.len, MALLOC_CAP_DMA);
     if (la_frame.fb.buf == NULL)
             {
                 ret = ESP_ERR_NO_MEM;
@@ -204,7 +205,7 @@ esp_err_t start_logic_analizer(logic_analizer_config_t *config)
     // configure I2S  - pin definition, pin trigger, sample frame & dma frame, clock divider
     logic_analizer_ll_config(config->pin,config->pin_trigger,config->sample_rate, &la_frame);
     // start main task - check logic analizer get data & call cb
-    if (pdPASS != xTaskCreate(logic_analizer_task, "la_task", LA_TASK_STACK, &(configure->meashure_timeout), configMAX_PRIORITIES - 2, &logic_analizer_task_handle))
+    if (pdPASS != xTaskCreate(logic_analizer_task, "la_task", LA_TASK_STACK, config, configMAX_PRIORITIES - 2, &logic_analizer_task_handle))
             {
                 ret = ESP_ERR_NO_MEM;
                 goto _freedma_ret;

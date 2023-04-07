@@ -16,7 +16,10 @@
 			"regex": "c",
 			"utility": "c",
 			"la.h": "c",
-			"gpio.h": "c"
+			"gpio.h": "c",
+			"logic_analizer.h": "c",
+			"logic_analizer_ll.h": "c",
+			"gpio_types.h": "c"
 		}
 	}
 }

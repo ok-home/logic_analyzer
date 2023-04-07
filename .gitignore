@@ -1148,3 +1148,6 @@ build/log/idf_py_stderr_output_5224
 build/log/idf_py_stderr_output_5391
 build/log/idf_py_stdout_output_5224
 build/log/idf_py_stdout_output_5391
+build/esp-idf/main/CMakeFiles/__idf_main.dir/logic_analizer_ll.c.obj
+build/esp-idf/main/CMakeFiles/__idf_main.dir/logic_analizer.c.obj
+build/esp-idf/main/CMakeFiles/__idf_main.dir/main_la.c.obj

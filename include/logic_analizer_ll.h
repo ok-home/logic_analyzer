@@ -26,7 +26,7 @@
  *
  *  @return
 */
-void logic_analizer_ll_config(int data_pins,int pin_trigger,int sample_rate,la_frame_t *frame);
+void logic_analizer_ll_config(int *data_pins,int pin_trigger,int sample_rate,la_frame_t *frame);
 /**
  *  @brief logic analizer start meashure
  *
@@ -44,13 +44,13 @@ void IRAM_ATTR logic_analizer_ll_stop();
  *
  *  @return
 */
-esp_err_t logic_analizer_ll_init_dma_eof_isr(TaskHandle_t task)
+esp_err_t logic_analizer_ll_init_dma_eof_isr(TaskHandle_t task);
 /**
  *  @brief logic analizer free dma eof isr
  *
  *  @return
 */
-void logic_analizer_ll_deinit_dma_eof_isr()
+void logic_analizer_ll_deinit_dma_eof_isr();
 /**
  *  @brief logic analizer return real sample rate 
  *
