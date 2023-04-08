@@ -17,7 +17,7 @@
 #define LEDC_OUTPUT_IO (19)            // Define the output GPIO
 
 #define GPIO_BLINK (15)
-
+static TaskHandle_t tx_handle;
 static void example_ledc_init(void)
 {
     // Prepare and then apply the LEDC PWM timer configuration
@@ -80,30 +80,42 @@ void la_cb(uint16_t *buf, int cnt, int clk)
         printf("%04x ", buf[i]);
     }
     printf("\nExit CB\n");
+        vTaskDelete(tx_handle);
 }
-
+#define GPIO_TX 1
+#define GPIO_RX 3
 logic_analizer_config_t la_cfg =
     {
-        .pin = {LEDC_OUTPUT_IO, -1, -1, -1, GPIO_BLINK, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-        .pin_trigger = GPIO_BLINK,
+//        .pin = {LEDC_OUTPUT_IO, -1, -1, -1, GPIO_BLINK, -1, -1, -1,-1, -1, -1, -1, -1, -1, -1, -1},
+        .pin = {-1, -1, -1, -1, -1, -1, -1, -1, GPIO_TX, -1, -1, -1, -1, -1, -1, -1},
+        .pin_trigger = GPIO_TX,
         .trigger_edge = GPIO_INTR_ANYEDGE,
-        .number_of_samples = 1000,
-        .sample_rate = 20000000,
+        .number_of_samples = 10000,
+        .sample_rate = 1250000,
         .meashure_timeout = portMAX_DELAY,
         .logic_analizer_cb = la_cb
         };
+    void txtask(void* p)
+    {
+        for(int i=0;;i++)
+        {
+            printf("data %02d\n",i);
+        }
+    }
 
 void app_main(void)
 {
-    printf("hello\n");
+
     // Set the LEDC peripheral configuration
     //example_ledc_init();
     // Set duty to 50%
     //ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
     // Update duty to apply the new value
     //ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-    xTaskCreate(led_blink, "tt", 2048, NULL, 1, NULL);
+    //xTaskCreate(led_blink, "tt", 2048, NULL, 1, NULL);
+    xTaskCreate(txtask, "tx", 2048, NULL, 1, &tx_handle);
     int ret = start_logic_analizer(&la_cfg);
     if (ret != ESP_OK)
         printf("ERR %x\n", ret);
+
 };

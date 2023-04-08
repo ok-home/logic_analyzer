@@ -1,5 +1,11 @@
-
 #include "logic_analizer_ll.h"
+
+// if define external logic analizer - define pin as gpio input
+// else - self diagnostic analizer - define pin as defined on firmware + input to i2s
+// comment/uncomment define
+
+//#define EXTERNAL_LOGIC_ANALIZER 1
+#undef EXTERNAL_LOGIC_ANALIZER
 
 #define gpio_matrix_in(a, b, c) esp_rom_gpio_connect_in_signal(a, b, c)
 
@@ -122,11 +128,13 @@ static void logic_analizer_ll_set_clock(int sample_rate)
 }
 static void logic_analizer_ll_set_pin(int *data_pins, int pin_trigger, int trigger_edge)
 {
-    //
-    // trigger pin
-    // attention - pin trigger gpio not defined
-    // attention - pin trigger irq remove default pin irq
-    //
+//
+// trigger pin
+// attention - pin trigger gpio not defined on self diagnostic
+// attention - pin trigger irq remove default pin irq on self diagnostic
+//
+#ifndef EXTERNAL_LOGIC_ANALIZER
+
     if (pin_trigger >= 0)
     {
         vTaskDelay(5);
@@ -138,7 +146,7 @@ static void logic_analizer_ll_set_pin(int *data_pins, int pin_trigger, int trigg
 
     for (int i = 0; i < 16; i++)
     {
-//        printf("fun out gpio %d val %lx \n", data_pins[i], GPIO.func_out_sel_cfg[data_pins[i]].val); // test only
+        //        printf("fun out gpio %d val %lx \n", data_pins[i], GPIO.func_out_sel_cfg[data_pins[i]].val); // test only
         if (data_pins[i] < 0) // pin disable - already 0
         {
             gpio_matrix_in(0x30, I2S0I_DATA_IN0_IDX + i, false);
@@ -154,16 +162,35 @@ static void logic_analizer_ll_set_pin(int *data_pins, int pin_trigger, int trigg
                 PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[i]]);
             }
             gpio_matrix_in(data_pins[i], I2S0I_DATA_IN0_IDX + i, false); // connect pin to signal
-
-            // test only
-            //        PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[i]]);
-            //        gpio_set_pull_mode(data_pins[i], GPIO_FLOATING);
-            //        gpio_set_direction(data_pins[i], GPIO_MODE_INPUT);
-            //        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[data_pins[i]], PIN_FUNC_GPIO);
-            // end test
-            // gpio_reset_pin ( gpio_num_t gpio_num )
         }
     }
+#else
+    // external not tested
+    for (int i = 0; i < 16; i++)
+    {
+        if (data_pins[i] < 0) // pin disable - already 0
+        {
+            gpio_matrix_in(0x30, I2S0I_DATA_IN0_IDX + i, false);
+        }
+        else
+        {
+            gpio_reset_pin(data_pins[i]);
+            gpio_set_pull_mode(data_pins[i], GPIO_FLOATING);
+            gpio_set_direction(data_pins[i], GPIO_MODE_INPUT);
+            gpio_matrix_in(data_pins[i], I2S0I_DATA_IN0_IDX + i, false); // connect pin to signal
+        }
+    }
+    if (pin_trigger >= 0)
+    {
+        vTaskDelay(5);
+        gpio_install_isr_service(0); // default
+        gpio_set_intr_type(pin_trigger, trigger_edge);
+        gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
+        gpio_intr_disable(pin_trigger);
+    }
+
+#endif
+
     // cam mode signals must be set to hight
     gpio_matrix_in(0x38, I2S0I_V_SYNC_IDX, false);
     gpio_matrix_in(0x38, I2S0I_H_SYNC_IDX, false);
