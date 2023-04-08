@@ -37,18 +37,27 @@ typedef enum
 } i2s_sampling_mode_t;
 
 static intr_handle_t isr_handle;
-
+//  trigger isr handle
+static void IRAM_ATTR la_ll_trigger_isr(void *handle)
+{
+    BaseType_t HPTaskAwoken = pdFALSE;
+    // ll start
+    I2S0.conf.rx_start = 1;
+    gpio_intr_disable((int)handle);
+    if (HPTaskAwoken == pdTRUE)
+    {
+        portYIELD_FROM_ISR();
+    }
+}
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
 {
     BaseType_t HPTaskAwoken = pdFALSE;
-
     typeof(I2S0.int_st) status = I2S0.int_st;
     if (status.val == 0)
     {
         return;
     }
     I2S0.int_clr.val = status.val;
-
     if (status.in_suc_eof)
     {
 
@@ -72,18 +81,9 @@ static void logic_analizer_ll_reset()
     I2S0.lc_conf.ahbm_rst = 1;
     I2S0.lc_conf.ahbm_rst = 0;
 }
-static  void logic_analizer_ll_set_mode()
+static void logic_analizer_ll_set_mode()
 {
-    /*
-    I2S0.conf.rx_slave_mod = 0; //- master mode
-    I2S0.conf.rx_right_first = 0;
-    I2S0.conf.rx_msb_right = 0;
-    I2S0.conf.rx_msb_shift = 0;
-    I2S0.conf.rx_mono = 0;
-    I2S0.conf.rx_short_sync = 0;
-    */
     I2S0.conf.val = 0;
-
     I2S0.conf2.lcd_en = 1;
     I2S0.conf2.camera_en = 1;
 
@@ -94,23 +94,22 @@ static  void logic_analizer_ll_set_mode()
     I2S0.conf_chan.rx_chan_mod = 1;
     I2S0.sample_rate_conf.rx_bits_mod = 0;
     I2S0.timing.val = 0;
-    //I2S0.timing.rx_dsync_sw = 0; //1
 }
 static div_68_t logic_analizer_ll_convert_sample_rate(int sample_rate)
 {
-        div_68_t ldiv;
-       int cnt_div = LA_CLK_SAMPLE_RATE/sample_rate;
-       if( cnt_div < 64 ) 
-       {
-            ldiv.div_8=2; 
-            ldiv.div_6=cnt_div/2;
-        }
-        else
-        {
-            ldiv.div_8=cnt_div/64+1; 
-            ldiv.div_6=cnt_div/ldiv.div_8;
-        }
-        return ldiv;
+    div_68_t ldiv;
+    int cnt_div = LA_CLK_SAMPLE_RATE / sample_rate;
+    if (cnt_div < 64)
+    {
+        ldiv.div_8 = 2;
+        ldiv.div_6 = cnt_div / 2;
+    }
+    else
+    {
+        ldiv.div_8 = cnt_div / 64 + 1;
+        ldiv.div_6 = cnt_div / ldiv.div_8;
+    }
+    return ldiv;
 }
 static void logic_analizer_ll_set_clock(int sample_rate)
 {
@@ -118,72 +117,83 @@ static void logic_analizer_ll_set_clock(int sample_rate)
     // Configure clock divider
     I2S0.clkm_conf.clkm_div_a = 0;
     I2S0.clkm_conf.clkm_div_b = 0;
-    I2S0.clkm_conf.clkm_div_num = ldiv.div_8; // clk div_8
+    I2S0.clkm_conf.clkm_div_num = ldiv.div_8;          // clk div_8
     I2S0.sample_rate_conf.rx_bck_div_num = ldiv.div_6; // bclk div_6
 }
-static void logic_analizer_ll_set_pin(int *data_pins,int pin_trigger)
+static void logic_analizer_ll_set_pin(int *data_pins, int pin_trigger, int trigger_edge)
 {
     //
-    // todo trigger pin
+    // trigger pin
+    // attention - pin trigger gpio not defined
+    // attention - pin trigger irq remove default pin irq
     //
+    if (pin_trigger >= 0)
+    {
+        vTaskDelay(5);
+        gpio_install_isr_service(0); // default
+        gpio_set_intr_type(pin_trigger, trigger_edge);
+        gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
+        gpio_intr_disable(pin_trigger);
+    }
 
     for (int i = 0; i < 16; i++)
     {
-    printf("fun out gpio %d val %lx \n",data_pins[i],GPIO.func_out_sel_cfg[data_pins[i]].val); // test only
-
-    if(data_pins[i]<0) // pin disable - already 0
-    {
-      gpio_matrix_in(0x30, I2S0I_DATA_IN0_IDX + i, false);  
-    }
-    else
-    {
-        
-        if(GPIO.func_out_sel_cfg[data_pins[i]].val&0x100)           // if defined as GPIO
+//        printf("fun out gpio %d val %lx \n", data_pins[i], GPIO.func_out_sel_cfg[data_pins[i]].val); // test only
+        if (data_pins[i] < 0) // pin disable - already 0
         {
-            gpio_set_direction(data_pins[i], GPIO_MODE_INPUT_OUTPUT);
+            gpio_matrix_in(0x30, I2S0I_DATA_IN0_IDX + i, false);
         }
-        else                                                        // if defined as signal
+        else
         {
-            PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[i]]);  
-        }     
-        gpio_matrix_in(data_pins[i], I2S0I_DATA_IN0_IDX + i, false); // connect pin to signal
+            if (GPIO.func_out_sel_cfg[data_pins[i]].val & 0x100) // if defined as GPIO
+            {
+                gpio_set_direction(data_pins[i], GPIO_MODE_INPUT_OUTPUT);
+            }
+            else // if defined as signal
+            {
+                PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[i]]);
+            }
+            gpio_matrix_in(data_pins[i], I2S0I_DATA_IN0_IDX + i, false); // connect pin to signal
 
-        // test only
-        //        PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[i]]);
-        //        gpio_set_pull_mode(data_pins[i], GPIO_FLOATING);
-        //        gpio_set_direction(data_pins[i], GPIO_MODE_INPUT);
-        //        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[data_pins[i]], PIN_FUNC_GPIO);
-        // end test 
-
+            // test only
+            //        PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[i]]);
+            //        gpio_set_pull_mode(data_pins[i], GPIO_FLOATING);
+            //        gpio_set_direction(data_pins[i], GPIO_MODE_INPUT);
+            //        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[data_pins[i]], PIN_FUNC_GPIO);
+            // end test
+            // gpio_reset_pin ( gpio_num_t gpio_num )
+        }
     }
-    }
-    // cam mode signals must be set to hight    
+    // cam mode signals must be set to hight
     gpio_matrix_in(0x38, I2S0I_V_SYNC_IDX, false);
     gpio_matrix_in(0x38, I2S0I_H_SYNC_IDX, false);
     gpio_matrix_in(0x38, I2S0I_H_ENABLE_IDX, false);
-
 }
-void logic_analizer_ll_config(int *data_pins,int pin_trigger,int sample_rate,la_frame_t *frame)
+void logic_analizer_ll_config(int *data_pins, int pin_trigger, int trigger_edge, int sample_rate, la_frame_t *frame)
 {
-        // Enable and configure I2S peripheral
+    // Enable and configure I2S peripheral
     periph_module_enable(PERIPH_I2S0_MODULE);
 
     I2S0.conf.rx_start = 0;
     logic_analizer_ll_reset();
     logic_analizer_ll_set_mode();
     logic_analizer_ll_set_clock(sample_rate);
-    logic_analizer_ll_set_pin(data_pins,pin_trigger);
+    logic_analizer_ll_set_pin(data_pins, pin_trigger, trigger_edge);
     // set dma descriptor
-    I2S0.rx_eof_num = frame->fb.len / sizeof(uint32_t);             // count in 32 bit word
+    I2S0.rx_eof_num = frame->fb.len / sizeof(uint32_t); // count in 32 bit word
     I2S0.in_link.addr = ((uint32_t) & (frame->dma[0])) & 0xfffff;
-
-}
-void logic_analizer_ll_start()
-{
+    // pre start
     I2S0.conf.rx_start = 0;
     I2S_ISR_ENABLE(in_suc_eof);
     I2S0.in_link.start = 1;
+}
+void IRAM_ATTR logic_analizer_ll_start()
+{
     I2S0.conf.rx_start = 1;
+}
+void logic_analizer_ll_triggered_start(int pin_trigger)
+{
+    gpio_intr_enable(pin_trigger);
 }
 void IRAM_ATTR logic_analizer_ll_stop()
 {
@@ -194,7 +204,7 @@ void IRAM_ATTR logic_analizer_ll_stop()
 int logic_analizer_ll_get_sample_rate(int sample_rate)
 {
     div_68_t ldiv = logic_analizer_ll_convert_sample_rate(sample_rate);
-    return LA_CLK_SAMPLE_RATE/(ldiv.div_6*ldiv.div_8);
+    return LA_CLK_SAMPLE_RATE / (ldiv.div_6 * ldiv.div_8);
 }
 esp_err_t logic_analizer_ll_init_dma_eof_isr(TaskHandle_t task)
 {
@@ -204,4 +214,3 @@ void logic_analizer_ll_deinit_dma_eof_isr()
 {
     esp_intr_free(isr_handle);
 }
-

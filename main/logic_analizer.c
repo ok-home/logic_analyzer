@@ -95,7 +95,7 @@ static void logic_analizer_task(void *arg)
         if (noTimeout)
         {
             // test only
-            printf("generate isr - transfer done\n");
+//            printf("generate isr - transfer done\n");
 
             // end test only
             cfg->logic_analizer_cb((uint16_t *)la_frame.fb.buf, la_frame.fb.len / 2, logic_analizer_ll_get_sample_rate(cfg->sample_rate));
@@ -182,7 +182,7 @@ esp_err_t start_logic_analizer(logic_analizer_config_t *config)
         goto _freebuf_ret;
     }
     // configure I2S  - pin definition, pin trigger, sample frame & dma frame, clock divider
-    logic_analizer_ll_config(config->pin, config->pin_trigger, config->sample_rate, &la_frame);
+    logic_analizer_ll_config(config->pin, config->pin_trigger, config->trigger_edge, config->sample_rate, &la_frame);
     // start main task - check logic analizer get data & call cb
     if (pdPASS != xTaskCreate(logic_analizer_task, "la_task", LA_TASK_STACK, config, configMAX_PRIORITIES - 2, &logic_analizer_task_handle))
     {
@@ -196,9 +196,16 @@ esp_err_t start_logic_analizer(logic_analizer_config_t *config)
         goto _freetask_ret;
     }
     /*
-     * triggered la stert not defined - autostart
+     * triggered  start
      */
-    logic_analizer_ll_start();
+    if (config->pin_trigger < 0)
+    {
+        logic_analizer_ll_start();
+    }
+    else
+    {
+        logic_analizer_ll_triggered_start(config->pin_trigger);
+    }
     return ESP_OK;
 
 _freetask_ret:

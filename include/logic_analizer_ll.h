@@ -42,12 +42,16 @@ typedef struct {
  *
  *  @return
 */
-void logic_analizer_ll_config(int *data_pins,int pin_trigger,int sample_rate,la_frame_t *frame);
+void logic_analizer_ll_config(int *data_pins,int pin_trigger,int trigger_edge,int sample_rate,la_frame_t *frame);
 /**
  *  @brief logic analizer start meashure
  *
 */
 void logic_analizer_ll_start();
+
+void logic_analizer_ll_triggered_start(int pin_trigger);
+
+
 /**
  *  @brief logic analizer stop meashure
  *

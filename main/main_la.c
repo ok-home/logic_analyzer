@@ -47,21 +47,21 @@ void led_blink(void *p)
         .pin_bit_mask = 1ULL << GPIO_BLINK,
         .mode = GPIO_MODE_OUTPUT,
         .intr_type = GPIO_INTR_DISABLE};
-    int on_off = 0;
     gpio_config(&io_cfg);
     // gpio_set_direction(15,GPIO_MODE_INPUT_OUTPUT);
     while (1)
     {
-        gpio_set_level(GPIO_BLINK, on_off & 1);
-        on_off++;
-        gpio_set_level(GPIO_BLINK, on_off & 1);
-        on_off++;
-        gpio_set_level(GPIO_BLINK, on_off & 1);
-        on_off++;
-        gpio_set_level(GPIO_BLINK, on_off & 1);
-        on_off++;
-        gpio_set_level(GPIO_BLINK, on_off & 1);
-        on_off++;
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+
         vTaskDelay(1);
     }
 }
@@ -75,20 +75,20 @@ void la_cb(uint16_t *buf, int cnt, int clk)
     {
         if (i % 16 == 0)
         {
-            printf("\n %d ", i);
+            printf("\n %04d ", i);
         }
-        printf("%x ", buf[i]);
+        printf("%04x ", buf[i]);
     }
-    printf("Exit CB\n");
+    printf("\nExit CB\n");
 }
 
 logic_analizer_config_t la_cfg =
     {
         .pin = {LEDC_OUTPUT_IO, -1, -1, -1, GPIO_BLINK, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-        .pin_trigger = -1,
-        .trigger_edge = GPIO_INTR_POSEDGE,
-        .number_of_samples = 6000,
-        .sample_rate = 2500000,
+        .pin_trigger = GPIO_BLINK,
+        .trigger_edge = GPIO_INTR_ANYEDGE,
+        .number_of_samples = 1000,
+        .sample_rate = 20000000,
         .meashure_timeout = portMAX_DELAY,
         .logic_analizer_cb = la_cb
         };
@@ -97,12 +97,12 @@ void app_main(void)
 {
     printf("hello\n");
     // Set the LEDC peripheral configuration
-    example_ledc_init();
+    //example_ledc_init();
     // Set duty to 50%
-    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
+    //ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
     // Update duty to apply the new value
-    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-    //xTaskCreate(led_blink, "tt", 2048, NULL, 1, NULL);
+    //ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+    xTaskCreate(led_blink, "tt", 2048, NULL, 1, NULL);
     int ret = start_logic_analizer(&la_cfg);
     if (ret != ESP_OK)
         printf("ERR %x\n", ret);
