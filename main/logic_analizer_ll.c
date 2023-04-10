@@ -208,7 +208,7 @@ void logic_analizer_ll_config(int *data_pins, int pin_trigger, int trigger_edge,
     logic_analizer_ll_set_pin(data_pins, pin_trigger, trigger_edge);
     // set dma descriptor
     I2S0.rx_eof_num = frame->fb.len / sizeof(uint32_t); // count in 32 bit word
-    I2S0.in_link.addr = ((uint32_t) & (frame->dma[0])) & 0xfffff;
+    I2S0.in_link.addr = ((uint32_t) & (frame->dma[0])) ;
     // pre start
     I2S0.conf.rx_start = 0;
     I2S_ISR_ENABLE(in_suc_eof);
