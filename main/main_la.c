@@ -8,6 +8,8 @@
 #include "driver/ledc.h"
 #include "driver/gpio.h"
 
+#include "sump.h"
+
 #define LEDC_TIMER LEDC_TIMER_0
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
 #define LEDC_CHANNEL LEDC_CHANNEL_0
@@ -17,7 +19,6 @@
 #define LEDC_OUTPUT_IO (19)            // Define the output GPIO
 
 #define GPIO_BLINK (15)
-static TaskHandle_t tx_handle;
 static void example_ledc_init(void)
 {
     // Prepare and then apply the LEDC PWM timer configuration
@@ -65,57 +66,59 @@ void led_blink(void *p)
         vTaskDelay(1);
     }
 }
-
+/*
 void la_cb(uint16_t *buf, int cnt, int clk)
 {
-    if(buf==NULL) {printf("ERR timeout ??\n"); return;}
-    printf("Data Ready CB\n");
-    printf("cnt samples %d clock %d \n", cnt, clk);
-    for (int i = 0; i < cnt + 16; i++)
+    if (buf == NULL)
     {
-        if (i % 16 == 0)
-        {
-            printf("\n %04d ", i);
-        }
-        printf("%04x ", buf[i]);
+        // err
+        return;
     }
-    printf("\nExit CB\n");
-        vTaskDelete(tx_handle);
+
+    
+        printf("Data Ready CB\n");
+        printf("cnt samples %d clock %d \n", cnt, clk);
+        for (int i = 0; i < cnt + 16; i++)
+        {
+            if (i % 16 == 0)
+            {
+                printf("\n %04d ", i);
+            }
+            printf("%04x ", buf[i]);
+        }
+        printf("\nExit CB\n");
+    
+   
 }
-#define GPIO_TX 1
-#define GPIO_RX 3
+*/
+
+/*
 logic_analizer_config_t la_cfg =
     {
-//        .pin = {LEDC_OUTPUT_IO, -1, -1, -1, GPIO_BLINK, -1, -1, -1,-1, -1, -1, -1, -1, -1, -1, -1},
-        .pin = {-1, -1, -1, -1, -1, -1, -1, -1, GPIO_TX, -1, -1, -1, -1, -1, -1, -1},
-        .pin_trigger = GPIO_TX,
+        //        .pin = {LEDC_OUTPUT_IO, -1, -1, -1, GPIO_BLINK, -1, -1, -1,-1, -1, -1, -1, -1, -1, -1, -1},
+        .pin = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+        .pin_trigger = -1,
         .trigger_edge = GPIO_INTR_ANYEDGE,
         .number_of_samples = 10000,
         .sample_rate = 1250000,
         .meashure_timeout = portMAX_DELAY,
-        .logic_analizer_cb = la_cb
-        };
-    void txtask(void* p)
-    {
-        for(int i=0;;i++)
-        {
-            printf("data %02d\n",i);
-        }
-    }
-
+        .logic_analizer_cb = la_cb};
+*/
 void app_main(void)
 {
 
     // Set the LEDC peripheral configuration
-    //example_ledc_init();
+     example_ledc_init();
     // Set duty to 50%
-    //ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
     // Update duty to apply the new value
-    //ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-    //xTaskCreate(led_blink, "tt", 2048, NULL, 1, NULL);
-    xTaskCreate(txtask, "tx", 2048, NULL, 1, &tx_handle);
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+    xTaskCreate(led_blink, "tt", 2048, NULL, 1, NULL);
+
+    xTaskCreate(sump_task, "sump_task", 2048, NULL, 1, NULL);
+    /*
     int ret = start_logic_analizer(&la_cfg);
     if (ret != ESP_OK)
         printf("ERR %x\n", ret);
-
-};
+    */
+}

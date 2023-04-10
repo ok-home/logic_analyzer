@@ -94,10 +94,6 @@ static void logic_analizer_task(void *arg)
         noTimeout = ulTaskNotifyTake(pdFALSE, cfg->meashure_timeout); // portMAX_DELAY
         if (noTimeout)
         {
-            // test only
-//            printf("generate isr - transfer done\n");
-
-            // end test only
             cfg->logic_analizer_cb((uint16_t *)la_frame.fb.buf, la_frame.fb.len / 2, logic_analizer_ll_get_sample_rate(cfg->sample_rate));
             logic_analizer_stop(); // todo stop & clear on task or external ??
         }
