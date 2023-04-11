@@ -1,6 +1,7 @@
 
 #include "logic_analizer.h"
 #include "logic_analizer_ll.h"
+#include "sump.h"
 
 // frame buff & dma descripter
 static la_frame_t la_frame = {
@@ -61,11 +62,10 @@ static void logic_analizer_stop(void)
     logic_analizer_ll_stop();
     // deinit dma isr
     logic_analizer_ll_deinit_dma_eof_isr();
-
-    if (logic_analizer_task_handle)
+    if (la_frame.dma)
     {
-        vTaskDelete(logic_analizer_task_handle);
-        logic_analizer_task_handle = NULL;
+        free(la_frame.dma);
+        la_frame.dma = NULL;
     }
     if (la_frame.fb.buf)
     {
@@ -73,11 +73,7 @@ static void logic_analizer_stop(void)
         la_frame.fb.buf = NULL;
         la_frame.fb.len = 0;
     }
-    if (la_frame.dma)
-    {
-        free(la_frame.fb.buf);
-        la_frame.dma = NULL;
-    }
+    logic_analizer_started = 0;
 }
 /**
  *  @brief main logic analizer task
@@ -96,12 +92,14 @@ static void logic_analizer_task(void *arg)
         {
             cfg->logic_analizer_cb((uint16_t *)la_frame.fb.buf, la_frame.fb.len / 2, logic_analizer_ll_get_sample_rate(cfg->sample_rate));
             logic_analizer_stop(); // todo stop & clear on task or external ??
+            vTaskDelete(logic_analizer_task_handle);
         }
 
         else
         {
             cfg->logic_analizer_cb(NULL, 0, 0); // timeout
             logic_analizer_stop();              // todo stop & clear on task or external ??
+            vTaskDelete(logic_analizer_task_handle);
         }
     }
 }
@@ -121,7 +119,7 @@ esp_err_t start_logic_analizer(logic_analizer_config_t *config)
 {
     esp_err_t ret = 0;
     if (logic_analizer_started)
-        return ESP_ERR_INVALID_ARG; // todo change err code
+        return 9;//ESP_ERR_INVALID_ARG; // todo change err code
 
     logic_analizer_started = 1;
     // check cb pointer
@@ -180,7 +178,7 @@ esp_err_t start_logic_analizer(logic_analizer_config_t *config)
     // configure I2S  - pin definition, pin trigger, sample frame & dma frame, clock divider
     logic_analizer_ll_config(config->pin, config->pin_trigger, config->trigger_edge, config->sample_rate, &la_frame);
     // start main task - check logic analizer get data & call cb
-    if (pdPASS != xTaskCreate(logic_analizer_task, "la_task", LA_TASK_STACK, config, configMAX_PRIORITIES - 2, &logic_analizer_task_handle))
+    if (pdPASS != xTaskCreate(logic_analizer_task, "la_task", LA_TASK_STACK*4, config, configMAX_PRIORITIES - 2, &logic_analizer_task_handle))
     {
         ret = ESP_ERR_NO_MEM;
         goto _freedma_ret;

@@ -8,14 +8,14 @@
 #include "driver/ledc.h"
 #include "driver/gpio.h"
 
-#include "sump.h"
+//#include "sump.h"
 
 #define LEDC_TIMER LEDC_TIMER_0
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
 #define LEDC_CHANNEL LEDC_CHANNEL_0
 #define LEDC_DUTY_RES LEDC_TIMER_4_BIT // Set duty resolution to 13 bits
 #define LEDC_DUTY (8)                  // Set duty to 50%. ((2 ** 13) - 1) * 50% = 4095
-#define LEDC_FREQUENCY (500000)       // Frequency in Hertz. Set frequency at 5 kHz
+#define LEDC_FREQUENCY (1250000)       // Frequency in Hertz. Set frequency at 5 kHz
 #define LEDC_OUTPUT_IO (19)            // Define the output GPIO
 
 #define GPIO_BLINK (15)
@@ -66,6 +66,30 @@ void led_blink(void *p)
         vTaskDelay(1);
     }
 }
+
+void la_cb(uint16_t *buf, int cnt, int clk)
+{
+    if (buf == NULL)
+    {
+        printf("ERR CB NULL\n");
+        return;
+    }
+            printf("cb done\n");
+}
+
+
+
+logic_analizer_config_t la_cfg =
+    {
+        .pin = {LEDC_OUTPUT_IO, -1, -1, -1, GPIO_BLINK, -1, -1, -1,-1, -1, -1, -1, -1, -1, -1, -1},
+        //.pin = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+        .pin_trigger = -1,
+        .trigger_edge = GPIO_INTR_ANYEDGE,
+        .number_of_samples = 32764,
+        .sample_rate = 20000000,
+        .meashure_timeout = portMAX_DELAY,
+        .logic_analizer_cb = la_cb};
+
 void app_main(void)
 {
 
@@ -77,5 +101,14 @@ void app_main(void)
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
     xTaskCreate(led_blink, "tt", 2048*2, NULL, 1, NULL);
 
-    xTaskCreate(sump_task, "sump_task", 2048*4, NULL, 1, NULL);
+//    xTaskCreate(sump_task, "sump_task", 2048*4, NULL, 1, NULL);
+    int ret =0;
+    for(int i=0;i<20;i++){
+        vTaskDelay(100);
+                printf("start %d\n", i);
+    ret = start_logic_analizer(&la_cfg);
+
+    if (ret != ESP_OK)
+        printf("ERR %x\n", ret);
+    }
 }

@@ -17,6 +17,19 @@
 
 #include "sump.h"
 
+#define BLINK_PIN 2
+QueueHandle_t blink_queue;
+typedef struct blink
+{
+    int on_time;
+    int off_time;
+    int repeat;
+} blink_t;
+
+
+void blink_task(void *p);
+
+
 int trigger = 0;
 int first_trigger_pin = 0;
 int trigger_values;
@@ -45,19 +58,22 @@ logic_analizer_config_t la_cfg =
 static void sump_capture_and_send_samples()
 {
     la_cfg.number_of_samples = readCount;
-    la_cfg.sample_rate = 100000000/divider;
-    start_logic_analizer(&la_cfg);
-
+    la_cfg.sample_rate = 100000000/(divider+1);
+            send_err_blink(50,50,divider);
+    int err = start_logic_analizer(&la_cfg);
+    if(err) 
+        send_err_blink(100,100,4);
 }
 void sump_la_cb(uint16_t *buf, int cnt, int clk)
 {
     if (buf == NULL)
     {
-        // err
+        send_err_blink(50,50,3);
         return;
     }
-    sump_write_data((uint8_t*)buf, cnt*2);
-    //sump_write_data((uint8_t*)buf, readCount*2);
+    //sump_write_data((uint8_t*)buf, cnt*2);
+    sump_write_data((uint8_t*)buf, readCount*2);
+//    send_err_blink(100,100,1);
 }
 
 
@@ -68,7 +84,8 @@ void sump_la_cb(uint16_t *buf, int cnt, int clk)
 #define SUMP_TEST_RTS (UART_PIN_NO_CHANGE)
 #define SUMP_TEST_CTS (UART_PIN_NO_CHANGE)
 #define SUMP_UART_PORT_NUM 0
-#define SUMP_UART_BAUD_RATE 115200
+#define SUMP_UART_BAUD_RATE 921600
+//115200
 
 #define UART_BUF_SIZE (256)
 #define SUMP_TASK_STACK_SIZE (CONFIG_EXAMPLE_TASK_STACK_SIZE)
@@ -114,6 +131,7 @@ static void sump_writeByte(uint8_t byte)
 // loop read sump command // test only
 void sump_task(void *arg)
 {
+    xTaskCreate(blink_task, "blink_task", 2048*4, NULL, 1, NULL);
     sump_config_uart();
     while (1)
     {
@@ -125,11 +143,11 @@ void sump_task(void *arg)
 
 // test only
 // data buff size
-#define MAX_CAPTURE_SIZE 32768
+#define MAX_CAPTURE_SIZE 32764*2
 // count sample
 #define MAX_SAMPLE_COUNT MAX_CAPTURE_SIZE / 2
 // max sample clock HZ
-#define MAX_SAMPLE_RATE 20000000
+#define MAX_SAMPLE_RATE 2000000000
 // test sample buff
 //static uint8_t sample[MAX_CAPTURE_SIZE] = {0};
 /*
@@ -198,7 +216,6 @@ static void sump_cmd_parser(uint8_t cmdByte)
         break;
     case SUMP_ARM:
         sump_capture_and_send_samples();
-        uart_flush(0);
         break;
     case SUMP_TRIGGER_MASK_CH_A:
         sump_getCmd4(cmd4);
@@ -261,7 +278,6 @@ static void sump_cmd_parser(uint8_t cmdByte)
     case SUMP_SELF_TEST:
         break;
     default:
-        uart_flush(0);
         break;
     }
 }
@@ -300,3 +316,34 @@ static void sump_get_metadata()
 }
 
 
+void blink_task(void *p)
+{
+    gpio_config_t cfg = {
+        .pin_bit_mask = 1ULL << BLINK_PIN,
+        .mode = GPIO_MODE_OUTPUT,
+        .intr_type = GPIO_INTR_DISABLE};
+    blink_t blink_data;
+    gpio_config(&cfg);
+    blink_queue = xQueueCreate(10, sizeof(blink_t));
+    gpio_set_level(BLINK_PIN, 0);
+    while (1)
+    {
+        xQueueReceive(blink_queue, &blink_data, portMAX_DELAY);
+        while (blink_data.repeat--)
+        {
+            gpio_set_level(BLINK_PIN, 1);
+            vTaskDelay(blink_data.on_time);
+            gpio_set_level(BLINK_PIN, 0);
+            vTaskDelay(blink_data.off_time);
+        } ;
+    }
+}
+
+void send_err_blink(int on_time, int off_time, int repeat)
+{
+    blink_t on_off;
+    on_off.on_time = on_time;
+    on_off.off_time = off_time;
+    on_off.repeat = repeat;
+    xQueueSend(blink_queue, &on_off, portMAX_DELAY);
+}
