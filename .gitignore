@@ -1158,3 +1158,7 @@ build/log/idf_py_stdout_output_5110
 build/log/idf_py_stderr_output_3985
 build/log/idf_py_stdout_output_3985
 build/esp-idf/main/CMakeFiles/__idf_main.dir/sump.c.obj
+build/log/idf_py_stderr_output_30906
+build/log/idf_py_stderr_output_31076
+build/log/idf_py_stdout_output_30906
+build/log/idf_py_stdout_output_31076

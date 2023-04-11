@@ -56,7 +56,8 @@ void sump_la_cb(uint16_t *buf, int cnt, int clk)
         // err
         return;
     }
-    sump_write_data((uint8_t*)buf, readCount*2);
+    sump_write_data((uint8_t*)buf, cnt*2);
+    //sump_write_data((uint8_t*)buf, readCount*2);
 }
 
 
@@ -130,7 +131,7 @@ void sump_task(void *arg)
 // max sample clock HZ
 #define MAX_SAMPLE_RATE 20000000
 // test sample buff
-static uint8_t sample[MAX_CAPTURE_SIZE] = {0};
+//static uint8_t sample[MAX_CAPTURE_SIZE] = {0};
 /*
 void app_main(void)
 {
@@ -197,7 +198,7 @@ static void sump_cmd_parser(uint8_t cmdByte)
         break;
     case SUMP_ARM:
         sump_capture_and_send_samples();
-
+        uart_flush(0);
         break;
     case SUMP_TRIGGER_MASK_CH_A:
         sump_getCmd4(cmd4);
