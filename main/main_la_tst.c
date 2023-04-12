@@ -15,7 +15,7 @@
 #define LEDC_CHANNEL LEDC_CHANNEL_0
 #define LEDC_DUTY_RES LEDC_TIMER_4_BIT // Set duty resolution to 13 bits
 #define LEDC_DUTY (8)                  // Set duty to 50%. ((2 ** 13) - 1) * 50% = 4095
-#define LEDC_FREQUENCY (1250000)       // Frequency in Hertz. Set frequency at 5 kHz
+#define LEDC_FREQUENCY (500000)       // Frequency in Hertz. Set frequency at 5 kHz
 #define LEDC_OUTPUT_IO (19)            // Define the output GPIO
 
 #define GPIO_BLINK (15)
@@ -74,10 +74,14 @@ void la_cb(uint16_t *buf, int cnt, int clk)
         printf("ERR CB NULL\n");
         return;
     }
-            printf("cb done\n");
+            printf("cb done sr = %d cnt = %d \n",clk,cnt);
+            for(int i=0;i<128;i++)
+            {
+                if(i%16==0) printf("\n%0000x ",i);
+                printf("\n%0000x ",buf[i]);
+            }
+            printf("\nout done\n");
 }
-
-
 
 logic_analizer_config_t la_cfg =
     {
@@ -85,11 +89,11 @@ logic_analizer_config_t la_cfg =
         //.pin = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         .pin_trigger = -1,
         .trigger_edge = GPIO_INTR_ANYEDGE,
-        .number_of_samples = 32764,
+        .number_of_samples = 200,
         .sample_rate = 20000000,
         .meashure_timeout = portMAX_DELAY,
         .logic_analizer_cb = la_cb};
-
+    int s_rate[] = {20000000,10000000,5000000,2000000,1000000};
 void app_main(void)
 {
 
@@ -99,14 +103,15 @@ void app_main(void)
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-    xTaskCreate(led_blink, "tt", 2048*2, NULL, 1, NULL);
+//    xTaskCreate(led_blink, "tt", 2048*2, NULL, 1, NULL);
 
 //    xTaskCreate(sump_task, "sump_task", 2048*4, NULL, 1, NULL);
     int ret =0;
-    for(int i=0;i<20;i++){
+    for(int i=0;i<sizeof(s_rate)/sizeof(int);i++){
         vTaskDelay(100);
-                printf("start %d\n", i);
-    ret = start_logic_analizer(&la_cfg);
+        printf("start %d sr = %d\n", i, s_rate[i]);
+        la_cfg.sample_rate = s_rate[i];
+        ret = start_logic_analizer(&la_cfg);
 
     if (ret != ESP_OK)
         printf("ERR %x\n", ret);
