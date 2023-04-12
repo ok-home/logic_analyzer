@@ -59,7 +59,7 @@ static void sump_capture_and_send_samples()
 {
     la_cfg.number_of_samples = readCount;
     la_cfg.sample_rate = 100000000/(divider+1);
-            send_err_blink(50,50,divider);
+    //        send_err_blink(50,50,divider);
     int err = start_logic_analizer(&la_cfg);
     if(err) 
         send_err_blink(100,100,4);
