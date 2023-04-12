@@ -13,8 +13,8 @@
 #define LEDC_TIMER LEDC_TIMER_0
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
 #define LEDC_CHANNEL LEDC_CHANNEL_0
-#define LEDC_DUTY_RES LEDC_TIMER_4_BIT // Set duty resolution to 13 bits
-#define LEDC_DUTY (8)                  // Set duty to 50%. ((2 ** 13) - 1) * 50% = 4095
+#define LEDC_DUTY_RES LEDC_TIMER_5_BIT // Set duty resolution to 13 bits
+#define LEDC_DUTY (15)                  // Set duty to 50%. ((2 ** 13) - 1) * 50% = 4095
 #define LEDC_FREQUENCY (500000)       // Frequency in Hertz. Set frequency at 5 kHz
 #define LEDC_OUTPUT_IO (19)            // Define the output GPIO
 
@@ -77,8 +77,8 @@ void la_cb(uint16_t *buf, int cnt, int clk)
             printf("cb done sr = %d cnt = %d \n",clk,cnt);
             for(int i=0;i<128;i++)
             {
-                if(i%16==0) printf("\n%0000x ",i);
-                printf("\n%0000x ",buf[i]);
+                if(i%16==0) printf("\n%04x ",i);
+                printf("%04x ",buf[i]);
             }
             printf("\nout done\n");
 }
@@ -93,7 +93,7 @@ logic_analizer_config_t la_cfg =
         .sample_rate = 20000000,
         .meashure_timeout = portMAX_DELAY,
         .logic_analizer_cb = la_cb};
-    int s_rate[] = {20000000,10000000,5000000,2000000,1000000};
+    int s_rate[] = {20000000,10000000,5800000,5000000,2500000,2000000,1000000};
 void app_main(void)
 {
 
