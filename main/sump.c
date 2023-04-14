@@ -45,7 +45,7 @@ static void sump_capture_and_send_samples();
 
 logic_analizer_config_t la_cfg =
     {
-        .pin = {LEDC_OUTPUT_IO, -1, -1, -1, GPIO_BLINK, -1, -1, -1,-1, -1, -1, -1, -1, -1, -1, -1},
+        .pin = {LEDC_OUTPUT_IO, -1, 23, -1, GPIO_BLINK, -1, -1, -1,-1, -1, -1, -1, -1, -1, -1, -1},
         //.pin = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         .pin_trigger = -1,
         .trigger_edge = GPIO_INTR_ANYEDGE,

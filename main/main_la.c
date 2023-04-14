@@ -13,12 +13,12 @@
 #define LEDC_TIMER LEDC_TIMER_0
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
 #define LEDC_CHANNEL LEDC_CHANNEL_0
-#define LEDC_DUTY_RES LEDC_TIMER_4_BIT // Set duty resolution to 13 bits
-#define LEDC_DUTY (8)                  // Set duty to 50%. ((2 ** 13) - 1) * 50% = 4095
-#define LEDC_FREQUENCY (500000)       // Frequency in Hertz. Set frequency at 5 kHz
-#define LEDC_OUTPUT_IO (19)            // Define the output GPIO
+#define LEDC_DUTY_RES LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
+#define LEDC_DUTY (4095)                  // Set duty to 50%. ((2 ** 13) - 1) * 50% = 4095
+#define LEDC_FREQUENCY (5000)       // Frequency in Hertz. Set frequency at 5 kHz
+//#define LEDC_OUTPUT_IO (22)            // Define the output GPIO
 
-#define GPIO_BLINK (15)
+//#define GPIO_BLINK (15)
 static void example_ledc_init(void)
 {
     // Prepare and then apply the LEDC PWM timer configuration
@@ -68,14 +68,20 @@ void led_blink(void *p)
 }
 void app_main(void)
 {
-
+gpio_config_t io_cfg = {
+        .pin_bit_mask = 1ULL << 23,
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = 1,
+        .pull_down_en = 0,
+        .intr_type = GPIO_INTR_DISABLE};
+    gpio_config(&io_cfg);
     // Set the LEDC peripheral configuration
      example_ledc_init();
     // Set duty to 50%
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-    xTaskCreate(led_blink, "tt", 2048*2, NULL, 1, NULL);
+    //xTaskCreate(led_blink, "tt", 2048*2, NULL, 1, NULL);
 
     xTaskCreate(sump_task, "sump_task", 2048*4, NULL, 1, NULL);
 }

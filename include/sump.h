@@ -2,7 +2,7 @@
 
 #include "logic_analizer.h"
 
-#define LEDC_OUTPUT_IO (19)  
+#define LEDC_OUTPUT_IO (22)  
 #define GPIO_BLINK (15)
 
 void sump_task(void *arg);
