@@ -87,31 +87,33 @@ logic_analizer_config_t la_cfg =
     {
         .pin = {LEDC_OUTPUT_IO, -1, -1, -1, GPIO_BLINK, -1, -1, -1,-1, -1, -1, -1, -1, -1, -1, -1},
         //.pin = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-        .pin_trigger = -1,
-        .trigger_edge = GPIO_INTR_ANYEDGE,
+        .pin_trigger = 15,
+        .trigger_edge = GPIO_INTR_POSEDGE,
         .number_of_samples = 200,
         .sample_rate = 20000000,
-        .meashure_timeout = portMAX_DELAY,
+        .meashure_timeout = 1000,
         .logic_analizer_cb = la_cb};
-    int s_rate[] = {20000000,10000000,5800000,5000000,2500000,2000000,1000000};
+
 void app_main(void)
 {
 
     // Set the LEDC peripheral configuration
-     example_ledc_init();
+//     example_ledc_init();
     // Set duty to 50%
-    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
+//    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
     // Update duty to apply the new value
-    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-//    xTaskCreate(led_blink, "tt", 2048*2, NULL, 1, NULL);
+//    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+    xTaskCreate(led_blink, "tt", 2048*2, NULL, 1, NULL);
 
-//    xTaskCreate(sump_task, "sump_task", 2048*4, NULL, 1, NULL);
     int ret =0;
-    for(int i=0;i<sizeof(s_rate)/sizeof(int);i++){
-        vTaskDelay(100);
-        printf("start %d sr = %d\n", i, s_rate[i]);
-        la_cfg.sample_rate = s_rate[i];
+    for(int i=0;i<6;i++){
+        //vTaskDelay(1);
+        printf("start %d \n", i);
+        do
+        {
         ret = start_logic_analizer(&la_cfg);
+        } while(ret==9);
+        
 
     if (ret != ESP_OK)
         printf("ERR %x\n", ret);
