@@ -44,12 +44,12 @@ typedef enum
 
 static intr_handle_t isr_handle;
 //  trigger isr handle
-static void IRAM_ATTR la_ll_trigger_isr(void *handle)
+static void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
     BaseType_t HPTaskAwoken = pdFALSE;
     // ll start
     I2S0.conf.rx_start = 1;
-    gpio_intr_disable((int)handle);
+    gpio_intr_disable((int)pin);
     if (HPTaskAwoken == pdTRUE)
     {
         portYIELD_FROM_ISR();
@@ -94,7 +94,7 @@ static void logic_analizer_ll_set_mode()
     I2S0.conf2.camera_en = 1;
 
     I2S0.fifo_conf.dscr_en = 1;
-    I2S0.fifo_conf.rx_fifo_mod = SM_0A0B_0C0D;
+    I2S0.fifo_conf.rx_fifo_mod = 1;
     I2S0.fifo_conf.rx_fifo_mod_force_en = 1;
 
     I2S0.conf_chan.rx_chan_mod = 1;

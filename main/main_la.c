@@ -62,6 +62,27 @@ void led_blink(void *p)
         gpio_set_level(GPIO_BLINK, 0);
         gpio_set_level(GPIO_BLINK, 1);
         gpio_set_level(GPIO_BLINK, 0);
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+
 
         vTaskDelay(1);
     }
@@ -81,7 +102,7 @@ gpio_config_t io_cfg = {
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-    //xTaskCreate(led_blink, "tt", 2048*2, NULL, 1, NULL);
+    xTaskCreate(led_blink, "tt", 2048*2, NULL, 1, NULL);
 
     xTaskCreate(sump_task, "sump_task", 2048*4, NULL, 1, NULL);
 }

@@ -90,6 +90,10 @@ static void logic_analizer_task(void *arg)
         noTimeout = ulTaskNotifyTake(pdFALSE, cfg->meashure_timeout); // portMAX_DELAY
         if (noTimeout)
         {
+            // dma data ready
+            // sample sequence in 32 word - adr0=sample1, adr1=sample0 
+            // swap sample sequence if necessary
+            // for sump sample swap on uart tx
             cfg->logic_analizer_cb((uint16_t *)la_frame.fb.buf, la_frame.fb.len / 2, logic_analizer_ll_get_sample_rate(cfg->sample_rate));
             logic_analizer_stop(); // todo stop & clear on task or external ??
             vTaskDelete(logic_analizer_task_handle);
@@ -162,7 +166,7 @@ esp_err_t start_logic_analizer(logic_analizer_config_t *config)
     }
     // allocate frame buffer
     la_frame.fb.len = config->number_of_samples * 2;
-    la_frame.fb.buf = heap_caps_malloc(la_frame.fb.len, MALLOC_CAP_DMA);
+    la_frame.fb.buf = heap_caps_calloc(la_frame.fb.len,1, MALLOC_CAP_DMA);
     if (la_frame.fb.buf == NULL)
     {
         ret = ESP_ERR_NO_MEM;
