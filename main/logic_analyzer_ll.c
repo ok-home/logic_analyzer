@@ -1,4 +1,4 @@
-/* logic analizer ll example
+/* logic analyzer ll example
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
@@ -7,10 +7,10 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
-#include "logic_analizer_ll.h"
+#include "logic_analyzer_ll.h"
 
-// if define external logic analizer - define pin as gpio input
-// else - self diagnostic analizer - define pin as defined on firmware + input to i2s
+// if define external logic analyzer - define pin as gpio input
+// else - self diagnostic analyzer - define pin as defined on firmware + input to i2s
 // comment/uncomment define
 
 //#define EXTERNAL_LOGIC_ANALIZER 1
@@ -83,7 +83,7 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
         portYIELD_FROM_ISR();
     }
 }
-static void logic_analizer_ll_reset()
+static void logic_analyzer_ll_reset()
 {
     I2S0.conf.rx_reset = 1;
     I2S0.conf.rx_reset = 0;
@@ -96,7 +96,7 @@ static void logic_analizer_ll_reset()
     I2S0.lc_conf.ahbm_rst = 1;
     I2S0.lc_conf.ahbm_rst = 0;
 }
-static void logic_analizer_ll_set_mode()
+static void logic_analyzer_ll_set_mode()
 {
     I2S0.conf.val = 0;
     I2S0.conf2.lcd_en = 1;
@@ -110,7 +110,7 @@ static void logic_analizer_ll_set_mode()
     I2S0.sample_rate_conf.rx_bits_mod = 0;
     I2S0.timing.val = 0;
 }
-static div_68_t logic_analizer_ll_convert_sample_rate(int sample_rate)
+static div_68_t logic_analyzer_ll_convert_sample_rate(int sample_rate)
 {
     div_68_t ldiv;
     int cnt_div = LA_CLK_SAMPLE_RATE / sample_rate;
@@ -126,16 +126,16 @@ static div_68_t logic_analizer_ll_convert_sample_rate(int sample_rate)
     }
     return ldiv;
 }
-static void logic_analizer_ll_set_clock(int sample_rate)
+static void logic_analyzer_ll_set_clock(int sample_rate)
 {
-    div_68_t ldiv = logic_analizer_ll_convert_sample_rate(sample_rate);
+    div_68_t ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
     // Configure clock divider
     I2S0.clkm_conf.clkm_div_a = 0;
     I2S0.clkm_conf.clkm_div_b = 0;
     I2S0.clkm_conf.clkm_div_num = ldiv.div_8;          // clk div_8
     I2S0.sample_rate_conf.rx_bck_div_num = ldiv.div_6; // bclk div_6
 }
-static void logic_analizer_ll_set_pin(int *data_pins, int pin_trigger, int trigger_edge)
+static void logic_analyzer_ll_set_pin(int *data_pins, int pin_trigger, int trigger_edge)
 {
 //
 // trigger pin
@@ -198,16 +198,16 @@ static void logic_analizer_ll_set_pin(int *data_pins, int pin_trigger, int trigg
     gpio_matrix_in(0x38, I2S0I_H_SYNC_IDX, false);
     gpio_matrix_in(0x38, I2S0I_H_ENABLE_IDX, false);
 }
-void logic_analizer_ll_config(int *data_pins, int pin_trigger, int trigger_edge, int sample_rate, la_frame_t *frame)
+void logic_analyzer_ll_config(int *data_pins, int pin_trigger, int trigger_edge, int sample_rate, la_frame_t *frame)
 {
     // Enable and configure I2S peripheral
     periph_module_enable(PERIPH_I2S0_MODULE);
 
     I2S0.conf.rx_start = 0;
-    logic_analizer_ll_reset();
-    logic_analizer_ll_set_mode();
-    logic_analizer_ll_set_clock(sample_rate);
-    logic_analizer_ll_set_pin(data_pins, pin_trigger, trigger_edge);
+    logic_analyzer_ll_reset();
+    logic_analyzer_ll_set_mode();
+    logic_analyzer_ll_set_clock(sample_rate);
+    logic_analyzer_ll_set_pin(data_pins, pin_trigger, trigger_edge);
     // set dma descriptor
     I2S0.rx_eof_num = frame->fb.len / sizeof(uint32_t); // count in 32 bit word
     I2S0.in_link.addr = ((uint32_t) & (frame->dma[0])) ;
@@ -216,30 +216,30 @@ void logic_analizer_ll_config(int *data_pins, int pin_trigger, int trigger_edge,
     I2S_ISR_ENABLE(in_suc_eof);
     I2S0.in_link.start = 1;
 }
-void IRAM_ATTR logic_analizer_ll_start()
+void IRAM_ATTR logic_analyzer_ll_start()
 {
     I2S0.conf.rx_start = 1;
 }
-void logic_analizer_ll_triggered_start(int pin_trigger)
+void logic_analyzer_ll_triggered_start(int pin_trigger)
 {
     gpio_intr_enable(pin_trigger);
 }
-void IRAM_ATTR logic_analizer_ll_stop()
+void IRAM_ATTR logic_analyzer_ll_stop()
 {
     I2S0.conf.rx_start = 0;
     I2S_ISR_DISABLE(in_suc_eof);
     I2S0.in_link.stop = 1;
 }
-int logic_analizer_ll_get_sample_rate(int sample_rate)
+int logic_analyzer_ll_get_sample_rate(int sample_rate)
 {
-    div_68_t ldiv = logic_analizer_ll_convert_sample_rate(sample_rate);
+    div_68_t ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
     return LA_CLK_SAMPLE_RATE / (ldiv.div_6 * ldiv.div_8);
 }
-esp_err_t logic_analizer_ll_init_dma_eof_isr(TaskHandle_t task)
+esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
 {
     return esp_intr_alloc(ETS_I2S0_INTR_SOURCE, ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM, la_ll_dma_isr, (void *)task, &isr_handle);
 }
-void logic_analizer_ll_deinit_dma_eof_isr()
+void logic_analyzer_ll_deinit_dma_eof_isr()
 {
     esp_intr_free(isr_handle);
 }

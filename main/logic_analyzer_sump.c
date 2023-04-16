@@ -1,4 +1,4 @@
-/* logic analizer sump example
+/* logic analyzer sump example
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
@@ -11,9 +11,9 @@
 #include "driver/uart.h"
 #include "driver/gpio.h"
 
-#include "logic_analizer_pin_definition.h"
-#include "logic_analizer_hal.h"
-#include "logic_analizer_sump.h"
+#include "logic_analyzer_pin_definition.h"
+#include "logic_analyzer_hal.h"
+#include "logic_analyzer_sump.h"
 
 static int first_trigger_pin = 0;
 static int first_trigger_val = 0;
@@ -28,7 +28,7 @@ static void sump_get_metadata();
 static void sump_capture_and_send_samples();
 static void sump_la_cb(uint16_t *buf, int cnt, int clk);
 
-logic_analizer_config_t la_cfg =
+logic_analyzer_config_t la_cfg =
     {
         .pin = {LA_PIN_0,LA_PIN_1,LA_PIN_2,LA_PIN_3,LA_PIN_4,LA_PIN_5,LA_PIN_6,LA_PIN_7,LA_PIN_8,LA_PIN_9,LA_PIN_10,LA_PIN_11,LA_PIN_12,LA_PIN_13,LA_PIN_14,LA_PIN_15},
 
@@ -37,7 +37,7 @@ logic_analizer_config_t la_cfg =
         .number_of_samples = MAX_SAMPLE_COUNT,
         .sample_rate = MAX_SAMPLE_RATE,
         .meashure_timeout = LA__DEFAULT_TiMEOUT, // portMAX_DELAY,
-        .logic_analizer_cb = sump_la_cb};
+        .logic_analyzer_cb = sump_la_cb};
 
 static void sump_capture_and_send_samples()
 {
@@ -54,7 +54,7 @@ static void sump_capture_and_send_samples()
 
     la_cfg.trigger_edge = first_trigger_val ? GPIO_INTR_POSEDGE : GPIO_INTR_NEGEDGE;
 
-    int err = start_logic_analizer(&la_cfg);
+    int err = start_logic_analyzer(&la_cfg);
     if (err)
     {
       return;  
@@ -115,7 +115,7 @@ static void sump_writeByte(uint8_t byte)
 }
 
 // loop read sump command // test only
-void logic_analizer_sump_task(void *arg)
+void logic_analyzer_sump_task(void *arg)
 {
     sump_config_uart();
     while (1)

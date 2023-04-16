@@ -14,14 +14,14 @@
 
 // sigrok default sample rate
 #define PULSEVIEW_MAX_SAMPLE_RATE 100000000
-// logic analizer max data buff size
+// logic analyzer max data buff size
 #define MAX_CAPTURE_SIZE (32764 * 2)
-// logic analizer max count sample
+// logic analyzer max count sample
 #define MAX_SAMPLE_COUNT (MAX_CAPTURE_SIZE / 2)
-// logic analizer max sample clock HZ (sigrok not use this)
+// logic analyzer max sample clock HZ (sigrok not use this)
 #define MAX_SAMPLE_RATE 20000000
 
-// define logic analizre channel pin
+// define logic analyzre channel pin
 // -1 - pin disabled
 #define LA_PIN_0 (IN_PORT_1)
 #define LA_PIN_1 (LEDC_OUTPUT_IO)
@@ -40,12 +40,12 @@
 #define LA_PIN_14 (-1)
 #define LA_PIN_15 (-1)
 
-// define logic analizrer trigger pin 
+// define logic analyzrer trigger pin 
 // -1 disable
 // sigrok redefine this pin
 #define LA_PIN_TRIGGER (-1)
 
-// define logic analizrer timeout freertos tick
+// define logic analyzrer timeout freertos tick
 // default 20 sek
 #define LA__DEFAULT_TiMEOUT (2000)
 

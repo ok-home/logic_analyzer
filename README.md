@@ -32,16 +32,16 @@
   - Дальше читаем руководство по PulseView.
   # Интерфейс программы
   ## Условно состоит из 2-частей
-  ### include/logic_analizer_pin_definition.h
+  ### include/logic_analyzer_pin_definition.h
    - определение пинов и констант
-  ### include/logic_analizer_hal.h
+  ### include/logic_analyzer_hal.h
   - Получает сэмплы в буфер ESP32
-  - logic_analizer_config_t - конфигурация захвата
-  - start_logic_analizer(logic_analizer_config_t *config) - старт захвата
-  - void (*logic_analizer_cb_t)(uint16_t *samle_buf, int samples, int sample_rate) - каллбэк после захвата данных
-  ### include/logic_analizer_sump.h
+  - logic_analyzer_config_t - конфигурация захвата
+  - start_logic_analyzer(logic_analyzer_config_t *config) - старт захвата
+  - void (*logic_analyzer_cb_t)(uint16_t *samle_buf, int samples, int sample_rate) - каллбэк после захвата данных
+  ### include/logic_analyzer_sump.h
   - работа с PulseView 
-  - logic_analizer_sump_task(void *arg) 
+  - logic_analyzer_sump_task(void *arg) 
   ## Пример с тестовыми сэмплами
   ### main/main_la.c
   - test_sample_init() - включает простой генератор на 500 килогерц, и пачку GPIO имульсов с большой скважностью. Никаких дополнительных подключений, проводков и пр. не нужно, уже будет показывать внутренности. При желании можете поставить 2 перемычки на пины (18-22,19-23) - продублирует сигналы на GPIO.

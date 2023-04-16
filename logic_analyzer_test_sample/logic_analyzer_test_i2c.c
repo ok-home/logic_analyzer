@@ -1,4 +1,4 @@
-/* logic analizer i2c test sample example
+/* logic analyzer i2c test sample example
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
@@ -12,7 +12,7 @@
 #include "driver/i2c.h"
 #include "string.h"
 
-#include "logic_analizer_pin_definition.h"
+#include "logic_analyzer_pin_definition.h"
 
 #define TAG "CJMCU_8118"
 

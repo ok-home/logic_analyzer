@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 /**
- * @brief Data structure of logic analizer frame buffer
+ * @brief Data structure of logic analyzer frame buffer
  */
 typedef struct {
     uint8_t * buf;              //Pointer to the sample data
@@ -35,7 +35,7 @@ typedef struct {
 } la_frame_t;
 
 /**
- *  @brief logic analizer config i2s
+ *  @brief logic analyzer config i2s
  *        configure all i2s struct,before stert 
  *
  *  @param- int data_pins   - pointer of data GPIO array pin[16] ( 0-15 )
@@ -45,43 +45,43 @@ typedef struct {
  *
  *  @return
 */
-void logic_analizer_ll_config(int *data_pins,int pin_trigger,int trigger_edge,int sample_rate,la_frame_t *frame);
+void logic_analyzer_ll_config(int *data_pins,int pin_trigger,int trigger_edge,int sample_rate,la_frame_t *frame);
 /**
- *  @brief logic analizer start meashure
+ *  @brief logic analyzer start meashure
  *
 */
-void logic_analizer_ll_start();
+void logic_analyzer_ll_start();
 
-void logic_analizer_ll_triggered_start(int pin_trigger);
+void logic_analyzer_ll_triggered_start(int pin_trigger);
 
 
 /**
- *  @brief logic analizer stop meashure
+ *  @brief logic analyzer stop meashure
  *
 */
-void  logic_analizer_ll_stop();
+void  logic_analyzer_ll_stop();
 /**
- *  @brief logic analizer init dma eof isr
+ *  @brief logic analyzer init dma eof isr
  *          isr after full dma transfer
  *  @param-  TaskHandle_t task  - notify main task after full dma transfer
  *
  *  @return
 */
-esp_err_t logic_analizer_ll_init_dma_eof_isr(TaskHandle_t task);
+esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task);
 /**
- *  @brief logic analizer free dma eof isr
+ *  @brief logic analyzer free dma eof isr
  *
  *  @return
 */
-void logic_analizer_ll_deinit_dma_eof_isr();
+void logic_analyzer_ll_deinit_dma_eof_isr();
 /**
- *  @brief logic analizer return real sample rate 
+ *  @brief logic analyzer return real sample rate 
  *
  *  @param  int sample_rate  - config sample rate
  *
  *  @return  real sample rate
 */
-int logic_analizer_ll_get_sample_rate(int sample_rate);
+int logic_analyzer_ll_get_sample_rate(int sample_rate);
 
 #ifdef __cplusplus
 }

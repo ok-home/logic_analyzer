@@ -1,4 +1,4 @@
-/* logic analizer test sample example
+/* logic analyzer test sample example
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
@@ -13,7 +13,7 @@
 #include "driver/ledc.h"
 #include "driver/gpio.h"
 
-#include "logic_analizer_pin_definition.h"
+#include "logic_analyzer_pin_definition.h"
 
 #define LEDC_TIMER LEDC_TIMER_0
 #define LEDC_MODE LEDC_LOW_SPEED_MODE

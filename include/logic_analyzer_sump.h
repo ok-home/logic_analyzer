@@ -50,7 +50,7 @@
 extern "C" {
 #endif
 
-void logic_analizer_sump_task(void *arg);
+void logic_analyzer_sump_task(void *arg);
 
 #ifdef __cplusplus
 }
