@@ -1,7 +1,6 @@
 
-#include "logic_analizer.h"
+#include "logic_analizer_hal.h"
 #include "logic_analizer_ll.h"
-#include "sump.h"
 
 // frame buff & dma descripter
 static la_frame_t la_frame = {
@@ -147,7 +146,7 @@ esp_err_t start_logic_analizer(logic_analizer_config_t *config)
         ret = ESP_ERR_INVALID_ARG;
         goto _ret;
     }
-    else if ((config->trigger_edge & (GPIO_INTR_NEGEDGE | GPIO_INTR_POSEDGE)) == 0)
+    else if ((config->trigger_edge >= 0 && config->trigger_edge < GPIO_INTR_MAX) == 0)
     {
         ret = ESP_ERR_INVALID_ARG;
         goto _ret;

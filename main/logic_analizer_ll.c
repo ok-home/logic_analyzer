@@ -133,11 +133,12 @@ static void logic_analizer_ll_set_pin(int *data_pins, int pin_trigger, int trigg
 // attention - pin trigger gpio not defined on self diagnostic
 // attention - pin trigger irq remove default pin irq on self diagnostic
 //
+        vTaskDelay(5);
 #ifndef EXTERNAL_LOGIC_ANALIZER
 
     if (pin_trigger >= 0)
     {
-        vTaskDelay(5);
+//        vTaskDelay(5);
         gpio_install_isr_service(0); // default
         gpio_set_intr_type(pin_trigger, trigger_edge);
         gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
@@ -146,26 +147,18 @@ static void logic_analizer_ll_set_pin(int *data_pins, int pin_trigger, int trigg
 
     for (int i = 0; i < 16; i++)
     {
-        //        printf("fun out gpio %d val %lx \n", data_pins[i], GPIO.func_out_sel_cfg[data_pins[i]].val); // test only
         if (data_pins[i] < 0) // pin disable - already 0
         {
             gpio_matrix_in(0x30, I2S0I_DATA_IN0_IDX + i, false);
         }
         else
         {
-            if (GPIO.func_out_sel_cfg[data_pins[i]].val & 0x100) // if defined as GPIO
-            {
-                gpio_set_direction(data_pins[i], GPIO_MODE_INPUT_OUTPUT);
-            }
-            else // if defined as signal
-            {
-                PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[i]]);
-            }
+            PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[i]]);
             gpio_matrix_in(data_pins[i], I2S0I_DATA_IN0_IDX + i, false); // connect pin to signal
         }
     }
 #else
-    // external not tested
+    // external not tested ??
     for (int i = 0; i < 16; i++)
     {
         if (data_pins[i] < 0) // pin disable - already 0
@@ -182,7 +175,7 @@ static void logic_analizer_ll_set_pin(int *data_pins, int pin_trigger, int trigg
     }
     if (pin_trigger >= 0)
     {
-        vTaskDelay(5);
+//        vTaskDelay(5);
         gpio_install_isr_service(0); // default
         gpio_set_intr_type(pin_trigger, trigger_edge);
         gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);

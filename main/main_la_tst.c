@@ -16,7 +16,7 @@
 #define LEDC_DUTY_RES LEDC_TIMER_5_BIT // Set duty resolution to 13 bits
 #define LEDC_DUTY (15)                  // Set duty to 50%. ((2 ** 13) - 1) * 50% = 4095
 #define LEDC_FREQUENCY (500000)       // Frequency in Hertz. Set frequency at 5 kHz
-#define LEDC_OUTPUT_IO (19)            // Define the output GPIO
+//#define LEDC_OUTPUT_IO (19)            // Define the output GPIO
 
 #define GPIO_BLINK (15)
 static void example_ledc_init(void)

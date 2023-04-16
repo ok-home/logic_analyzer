@@ -15,7 +15,7 @@
 #include "sdkconfig.h"
 #include "esp_log.h"
 
-#include "sump.h"
+#include "logic_analizer_sump.h"
 
 #define BLINK_PIN 2
 QueueHandle_t blink_queue;
@@ -28,9 +28,7 @@ typedef struct blink
 
 void blink_task(void *p);
 
-// int trigger = -1;
 int first_trigger_pin = 0;
-// int trigger_values;
 int first_trigger_val = 0;
 int divider = 0;
 int readCount = 0;
@@ -44,23 +42,22 @@ static void sump_capture_and_send_samples();
 
 logic_analizer_config_t la_cfg =
     {
-        .pin = {LEDC_OUTPUT_IO, -1, 23, -1, GPIO_BLINK, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, LEDC_OUTPUT_IO},
+        .pin = {IN_PORT_1,LEDC_OUTPUT_IO, IN_PORT_2, GPIO_BLINK,  -1, GPIO_NUM_26, GPIO_NUM_27, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         //.pin = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         .pin_trigger = -1,
         .trigger_edge = GPIO_INTR_POSEDGE,
         .number_of_samples = 10000,
         .sample_rate = 1250000,
-        .meashure_timeout = 1000, // portMAX_DELAY,
+        .meashure_timeout = 2000, // portMAX_DELAY,
         .logic_analizer_cb = sump_la_cb};
 
 static void sump_capture_and_send_samples()
 {
     la_cfg.number_of_samples = readCount;
-    la_cfg.sample_rate = 100000000 / (divider + 1);
+    la_cfg.sample_rate = PULSEVIEW_MAX_SAMPLE_RATE / (divider + 1);
     if (first_trigger_pin >= 0)
     {
         la_cfg.pin_trigger = la_cfg.pin[first_trigger_pin];
-        //    send_err_blink(50,50,first_trigger_pin);
     }
     else
     {
@@ -68,10 +65,12 @@ static void sump_capture_and_send_samples()
     }
 
     la_cfg.trigger_edge = first_trigger_val ? GPIO_INTR_POSEDGE : GPIO_INTR_NEGEDGE;
-    //        send_err_blink(50,50,divider);
+
     int err = start_logic_analizer(&la_cfg);
     if (err)
+    {
         send_err_blink(50, 50, 4);
+    }
 }
 void sump_la_cb(uint16_t *buf, int cnt, int clk)
 {
@@ -80,8 +79,6 @@ void sump_la_cb(uint16_t *buf, int cnt, int clk)
         send_err_blink(50, 50, 3);
         return;
     }
-
-    // sump_write_data((uint8_t*)buf, readCount*2);
     /*
     uint16_t *buf_out = buf;
     for (int i = 0; i < readCount; i += 2)
@@ -92,28 +89,14 @@ void sump_la_cb(uint16_t *buf, int cnt, int clk)
     }
     */
     // sigrok - data send on reverse order ????
-        uint16_t *bufff = buf + readCount-1;
-        for (int i = 0; i < readCount; i += 2)
-        {
-            sump_write_data((uint8_t *)(bufff-1), 2);
-            sump_write_data((uint8_t *)(bufff), 2);
-            bufff -=2;
-        }
-    
+    uint16_t *bufff = buf + readCount - 1;
+    for (int i = 0; i < readCount; i += 2)
+    {
+        sump_write_data((uint8_t *)(bufff - 1), 2);
+        sump_write_data((uint8_t *)(bufff), 2);
+        bufff -= 2;
+    }
 }
-
-// define uart port - default port
-
-#define SUMP_TEST_TXD 1
-#define SUMP_TEST_RXD 3
-#define SUMP_TEST_RTS (UART_PIN_NO_CHANGE)
-#define SUMP_TEST_CTS (UART_PIN_NO_CHANGE)
-#define SUMP_UART_PORT_NUM 0
-#define SUMP_UART_BAUD_RATE 921600
-// 115200
-
-#define UART_BUF_SIZE (256)
-#define SUMP_TASK_STACK_SIZE (CONFIG_EXAMPLE_TASK_STACK_SIZE)
 
 static void sump_config_uart()
 {
@@ -129,7 +112,7 @@ static void sump_config_uart()
     };
     int intr_alloc_flags = ESP_INTR_FLAG_IRAM;
 
-    ESP_ERROR_CHECK(uart_driver_install(SUMP_UART_PORT_NUM, UART_BUF_SIZE * 2, 0, 0, NULL, intr_alloc_flags));
+    ESP_ERROR_CHECK(uart_driver_install(SUMP_UART_PORT_NUM, UART_BUF_SIZE, 0, 0, NULL, intr_alloc_flags));
     ESP_ERROR_CHECK(uart_param_config(SUMP_UART_PORT_NUM, &uart_config));
     ESP_ERROR_CHECK(uart_set_pin(SUMP_UART_PORT_NUM, SUMP_TEST_TXD, SUMP_TEST_RXD, SUMP_TEST_RTS, SUMP_TEST_CTS));
 }
@@ -161,18 +144,11 @@ void sump_task(void *arg)
     while (1)
     {
         uint8_t cmd = sump_getCmd();
-        // sump_writeByte(cmd);
         sump_cmd_parser(cmd);
     }
 }
 
-// test only
-// data buff size
-#define MAX_CAPTURE_SIZE 32764 * 2
-// count sample
-#define MAX_SAMPLE_COUNT MAX_CAPTURE_SIZE / 2
-// max sample clock HZ
-#define MAX_SAMPLE_RATE 20000000
+
 /*
  *  SUMP COMMAND DEFINITION
  */
@@ -204,7 +180,7 @@ void sump_task(void *arg)
 #define SUMP_SET_DIVIDER 0x80
 #define SUMP_SET_READ_DELAY_COUNT 0x81
 #define SUMP_SET_FLAGS 0x82
-#define SUMP_SET_RLE 0x0100
+//#define SUMP_SET_RLE 0x0100
 
 /* extended commands -- self-test unsupported, but metadata is returned. */
 #define SUMP_SELF_TEST 0x03
@@ -216,10 +192,14 @@ void sump_task(void *arg)
  */
 static void sump_cmd_parser(uint8_t cmdByte)
 {
-   static  int trigger = 0;
-   static  int trigger_values = 0;
-
-    uint8_t cmd4[4]; // four cmd buff
+    static int trigger = 0;
+    static int trigger_values = 0;
+    union ucmd
+    {
+        uint32_t u_cmd32;
+        uint16_t u_cmd16[2];
+        uint8_t u_cmd8[4];
+    } cmd;
     switch (cmdByte)
     {
     case SUMP_RESET:
@@ -231,10 +211,8 @@ static void sump_cmd_parser(uint8_t cmdByte)
         sump_capture_and_send_samples();
         break;
     case SUMP_TRIGGER_MASK_CH_A:
-        sump_getCmd4(cmd4);
-        trigger = cmd4[1] & 0xff;
-        trigger <<= 8;
-        trigger |= cmd4[0];
+        sump_getCmd4(cmd.u_cmd8);
+        trigger = cmd.u_cmd32&0xffff;
         first_trigger_pin = -1; // trigger not defined
         if (trigger)
         {
@@ -247,10 +225,8 @@ static void sump_cmd_parser(uint8_t cmdByte)
         }
         break;
     case SUMP_TRIGGER_VALUES_CH_A:
-        sump_getCmd4(cmd4);
-        trigger_values = cmd4[1] & 0xff;
-        trigger_values <<= 8;
-        trigger_values |= cmd4[0];
+        sump_getCmd4(cmd.u_cmd8);
+        trigger_values = cmd.u_cmd32&0xffff;
         first_trigger_val = 0;
         if (trigger)
         {
@@ -267,27 +243,19 @@ static void sump_cmd_parser(uint8_t cmdByte)
     case SUMP_TRIGGER_CONFIG_CH_B:
     case SUMP_TRIGGER_CONFIG_CH_C:
     case SUMP_TRIGGER_CONFIG_CH_D:
-        sump_getCmd4(cmd4);
+        sump_getCmd4(cmd.u_cmd8);
         break;
     case SUMP_SET_DIVIDER: // divider from freq ????
-        sump_getCmd4(cmd4);
-        divider = cmd4[2];
-        divider = divider << 8;
-        divider += cmd4[1];
-        divider = divider << 8;
-        divider += cmd4[0];
+        sump_getCmd4(cmd.u_cmd8);
+        divider = cmd.u_cmd32 & 0xffffff;
         break;
     case SUMP_SET_READ_DELAY_COUNT: // samples or bytes ??????
-        sump_getCmd4(cmd4);
-        readCount = 4 * (((cmd4[1] << 8) | cmd4[0]) + 1);
-        if (readCount > MAX_SAMPLE_COUNT)
-            readCount = MAX_SAMPLE_COUNT;
-        delayCount = 4 * (((cmd4[3] << 8) | cmd4[2]) + 1);
-        if (delayCount > MAX_SAMPLE_COUNT)
-            delayCount = MAX_SAMPLE_COUNT;
+        sump_getCmd4(cmd.u_cmd8);
+        readCount = ((cmd.u_cmd16[0]&0xffff)+1)*4;
+        delayCount = ((cmd.u_cmd16[1]&0xffff)+1)*4;
         break;
     case SUMP_SET_FLAGS:
-        sump_getCmd4(cmd4);
+        sump_getCmd4(cmd.u_cmd8);
         break;
     case SUMP_GET_METADATA:
         sump_get_metadata();
@@ -303,7 +271,6 @@ static void sump_get_metadata()
 {
     /* device name */
     sump_writeByte((uint8_t)0x01);
-    // OLS_Port.write("AGLAMv0");
     sump_write_data((uint8_t *)"ESP32", 6);
     /* firmware version */
     sump_writeByte((uint8_t)0x02);

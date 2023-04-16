@@ -19,7 +19,8 @@
 			"gpio.h": "c",
 			"logic_analizer.h": "c",
 			"logic_analizer_ll.h": "c",
-			"gpio_types.h": "c"
+			"gpio_types.h": "c",
+			"logic_analizer_hal.h": "c"
 		}
 	}
 }
