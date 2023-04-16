@@ -1,14 +1,28 @@
+/* logic analizer i2c test sample example
+
+   This example code is in the Public Domain (or CC0 licensed, at your option.)
+
+   Unless required by applicable law or agreed to in writing, this
+   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+   CONDITIONS OF ANY KIND, either express or implied.
+*/
+
 #include <stdio.h>
 #include "esp_log.h"
 #include "driver/i2c.h"
 #include "string.h"
 
+#include "logic_analizer_pin_definition.h"
+
 #define TAG "CJMCU_8118"
 
 #define portTICK_RATE_MS portTICK_PERIOD_MS
 
-#define CJMCU_8118_I2C_SDA_IO GPIO_NUM_26
-#define CJMCU_8118_I2C_SCL_IO GPIO_NUM_27
+//#define CJMCU_8118_I2C_SDA_IO GPIO_NUM_26
+//#define CJMCU_8118_I2C_SCL_IO GPIO_NUM_27
+#define CJMCU_8118_I2C_SDA_IO I2C_PIN_SDA
+#define CJMCU_8118_I2C_SCL_IO I2C_PIN_SCL
+
 #define CJMCU_8118_I2C_FREQ_HZ 100000
 
 #define MAX_I2C_RXTX_BUF   15        
@@ -513,7 +527,7 @@ void AirReadTask(void *p)
                 ESP_LOGE(TAG, "CCS811 ERR WRITE TEMP & HUM  %d\n", ret);
             }
         }
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 

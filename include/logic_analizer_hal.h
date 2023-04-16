@@ -36,7 +36,7 @@ typedef struct {
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  *     - ESP_ERR_NO_MEM No memory to initialize logic_analizer
- *     - ?????????????? - logic_analizer already working
+ *     - 9 - logic_analizer already working
  *     - ESP_FAIL Initialize fail
  */
 esp_err_t start_logic_analizer(logic_analizer_config_t *config);

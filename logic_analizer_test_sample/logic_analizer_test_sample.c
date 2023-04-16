@@ -1,25 +1,27 @@
+/* logic analizer test sample example
+
+   This example code is in the Public Domain (or CC0 licensed, at your option.)
+
+   Unless required by applicable law or agreed to in writing, this
+   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+   CONDITIONS OF ANY KIND, either express or implied.
+*/
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
-
-#include "logic_analizer_hal.h"
-#include "logic_analizer_sump.h"
-
 #include "driver/ledc.h"
 #include "driver/gpio.h"
 
-
+#include "logic_analizer_pin_definition.h"
 
 #define LEDC_TIMER LEDC_TIMER_0
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
 #define LEDC_CHANNEL LEDC_CHANNEL_0
-#define LEDC_DUTY_RES LEDC_TIMER_4_BIT // Set duty resolution to 13 bits
-#define LEDC_DUTY (8)                  // Set duty to 50%. ((2 ** 13) - 1) * 50% = 4095
-#define LEDC_FREQUENCY (500000)       // Frequency in Hertz. Set frequency at 5 kHz
-//#define LEDC_OUTPUT_IO (22)            // Define the output GPIO
+#define LEDC_DUTY_RES LEDC_TIMER_4_BIT // Set duty resolution to 
+#define LEDC_DUTY (8)                  // Set duty to 50%. 
+#define LEDC_FREQUENCY (500000)       // Frequency in Hertz. Set frequency at 500 kHz
 
-//#define GPIO_BLINK (15)
 static void example_ledc_init(void)
 {
     // Prepare and then apply the LEDC PWM timer configuration

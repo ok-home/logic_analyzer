@@ -1,2 +1,0 @@
-idf_component_register(SRCS "logic_analizer_test_i2c.c" "logic_analizer_test_sample.c"
-                    INCLUDE_DIRS "../../include")

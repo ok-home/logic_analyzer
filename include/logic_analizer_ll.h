@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_heap_caps.h"
@@ -14,9 +13,13 @@
 
 #define LA_CLK_SAMPLE_RATE 80000000
 #define LA_MAX_SAMPLE_RATE 20000000
-#define LA_MIN_SAMPLE_RATE 4000
+#define LA_MIN_SAMPLE_RATE 5000
 #define LA_TASK_STACK 2048
 #define DMA_FRAME 4092
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Data structure of logic analizer frame buffer
@@ -79,3 +82,7 @@ void logic_analizer_ll_deinit_dma_eof_isr();
  *  @return  real sample rate
 */
 int logic_analizer_ll_get_sample_rate(int sample_rate);
+
+#ifdef __cplusplus
+}
+#endif

@@ -1,4 +1,4 @@
-/* UART Echo Example
+/* logic analizer sump example
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
@@ -6,49 +6,37 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
-#include <stdio.h>
-#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/uart.h"
 #include "driver/gpio.h"
-#include "sdkconfig.h"
-#include "esp_log.h"
 
+#include "logic_analizer_pin_definition.h"
+#include "logic_analizer_hal.h"
 #include "logic_analizer_sump.h"
 
-#define BLINK_PIN 2
-QueueHandle_t blink_queue;
-typedef struct blink
-{
-    int on_time;
-    int off_time;
-    int repeat;
-} blink_t;
-
-void blink_task(void *p);
-
-int first_trigger_pin = 0;
-int first_trigger_val = 0;
-int divider = 0;
-int readCount = 0;
-int delayCount = 0;
+static int first_trigger_pin = 0;
+static int first_trigger_val = 0;
+static int divider = 0;
+static int readCount = 0;
+static int delayCount = 0;
 
 static void sump_write_data(uint8_t *buf, int len);
 static void sump_writeByte(uint8_t byte);
 static void sump_cmd_parser(uint8_t cmdByte);
 static void sump_get_metadata();
 static void sump_capture_and_send_samples();
+static void sump_la_cb(uint16_t *buf, int cnt, int clk);
 
 logic_analizer_config_t la_cfg =
     {
-        .pin = {IN_PORT_1,LEDC_OUTPUT_IO, IN_PORT_2, GPIO_BLINK,  -1, GPIO_NUM_26, GPIO_NUM_27, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-        //.pin = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-        .pin_trigger = -1,
+        .pin = {LA_PIN_0,LA_PIN_1,LA_PIN_2,LA_PIN_3,LA_PIN_4,LA_PIN_5,LA_PIN_6,LA_PIN_7,LA_PIN_8,LA_PIN_9,LA_PIN_10,LA_PIN_11,LA_PIN_12,LA_PIN_13,LA_PIN_14,LA_PIN_15},
+
+        .pin_trigger = LA_PIN_TRIGGER,
         .trigger_edge = GPIO_INTR_POSEDGE,
-        .number_of_samples = 10000,
-        .sample_rate = 1250000,
-        .meashure_timeout = 2000, // portMAX_DELAY,
+        .number_of_samples = MAX_SAMPLE_COUNT,
+        .sample_rate = MAX_SAMPLE_RATE,
+        .meashure_timeout = LA__DEFAULT_TiMEOUT, // portMAX_DELAY,
         .logic_analizer_cb = sump_la_cb};
 
 static void sump_capture_and_send_samples()
@@ -69,25 +57,15 @@ static void sump_capture_and_send_samples()
     int err = start_logic_analizer(&la_cfg);
     if (err)
     {
-        send_err_blink(50, 50, 4);
+      return;  
     }
 }
-void sump_la_cb(uint16_t *buf, int cnt, int clk)
+static void sump_la_cb(uint16_t *buf, int cnt, int clk)
 {
     if (buf == NULL)
     {
-        send_err_blink(50, 50, 3);
         return;
     }
-    /*
-    uint16_t *buf_out = buf;
-    for (int i = 0; i < readCount; i += 2)
-    {
-        sump_write_data((uint8_t *)(buf_out + 1), 2);
-        sump_write_data((uint8_t *)(buf_out), 2);
-        buf_out += 2;
-    }
-    */
     // sigrok - data send on reverse order ????
     uint16_t *bufff = buf + readCount - 1;
     for (int i = 0; i < readCount; i += 2)
@@ -137,9 +115,8 @@ static void sump_writeByte(uint8_t byte)
 }
 
 // loop read sump command // test only
-void sump_task(void *arg)
+void logic_analizer_sump_task(void *arg)
 {
-    xTaskCreate(blink_task, "blink_task", 2048 * 4, NULL, 1, NULL);
     sump_config_uart();
     while (1)
     {
@@ -148,43 +125,6 @@ void sump_task(void *arg)
     }
 }
 
-
-/*
- *  SUMP COMMAND DEFINITION
- */
-
-/* XON/XOFF are not supported. */
-#define SUMP_RESET 0x00
-#define SUMP_ARM 0x01
-#define SUMP_QUERY 0x02
-#define SUMP_XON 0x11
-#define SUMP_XOFF 0x13
-
-/* mask & values used, config ignored. only stage0 supported */
-#define SUMP_TRIGGER_MASK_CH_A 0xC0
-#define SUMP_TRIGGER_MASK_CH_B 0xC4
-#define SUMP_TRIGGER_MASK_CH_C 0xC8
-#define SUMP_TRIGGER_MASK_CH_D 0xCC
-
-#define SUMP_TRIGGER_VALUES_CH_A 0xC1
-#define SUMP_TRIGGER_VALUES_CH_B 0xC5
-#define SUMP_TRIGGER_VALUES_CH_C 0xC9
-#define SUMP_TRIGGER_VALUES_CH_D 0xCD
-
-#define SUMP_TRIGGER_CONFIG_CH_A 0xC2
-#define SUMP_TRIGGER_CONFIG_CH_B 0xC6
-#define SUMP_TRIGGER_CONFIG_CH_C 0xCA
-#define SUMP_TRIGGER_CONFIG_CH_D 0xCE
-
-/* Most flags are ignored. */
-#define SUMP_SET_DIVIDER 0x80
-#define SUMP_SET_READ_DELAY_COUNT 0x81
-#define SUMP_SET_FLAGS 0x82
-//#define SUMP_SET_RLE 0x0100
-
-/* extended commands -- self-test unsupported, but metadata is returned. */
-#define SUMP_SELF_TEST 0x03
-#define SUMP_GET_METADATA 0x04
 
 /*
  *   @brief main sump command loop
@@ -299,34 +239,3 @@ static void sump_get_metadata()
     sump_writeByte((uint8_t)0x00);
 }
 
-void blink_task(void *p)
-{
-    gpio_config_t cfg = {
-        .pin_bit_mask = 1ULL << BLINK_PIN,
-        .mode = GPIO_MODE_OUTPUT,
-        .intr_type = GPIO_INTR_DISABLE};
-    blink_t blink_data;
-    gpio_config(&cfg);
-    blink_queue = xQueueCreate(10, sizeof(blink_t));
-    gpio_set_level(BLINK_PIN, 0);
-    while (1)
-    {
-        xQueueReceive(blink_queue, &blink_data, portMAX_DELAY);
-        while (blink_data.repeat--)
-        {
-            gpio_set_level(BLINK_PIN, 1);
-            vTaskDelay(blink_data.on_time);
-            gpio_set_level(BLINK_PIN, 0);
-            vTaskDelay(blink_data.off_time);
-        };
-    }
-}
-
-void send_err_blink(int on_time, int off_time, int repeat)
-{
-    blink_t on_off;
-    on_off.on_time = on_time;
-    on_off.off_time = off_time;
-    on_off.repeat = repeat;
-    xQueueSend(blink_queue, &on_off, portMAX_DELAY);
-}

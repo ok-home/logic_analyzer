@@ -1,35 +1,54 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-S2 | ESP32-S3 |
-| ----------------- | ----- | -------- | -------- | -------- | -------- |
+| Supported Targets | 
+| ----------------- | 
 
-# _Sample project_
+# Логический анализатор на ESP32
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+![PulseView](/sigrok_esp.jpg)
 
-This is the simplest buildable example. The example is used by command `idf.py create-project`
-that copies the project to user specified path and set it's name. For more information follow the [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project)
+## Основные параметры
+ - 16 каналов.
+ - 20 мегегерц.  - максимальная частота сэмплов
+ - 32764 - максимальное количество сэмплов в кадре ( буфер захвата ). Объем ограничен максимальным размером свободной SDRAM.
+ - 1 канал триггера захвата. Триггер организован на прерываниях по фронтам. ESP32 прерывания обрабатываются примерно 2 мкСек - если частота на триггере больше 500 кГц, захват может не отработать. Соответственно задержка от триггера до начала данных, около 2-х мкСек.
+ - Используется внутренний клок сэмплов, нет необходимости ставить перемычки для подачи синхроимпульсов или использовать внешний генератор. Пины под синхроимпульсы не используются.
+ - Анализатор позволяет работать на измеряемом устройстве. Устанавливаем софт на пациента настраиваем GPIO на каналы ( проверено - простой GPIO, I2C, LED PWM, думаю что остальное также будет работать ), показывает как входные так и выходные сигналы пациента. Ограничения по триггеру в этом режиме - нельзя назначить триггер на пин (GPIO) у которого назначено прерывание на софте пациента ( анализатор перенастроит на себя )
+ - Можно сделать анализатор как отдельное устройство, но не вижу особого смысла На Ali достаточное количество дешевых аналогов с похожими харатеристиками. Основное преимущество самодиагностики - прилинковали софт к проекту и смотрим что там происходит. Понятно что софт пациента может уже использовать всю SDRAM - тогда сильно уменьшится объем сэмплов - но хотя бы уровни и небольшое количество отсчетов все равно увидим.
+ ## В качестве визуализации используется Sigrok PulseView
+  - Открытый софт
+  - Много анализаторов протокола
+  - используется UART для получения данных, протокол передачи "Openbench logic Sniffer & SUMP"
+  - по умолчанию используется UART0 ESP32 можно ( а лучше нужно ) использовать другой порт если он есть на вашем устройстве.
+  ## Известные баги
+  - при использовании UART0 - необходимо отключить весь дигностический вывод ESP32 (LOG LEVEL - NONE ), это не баг но существенное ограничение.
+  - PulseView - для получения данных нужно нажать RUN 2 раза с интервалом 1-2 секунды ( причину не знаю )
+  - PulseView - в режиме триггера не работает с кадрами меньще 1к ( причину не знаю )
+  - PulseView - не принимает параметр максимальной частоты сэмплов - легко увидите частоты 50/100/200 мегаГерц.
+  - PulseView - не работает предвыборка триггера ( ставим 0% ) - просто не делал, и в текущей архитектуре невозможно.
+  # Подключение PulseView
+  - Connect to device
+  - Choose the driver - Openbench logic Sniffer & SUMP
+  - Serial Port - Speed - 921610 ( скорость можно переопределить, на моем кабеле работает на этой скорости )
+  - Scan for Device - должен появиться ESP32 wiht 16 channal
+  - Дальше читаем руководство по PulseView.
+  # Интерфейс программы
+  ## Условно состоит из 2-частей
+  ### include/logic_analizer_pin_definition.h
+   - определение пинов и констант
+  ### include/logic_analizer_hal.h
+  - Получает сэмплы в буфер ESP32
+  - logic_analizer_config_t - конфигурация захвата
+  - start_logic_analizer(logic_analizer_config_t *config) - старт захвата
+  - void (*logic_analizer_cb_t)(uint16_t *samle_buf, int samples, int sample_rate) - каллбэк после захвата данных
+  ### include/logic_analizer_sump.h
+  - работа с PulseView 
+  - logic_analizer_sump_task(void *arg) 
+  ## Пример с тестовыми сэмплами
+  ### main/main_la.c
+  - test_sample_init() - включает простой генератор на 500 килогерц, и пачку GPIO имульсов с большой скважностью. Никаких дополнительных подключений, проводков и пр. не нужно, уже будет показывать внутренности. При желании можете поставить 2 перемычки на пины (18-22,19-23) - продублирует сигналы
+  - test_air() - подключен дополнительный модуль i2c - CJMCU_8118  - то что было под руками.
 
+## В проекте использованы части кода
+ - [esp32-cam](https://github.com/espressif/esp32-camera) for I2S DMA
+ - [EUA/ESP32_LogicAnalyzer](https://github.com/EUA/ESP32_LogicAnalyzer) for SUMP
 
-
-## How to use example
-We encourage the users to use the example as a template for the new projects.
-A recommended way is to follow the instructions on a [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project).
-
-## Example folder contents
-
-The project **sample_project** contains one source file in C language [main.c](main/main.c). The file is located in folder [main](main).
-
-ESP-IDF projects are built using CMake. The project build configuration is contained in `CMakeLists.txt`
-files that provide set of directives and instructions describing the project's source files and targets
-(executable, library, or both). 
-
-Below is short explanation of remaining files in the project folder.
-
-```
-├── CMakeLists.txt
-├── main
-│   ├── CMakeLists.txt
-│   └── main.c
-└── README.md                  This is the file you are currently reading
-```
-Additionally, the sample project contains Makefile and component.mk files, used for the legacy Make based build system. 
-They are not used or needed when building with CMake and idf.py.
+### Проект делался под себя поэтому пожелания добавления и исправления только при желании и возможности.

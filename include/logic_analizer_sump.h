@@ -1,18 +1,5 @@
 #pragma once
 
-#include "logic_analizer_hal.h"
-
-#define PULSEVIEW_MAX_SAMPLE_RATE 100000000
-
-
-// definition test_sample
-#define LEDC_OUTPUT_IO (18)  
-#define GPIO_BLINK (19)
-
-#define IN_PORT_1 (22)
-#define IN_PORT_2 (23)
-
-
 // define uart port - default port
 #define SUMP_UART_PORT_NUM 0
 #define SUMP_TEST_TXD 1
@@ -22,13 +9,49 @@
 #define SUMP_UART_BAUD_RATE 921600
 #define UART_BUF_SIZE (256)
 
-// data buff size
-#define MAX_CAPTURE_SIZE (32764 * 2)
-// count sample
-#define MAX_SAMPLE_COUNT (MAX_CAPTURE_SIZE / 2)
-// max sample clock HZ
-#define MAX_SAMPLE_RATE 20000000
+/*
+ *  SUMP COMMAND DEFINITION
+ */
 
-void sump_task(void *arg);
-void sump_la_cb(uint16_t *buf, int cnt, int clk);
-void send_err_blink(int on_time, int off_time, int repeat);
+/* XON/XOFF are not supported. */
+#define SUMP_RESET 0x00
+#define SUMP_ARM 0x01
+#define SUMP_QUERY 0x02
+#define SUMP_XON 0x11
+#define SUMP_XOFF 0x13
+
+/* mask & values used, config ignored. only stage0 supported */
+#define SUMP_TRIGGER_MASK_CH_A 0xC0
+#define SUMP_TRIGGER_MASK_CH_B 0xC4
+#define SUMP_TRIGGER_MASK_CH_C 0xC8
+#define SUMP_TRIGGER_MASK_CH_D 0xCC
+
+#define SUMP_TRIGGER_VALUES_CH_A 0xC1
+#define SUMP_TRIGGER_VALUES_CH_B 0xC5
+#define SUMP_TRIGGER_VALUES_CH_C 0xC9
+#define SUMP_TRIGGER_VALUES_CH_D 0xCD
+
+#define SUMP_TRIGGER_CONFIG_CH_A 0xC2
+#define SUMP_TRIGGER_CONFIG_CH_B 0xC6
+#define SUMP_TRIGGER_CONFIG_CH_C 0xCA
+#define SUMP_TRIGGER_CONFIG_CH_D 0xCE
+
+/* Most flags are ignored. */
+#define SUMP_SET_DIVIDER 0x80
+#define SUMP_SET_READ_DELAY_COUNT 0x81
+#define SUMP_SET_FLAGS 0x82
+//#define SUMP_SET_RLE 0x0100
+
+/* extended commands -- self-test unsupported, but metadata is returned. */
+#define SUMP_SELF_TEST 0x03
+#define SUMP_GET_METADATA 0x04
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void logic_analizer_sump_task(void *arg);
+
+#ifdef __cplusplus
+}
+#endif
