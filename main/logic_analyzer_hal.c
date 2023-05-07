@@ -18,6 +18,18 @@ static la_frame_t la_frame = {
 static TaskHandle_t logic_analyzer_task_handle = 0; // main task handle
 static int logic_analyzer_started = 0;              // flag start dma
 
+// sample sequence in 32 word - adr0=sample1, adr1=sample0 
+// swap sample sequence
+static inline void swap_buf(uint16_t* buf,int cnt){
+    uint16_t tmp;
+    for( int i=0;i<cnt;i+=2)
+    {
+        tmp = buf[i];
+        buf[i]=buf[i+1];
+        buf[i+1]=tmp;
+    }
+}
+
 /**
  * @brief allocate dma descriptor
  *
@@ -98,8 +110,8 @@ static void logic_analyzer_task(void *arg)
         {
             // dma data ready
             // sample sequence in 32 word - adr0=sample1, adr1=sample0 
-            // swap sample sequence if necessary
-            // for sump sample swap on uart tx
+            // swap sample sequence
+            swap_buf((uint16_t *)la_frame.fb.buf,la_frame.fb.len / 2);
             cfg->logic_analyzer_cb((uint16_t *)la_frame.fb.buf, la_frame.fb.len / 2, logic_analyzer_ll_get_sample_rate(cfg->sample_rate));
             logic_analyzer_stop(); // todo stop & clear on task or external ??
             vTaskDelete(logic_analyzer_task_handle);

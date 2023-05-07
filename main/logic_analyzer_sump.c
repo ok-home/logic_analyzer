@@ -67,13 +67,13 @@ static void sump_la_cb(uint16_t *buf, int cnt, int clk)
         return;
     }
     // sigrok - data send on reverse order ????
-    uint16_t *bufff = buf + readCount - 1;
-    for (int i = 0; i < readCount; i += 2)
+   uint16_t *bufff = buf + readCount - 1;
+    for (int i = 0; i < readCount; i++)
     {
-        sump_write_data((uint8_t *)(bufff - 1), 2);
         sump_write_data((uint8_t *)(bufff), 2);
-        bufff -= 2;
+        bufff--;
     }
+
 }
 
 static void sump_config_uart()
