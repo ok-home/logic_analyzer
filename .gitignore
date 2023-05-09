@@ -1,5 +1,4 @@
 /.devcontainer
-/.vscode
 /logic_analyzer_example/.vscode
 /logic_analyzer_example/.devcontainer
 /logic_analyzer_example/build
