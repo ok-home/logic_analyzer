@@ -11,10 +11,10 @@
 
 // if define external logic analyzer - define pin as gpio input
 // else - self diagnostic analyzer - define pin as defined on firmware + input to i2s
-// comment/uncomment define
 
-//#define EXTERNAL_LOGIC_ANALIZER 1
-#undef EXTERNAL_LOGIC_ANALIZER
+#ifdef CONFIG_ANALYZER_IN_APP_MODE
+#define IN_APP_LOGIC_ANALIZER
+#endif
 
 #define gpio_matrix_in(a, b, c) esp_rom_gpio_connect_in_signal(a, b, c)
 
@@ -143,11 +143,10 @@ static void logic_analyzer_ll_set_pin(int *data_pins, int pin_trigger, int trigg
 // attention - pin trigger irq remove default pin irq on self diagnostic
 //
         vTaskDelay(5);
-#ifndef EXTERNAL_LOGIC_ANALIZER
+#ifdef IN_APP_LOGIC_ANALIZER
 
     if (pin_trigger >= 0)
     {
-//        vTaskDelay(5);
         gpio_install_isr_service(0); // default
         gpio_set_intr_type(pin_trigger, trigger_edge);
         gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
@@ -184,7 +183,6 @@ static void logic_analyzer_ll_set_pin(int *data_pins, int pin_trigger, int trigg
     }
     if (pin_trigger >= 0)
     {
-//        vTaskDelay(5);
         gpio_install_isr_service(0); // default
         gpio_set_intr_type(pin_trigger, trigger_edge);
         gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);

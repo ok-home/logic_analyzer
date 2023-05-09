@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+<style>
+    #parent {
+        width: 100%;
+        height: 430px;
+        border: 1px solid #000;
+        overflow: auto;
+    }
+
+    .chs {
+        width: 100%;
+        float: left;
+        text-align: center;
+    }
+
+    .cl1 {
+        float: left;
+        width: 12%;
+        margin: 2px;
+        margin-top: 2px;
+        margin-bottom: 2px;
+    }
+
+    .cl01 {
+        float: left;
+        width: 100%;
+        text-align: center;
+        margin-top: 2px;
+        margin-bottom: 2px;
+    }
+
+    .cl02 {
+        float: left;
+        width: 100%;
+        text-align: center;
+        margin-top: 2px;
+        margin-bottom: 2px;
+    }
+
+    .button {
+        border: 0;
+        line-height: 1.5;
+        padding: 0 10px;
+        font-size: 1rem;
+        text-align: center;
+        border-radius: 5px;
+    }
+</style>
+
+<head>
+    <title>ESP32 logic analyzer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" >
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" >
+</head>
+
+<body>
+    <div class="chs" id="start">
+    </div>
+    <div id="parent">
+        <canvas id="myCanvas" width="2050" height="400" style="border:1px solid #000000;"></canvas>
+    </div>
+    <div class="chs" id="config">
+    </div>
+    <div class="chs" id="wifi">
+    </div>
+    <div id="datalist">
+    </div>
+    <div id="EchoString" class="logstr">ОШИБКА ПЕРЕДАЧИ</div>
+</body>
+
+<template id="tpl_list">
+    <datalist id=lst>
+    </datalist>
+</template>
+<template id="tpl_opt">
+    <option>
+</template>
+<script> // option template
+    function tpl_datalist(row) {
+        let ins = document.querySelector('#' + row.hdrID) // куда вставлять шаблон
+        if (!ins) return;
+        let tpl = document.querySelector('#tpl_list');
+        if (!tpl) return;
+        let cln = tpl.content.cloneNode(true);
+        let clnd = cln.querySelector("datalist");
+        clnd.id = row.rowID;
+        ins.appendChild(cln);
+    }
+    function tpl_options(row) {
+        let ins = document.querySelector('#' + row.rowID) // куда вставлять шаблон
+        if (!ins) return;
+        let tpl = document.querySelector('#tpl_opt');
+        if (!tpl) return;
+        cln = tpl.content.cloneNode(true);
+        clnd = cln.querySelector("option")
+        clnd.value = row.rowVal;
+        clnd.innerText = row.rowLbl;
+        ins.appendChild(cln);
+    }
+</script>
+<template id="tpl_input">
+    <div class="cl1">
+        <label class="cl01" for="r1"></label>
+        <input class="cl02" list="lst00" id="r1">
+    </div>
+</template>
+<script> // config data template
+    function tpl_input(row) {
+        // evt idx for template
+        let evtIdx = [
+            null,
+            checkCfgData,
+            startMeashure,
+            zoomToFit,
+            saveByteArray
+        ];
+
+        let ins = document.querySelector('#' + row.hdrID) // куда вставлять шаблон
+        if (!ins) return;
+        let tpl = document.querySelector('#tpl_input'); // шаблон
+        if (!tpl) return;
+        let cln = tpl.content.cloneNode(true);  // клонируем шаблон
+        let lbl = cln.querySelector("label");   // находим заголовок 
+        let inp = cln.querySelector("input");   // находим поле ввода
+        lbl.textContent = row.rowLbl;           // вставляем заголовок
+        lbl.htmlFor = row.rowID;                // привязываем заголовок к полю ввода
+        inp.id = row.rowID;                     // уникальный номер поля ввода
+        if (row.rowVal) { inp.value = row.rowVal; } else { inp.value = 0; };
+        if (row.rowType) { inp.type = row.rowType; } else { inp.type = "text"; };
+        if (row.rowMax) { inp.max = row.rowMax; } else { inp.max = 0; };
+        if (row.rowMin) { inp.min = row.rowMin; } else { inp.min = 0; };
+        if (row.rowStep) { inp.step = row.rowStep; } else { inp.step = 1; };
+        if (row.rowList) { inp.setAttribute('list', row.rowList); };
+        if (row.rowDis) { if (row.rowDis == 1) { inp.disabled = true; } else { inp.disabled = false; }; }
+        if (row.rowEvent && row.rowEvent != null) {
+            if (inp.type == "button") { inp.addEventListener("click", evtIdx[row.rowEvent]); }
+            else { inp.addEventListener("blur", evtIdx[row.rowEvent]); }
+        }
+        ins.appendChild(cln);                   // добавить шаблон в DOM
+        //        ins = document.querySelector('#'+row.rowID).setAttribute('list', row.rowList);; // куда вставлять шаблон
+    }
+</script>
+<script> // data definition
+    const x_bord = 50;
+    const y_bord = 50;
+    const zoom_inc = 0.025;
+    const min_cnt = 32;
+    const max_channels = 16;
+
+    let statusstr = document.getElementById("EchoString");
+    let canvas = document.getElementById("myCanvas");
+    let ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+    let x_canvas = canvas.width;
+    let y_canvas = canvas.height;
+    let max_cnt = 10000;
+    let curr_cnt = max_cnt;
+    let clock_cnt = 1000000; // clock count HZ
+    let clock_time_sek = 1 / clock_cnt;// clock time
+    let curr_canvas_x_point = 0;
+    let curr_array_start_point = 0;
+    let click_array_point = curr_array_start_point;//zoom point
+    let imgMarker;//save float marker
+    let marker_canvas_x_point = 0;// float marker
+    let mark_curr_canvas_x_point = 0;
+    let mark_click_array_point = curr_array_start_point;
+    var analyzerData = new Uint16Array(max_cnt);
+</script>
+<script> //analyser drawing
+    function drawLine(l_arr, l_channelName, l_channel, l_channels, l_start, l_cnt) {
+        let round_floor = l_start - Math.floor(l_start);  // round err
+        l_start = Math.floor(l_start);                  // to int
+        // start point in canvas
+        let y_channel_step = (y_canvas - y_bord) / l_channels;
+        let y_step = y_channel_step / 2;
+        let y_start = y_bord + (y_channel_step * (l_channel + 0.75));
+        let x_start = x_bord;
+        let x_step = (x_canvas - x_bord) / l_cnt;
+        // data mask & data
+        let d_mask = 1 << l_channelName.chNumber;
+        let data;
+        let data_pre = l_arr[l_start] & d_mask;
+        if (data_pre) y_start -= y_step;
+        // x y point
+        let x_shift = x_step * round_floor;  // step shift
+        let x = x_start - x_shift;
+        let y = y_start;
+        // prepoint
+        let x_pre = x_start;
+        let y_pre = y_start;
+        // stop idx
+        let stop_idx = l_start + l_cnt;
+        // draw line
+        ctx.beginPath();
+        ctx.lineDashOffset = 0;
+        ctx.setLineDash([]);
+
+        if (l_channel >= 0) {
+            ctx.moveTo(x_start, y_start);
+            for (let idx = l_start; idx < stop_idx; idx++) {
+                data = l_arr[idx] & d_mask;
+                if (data_pre != data) // data change
+                {
+                    ctx.lineTo(x, y);
+                    y = data ? y - y_step : y + y_step;
+                    ctx.lineTo(x, y);
+                    x_pre = x;
+                    y_pre = y;
+                    data_pre = data;
+                }
+                x += x_step;
+            }
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            // add left border
+            ctx.beginPath();
+            ctx.lineWidth = 2;
+            ctx.lineDashOffset = x_shift;
+            ctx.setLineDash([1, x_step - 1]);
+            y = y_channel_step * l_channel + y_bord;
+            ctx.moveTo(x_bord, y);
+            ctx.lineTo(x_canvas, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.lineWidth = 1;
+            ctx.setLineDash([]);
+            ctx.textAlign = "center";
+            ctx.fillText(l_channelName.chName, x_bord / 2, y + y_channel_step / 2 - 5);
+            ctx.fillText(l_channelName.gpioName, x_bord / 2, y + y_channel_step / 2 + 5);
+            ctx.stroke();
+            // end left border
+        }
+        if (l_channel == -1) // top border
+        {
+            let label_step = 0;
+            let tmp = 10000;
+            for (; ; tmp /= 10) {
+                if (l_cnt / tmp >= 10) { label_step = tmp; break; }
+                if (l_cnt / (tmp / 2) >= 10) { label_step = tmp / 2; break; }
+                if (l_cnt / (tmp / 5) >= 10) { label_step = tmp / 5; break; }
+            }
+            x = x_start - x_shift;
+            y = 25;
+            for (let idx = l_start; idx < stop_idx; idx++) {
+                if (idx % label_step == 0) {
+                    ctx.moveTo(x, y - 10);
+                    ctx.lineTo(x, y + 10);
+                    drawTime(idx, x, 10);
+                }
+                if (idx % (label_step / 10) == 0) {
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x, y + 10);
+                }
+                x += x_step;
+            }
+            ctx.stroke();
+        }
+    }
+    function drawLineS(l_arr, l_channels, l_start, l_cnt) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        drawXMarker();
+        let cfgCntCh = [];
+        let tmpl = document.querySelector('#config').querySelectorAll('input');
+        for (let tmp of tmpl) {
+            let ch = tmp.id.split("pin")[1];
+            if (ch && tmp.value >= 0) {
+                cfgCntCh.push({ chName: "CHAN " + ch, gpioName: "GPIO " + tmp.value, chNumber: Number(ch) });
+            }
+        }
+        l_channels = cfgCntCh.length;
+        for (let idx = 0; idx < l_channels; idx++) {
+            drawLine( l_arr, cfgCntCh[idx], idx, l_channels, l_start, l_cnt);
+        }
+        drawLine( l_arr, -1, -1, l_channels, l_start, l_cnt);//draw top border
+        imgMarker = ctx.getImageData(x_bord + marker_canvas_x_point - 50, 30, 100, 20, { willReadFrequently: true });
+        drawTimeMarker();
+    }
+    function drawXMarker() {
+        x = ((mark_click_array_point - curr_array_start_point) / curr_cnt) * (x_canvas - x_bord);
+        ctx.beginPath();
+        ctx.lineDashOffset = 0;
+        ctx.setLineDash([]);
+
+        ctx.moveTo(x + x_bord, 0);
+        ctx.lineTo(x + x_bord, y_canvas);
+        ctx.stroke();
+    }
+</script>
+<script> // event & validate html config data
+    function checkCfgData(e) {
+        checkData(this);
+    }
+    function checkData(row) {
+        datalist = row.list;
+        for (let j = 0; j < datalist.options.length; j++) {
+            if (row.value == datalist.options[j].value) {
+                return true;
+            }
+        }
+        row.value = '';
+        row.placeholder = "not found";
+        row.focus();
+        return false;
+    }
+    function startMeashure(evt) {
+        let tmpl = document.querySelector('#config').querySelectorAll('input');
+        for (let tmp of tmpl) {
+            if (checkData(tmp) == false) { return; }
+        }
+        sendAllCfg();
+    }
+    function sendAllCfg() {
+        let str;
+        let tmpl = document.querySelector('#config').querySelectorAll('input');
+        for (let tmp of tmpl) {
+            str = JSON.stringify({ rowID: tmp.id, rowVal: tmp.value });
+            socket.send(str);
+        }
+        socket.send("endcfg");
+    }
+    function zoomToFit(evt) {
+        curr_canvas_x_point = 0;
+        curr_array_start_point = 0;
+        click_array_point = curr_array_start_point;//zoom point
+        curr_cnt = max_cnt;
+        drawLineS(analyzerData, max_channels, 0, max_cnt);
+    }
+    function saveByteArray() {
+        let a = document.createElement("a");
+        document.body.appendChild(a);
+        a.style = "display: none";
+        let blob = new Blob([analyzerData], { type: "octet/stream" });
+        let url = window.URL.createObjectURL(blob);
+        a.href = url;
+        a.download = 'RawBinSample.bin';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+</script>
+<script> // receive data from ws
+    function receiveWsData(data) {
+        let obj;
+        try {
+            obj = JSON.parse(data);
+            if (obj.hdrID) {
+                template_input(obj);
+            }
+            else {
+                data_input(obj);
+            }
+        }
+        catch
+        {
+            //if (typeof data != "string") {
+            if (data instanceof ArrayBuffer) {
+                //analyzerData = data; //byte data
+                analyzerData = new Uint16Array(data);
+                console.log("bin " + analyzerData.length);
+                curr_canvas_x_point = 0;
+                curr_array_start_point = 0;
+                click_array_point = curr_array_start_point;//zoom point
+                curr_cnt = max_cnt;
+                drawLineS(analyzerData, max_channels, 0, max_cnt);
+            } else {
+                // text frame
+                console.log("text " + data);
+            }
+        }
+    }
+    function template_input(obj) {
+        switch (obj.hdrID) {
+            case "start":
+            case "config":
+                tpl_input(obj);
+                break;
+            case "datalist":
+                tpl_datalist(obj);
+                break;
+            case "options":
+                tpl_options(obj);
+                break;
+            default:
+                break;
+        }
+    }
+    function data_input(obj) {
+        if (obj.rowID) {
+            if (obj.rowID == "endcfg") {
+                console.log("end cfg recieve");
+                return;
+            }
+            document.querySelector('#' + obj.rowID).val = obj.rowVal;
+
+            if (obj.rowID.indexOf('smp00') == 0) {
+                max_cnt = curr_cnt = Number(obj.rowVal);
+                document.querySelector('#smp01').value = obj.rowVal;
+            }
+            if (obj.rowID.indexOf('clk00') == 0) {
+                clock_cnt = Number(obj.rowVal);
+                clock_time_sek = 1 / clock_cnt;
+                document.querySelector('#clk01').value = obj.rowVal;
+            }
+        }
+    }
+</script>
+<script> //canvas mouse event
+
+    function drawTime(tick, x, y) {
+        let tick_mul = 0;
+        let tick_pre = "";
+
+        if (clock_time_sek >= 1e-8) { tick_mul = 1e6; tick_pre = " mkS"; }
+        if (clock_time_sek >= 1e-5) { tick_mul = 1e3; tick_pre = " mS"; }
+        if (clock_time_sek >= 1e-2) { tick_mul = 1e0; tick_pre = " S"; }
+
+        ctx.textAlign = "right";
+        ctx.fillText((tick * clock_time_sek * tick_mul).toFixed(2), x, y);
+        ctx.textAlign = "left";
+        ctx.fillText(tick_pre, x, y);
+    }
+    function drawTimeMarker() {
+        ctx.beginPath();
+        ctx.moveTo(x_bord + marker_canvas_x_point - 5, 45);
+        ctx.lineTo(x_bord + marker_canvas_x_point + 5, 45);
+        ctx.lineTo(x_bord + marker_canvas_x_point, 50);
+        ctx.fill();
+        drawTime(click_array_point - mark_click_array_point, x_bord + marker_canvas_x_point, 45);
+    }
+    canvas.addEventListener('mousedown', function (evt) {
+        mark_curr_canvas_x_point = evt.offsetX < x_bord ? 0 : evt.offsetX - x_bord;
+        mark_click_array_point = Math.round(curr_array_start_point + curr_cnt * (mark_curr_canvas_x_point / (x_canvas - x_bord)));
+        drawLineS(analyzerData, max_channels, curr_array_start_point, curr_cnt);
+    }, false);
+    canvas.addEventListener('mousemove', function (evt) {
+        curr_canvas_x_point = evt.offsetX < x_bord ? 0 : evt.offsetX - x_bord;
+        click_array_point = Math.round(curr_array_start_point + curr_cnt * (curr_canvas_x_point / (x_canvas - x_bord)));
+        ctx.putImageData(imgMarker, x_bord + marker_canvas_x_point - 50, 30)
+        marker_canvas_x_point = evt.offsetX < x_bord ? 0 : evt.offsetX - x_bord;
+        imgMarker = ctx.getImageData(x_bord + marker_canvas_x_point - 50, 30, 100, 20, { willReadFrequently: true });
+        drawTimeMarker();
+    }, false);
+    canvas.addEventListener('wheel', function (evt) {
+        let delta = curr_cnt * zoom_inc;
+        if (evt.wheelDelta > 0) {
+            curr_cnt = (curr_cnt + delta);
+        } else {
+            curr_cnt = (curr_cnt - delta);
+        }
+        curr_array_start_point = (click_array_point - curr_cnt * (curr_canvas_x_point / (x_canvas - x_bord)));
+        drawLineS(analyzerData, max_channels, curr_array_start_point, curr_cnt);
+    }, false);
+</script>
+
+<script> // события WS // main start
+    let wsHostStr = "ws://" + document.location.host + document.location.pathname;
+    wsHostStr += (document.location.pathname == '/') ? "ws" : "/ws";
+    //    let wsHostStr = "ws://" + document.location.host + "/ws";
+
+    var socket = new WebSocket(wsHostStr);
+    socket.binaryType = "arraybuffer";
+    socket.onopen = function () {
+        statusstr.innerHTML = "Соединение установлено";
+        curr_cnt = max_cnt;
+        drawLineS(analyzerData, max_channels, curr_array_start_point, curr_cnt);// 
+    };
+    socket.onclose = function (event) {
+        statusstr.innerHTML = "Соединение закрыто";
+        statusstr.innerHTML += ' код: ' + event.code + ' причина: ' + event.reason;
+    };
+    socket.onerror = function () {
+        statusstr.innerHTML = "Ошибка сокета";
+    };
+
+    socket.onmessage = function (event) {
+        receiveWsData(event.data);
+    };
+
+    //https://involta.ru/tools/validator-html/
+</script>
+
+</html>

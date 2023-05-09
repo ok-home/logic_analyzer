@@ -85,8 +85,24 @@ void led_blink(void *p)
         gpio_set_level(GPIO_BLINK, 0);
         gpio_set_level(GPIO_BLINK, 1);
         gpio_set_level(GPIO_BLINK, 0);
-
-
+/*        
+    uint32_t mask = 1<<GPIO_BLINK;
+        
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    */
+    
+    
+    
+    
         vTaskDelay(1);
     }
 }

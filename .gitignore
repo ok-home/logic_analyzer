@@ -1,7 +1,8 @@
 /.devcontainer
 /.vscode
-/build
-/sdkconfig
-/sdkconfig.old
-debug.log
-debug.log
+/logic_analyzer_example/.vscode
+/logic_analyzer_example/.devcontainer
+/logic_analyzer_example/build
+/logic_analyzer_example/sdkconfig
+/logic_analyzer_example/sdkconfig.old
+

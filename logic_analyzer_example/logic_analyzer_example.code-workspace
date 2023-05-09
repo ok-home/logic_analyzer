@@ -1,0 +1,16 @@
+{
+    "folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"logic_analyzer_pin_definition.h": "c",
+			"logic_analyzer_sump.h": "c"
+		}
+	}
+}

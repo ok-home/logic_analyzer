@@ -1,12 +1,34 @@
 #pragma once
 
+// sigrok default sample rate
+#define PULSEVIEW_MAX_SAMPLE_RATE 100000000
+// logic analyzer max data buff size
+#define MAX_CAPTURE_SIZE (32764 * 2)
+// logic analyzer max count sample
+#define MAX_SAMPLE_COUNT (MAX_CAPTURE_SIZE / 2)
+// logic analyzer max sample clock HZ (sigrok not use this)
+#define MAX_SAMPLE_RATE 20000000
+
 // define uart port - default port
+#ifdef CONFIG_ANALYZER_USE_SUMP
+
+#define SUMP_UART_PORT_NUM      CONFIG_ANALYZER_SUMP_UART_PORT_NUMBER
+#define SUMP_TEST_TXD           CONFIG_ANALYZER_SUMP_UART_PORT_TX_PIN
+#define SUMP_TEST_RXD           CONFIG_ANALYZER_SUMP_UART_PORT_RX_PIN
+#define SUMP_UART_BAUD_RATE     CONFIG_ANALYZER_SUMP_UART_PORT_BAUD_RATE
+
+#else
+
 #define SUMP_UART_PORT_NUM 0
 #define SUMP_TEST_TXD 1
 #define SUMP_TEST_RXD 3
+#define SUMP_UART_BAUD_RATE 921600
+
+#endif
+
 #define SUMP_TEST_RTS (UART_PIN_NO_CHANGE)
 #define SUMP_TEST_CTS (UART_PIN_NO_CHANGE)
-#define SUMP_UART_BAUD_RATE 921600
+
 #define UART_BUF_SIZE (256)
 
 /*
@@ -50,7 +72,7 @@
 extern "C" {
 #endif
 
-void logic_analyzer_sump_task(void *arg);
+void logic_analyzer_sump(void);
 
 #ifdef __cplusplus
 }

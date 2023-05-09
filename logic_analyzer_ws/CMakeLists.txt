@@ -1,0 +1,16 @@
+idf_component_register(
+                    SRCS 
+                        "logic_analyzer_ws.c" 
+                        "logic_analyzer_ws_server.c"
+                    INCLUDE_DIRS 
+                        "./include"
+                    REQUIRES  
+                        logic_analyzer_hal 
+                        protocol_examples_common 
+                        esp_http_server 
+                        esp_wifi 
+                        nvs_flash 
+                        esp_eth
+                    EMBED_FILES 
+                        "logic_analyzer_ws.html"
+)
