@@ -363,7 +363,9 @@
                 curr_array_start_point = 0;
                 click_array_point = curr_array_start_point;//zoom point
                 curr_cnt = max_cnt;
+                if(analyzerData.length>0){
                 drawLineS(analyzerData, max_channels, 0, max_cnt);
+                }
             } else {
                 // text frame
                 console.log("text " + data);

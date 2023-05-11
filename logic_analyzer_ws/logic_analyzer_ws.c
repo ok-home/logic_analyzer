@@ -39,6 +39,8 @@ static void la_cb(uint16_t *sample_buf, int samples, int sample_rate)
     esp_err_t ret = 0;
     httpd_ws_frame_t ws_pkt;
 
+    if(samples)
+    {
     sprintf(jsonstr, "{\"rowID\":\"%s%02d\",\"rowVal\":\"%d\"}", rowID[ROW_MSMP], 0, samples);
     ret = send_ws_json(jsonstr);
     sprintf(jsonstr, "{\"rowID\":\"%s%02d\",\"rowVal\":\"%d\"}", rowID[ROW_MCLK], 0, sample_rate);
@@ -55,6 +57,12 @@ static void la_cb(uint16_t *sample_buf, int samples, int sample_rate)
         ESP_LOGE(TAG, "ERR - BINARY SEND %d", ret);
     }
     ESP_LOGI(TAG, "Binary send done");
+    }
+    else
+    {
+          ESP_LOGE(TAG, "Binary LA err - no data (zero size callback)");
+          send_ws_json("Binary LA err - no data (zero size callback)");
+    }
 }
 
 static esp_err_t json_to_str_parm(char *jsonstr, char *nameStr, char *valStr) // распаковать строку json в пару  name/val

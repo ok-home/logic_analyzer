@@ -26,7 +26,7 @@ void app_main(void)
     // test uart out
     while(1)
     {
-        ESP_LOGI("TEST MSG","TEST 123456789");
+        //ESP_LOGI("TEST MSG","TEST 123456789");
         vTaskDelay(100);
     }
 }
