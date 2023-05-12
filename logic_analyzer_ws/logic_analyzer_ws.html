@@ -426,7 +426,7 @@
         if (clock_time_sek >= 1e-2) { tick_mul = 1e0; tick_pre = " S"; }
 
         ctx.textAlign = "right";
-        ctx.fillText((tick * clock_time_sek * tick_mul).toFixed(2), x, y);
+        ctx.fillText((tick * clock_time_sek * tick_mul).toFixed(3), x, y);
         ctx.textAlign = "left";
         ctx.fillText(tick_pre, x, y);
     }

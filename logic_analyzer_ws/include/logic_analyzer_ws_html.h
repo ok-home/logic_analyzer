@@ -14,7 +14,7 @@
 #define MAX_GPIO 39
 #define MAX_SAMPLE_CNT 32764
 #define MIN_SAMPLE_CNT 100
-#define MAX_CLK 20000000
+#define MAX_CLK 40000000
 #define MIN_CLK 5000
 
 
@@ -105,13 +105,6 @@ enum HTML_EVENT_IDX {
     SAVE_EVENT              = 4
 };
 
-/*
-#define     NO_EVENT                = "0"
-#define     CHECK_CFG_DATA_EVENT    = "1"
-#define     START_EVENT             = "2"
-#define     ZOOM_EVENT              = "3"
-*/
-
 enum DATALIST_ROW{
     DATALIST_PIN = 0,
     DATALIST_EDGE = 1,
@@ -184,5 +177,6 @@ const options_list_t options[]={
     {2000000,"2 MHz","lst03"},
     {5000000,"5 MHz","lst03"},
     {10000000,"10 MHz","lst03"},
-    {20000000,"20 MHz","lst03"}
+    {20000000,"20 MHz","lst03"},
+    {40000000,"40 MHz","lst03"}
 };

@@ -31,8 +31,8 @@
 
 typedef struct div_68
 {
-    uint8_t div_8;
-    uint8_t div_6;
+    uint16_t div_8;
+    uint16_t div_6;
 } div_68_t;
 
 typedef enum
@@ -104,21 +104,63 @@ static void logic_analyzer_ll_set_mode()
     I2S0.sample_rate_conf.rx_bits_mod = 0;
     I2S0.timing.val = 0;
 }
+//
+// esp32 RefMan - 12.5
+// In the LCD mode, the frequency of WS is half of fBCK
+// LA_CLK_SAMPLE_RATE = pll160/2 = 80 000 000 hz
+//
 static div_68_t logic_analyzer_ll_convert_sample_rate(int sample_rate)
 {
-    div_68_t ldiv;
-    int cnt_div = LA_CLK_SAMPLE_RATE / sample_rate;
-    if (cnt_div < 64)
+    div_68_t ret = {
+        .div_6 = 1, // div_6 > =2
+        .div_8 = 1};
+
+    int delta_div_6 = 0;
+    int delta = 0;
+    int mindelta = 32767;
+    int cnt = LA_CLK_SAMPLE_RATE / sample_rate;
+    // extra div div_8+(div_8a/div_8b)
+    // int div_8a = 1;
+    // int div_8b = 0;
+    if (cnt <= 2) // 40 mhz  !! hack !!! in RefMan div6 >=2  ((
     {
-        ldiv.div_8 = 2;
-        ldiv.div_6 = cnt_div / 2;
+        ret.div_6 = 1;
+        ret.div_8 = 2;
+        return ret;
     }
-    else
+    if (cnt > 255 * 63)
     {
-        ldiv.div_8 = cnt_div / 64 + 1;
-        ldiv.div_6 = cnt_div / ldiv.div_8;
+        ret.div_6 = 63;
+        ret.div_8 = 255;
+        return ret;
     }
-    return ldiv;
+    while (ret.div_6++ < 63)
+    {
+        ret.div_8 = cnt / ret.div_6;
+        if (ret.div_8 > 255 || ret.div_8 == 1)
+            continue; // ==1 if div_8>=2 - 20 mHz
+        delta = cnt - ret.div_6 * ret.div_8;
+        if (delta == 0)
+        {
+            break;
+        }
+        if (mindelta > delta)
+        {
+            mindelta = delta;
+            delta_div_6 = ret.div_6;
+        }
+    }
+    if (delta)
+    {
+        ret.div_6 = delta_div_6;
+        ret.div_8 = cnt / ret.div_6;
+        //
+        // extra div div_8+(div_8a/div_8b)
+        //    div_8b = delta;
+        //    div_8a = ret.div_6;
+        //
+    }
+    return ret;
 }
 static void logic_analyzer_ll_set_clock(int sample_rate)
 {
@@ -131,12 +173,12 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
 }
 static void logic_analyzer_ll_set_pin(int *data_pins, int pin_trigger, int trigger_edge)
 {
-//
-// trigger pin
-// attention - pin trigger gpio not defined on self diagnostic
-// attention - pin trigger irq remove default pin irq on self diagnostic
-//
-        vTaskDelay(5);
+    //
+    // trigger pin
+    // attention - pin trigger gpio not defined on self diagnostic
+    // attention - pin trigger irq remove default pin irq on self diagnostic
+    //
+    vTaskDelay(5);
 #ifdef IN_APP_LOGIC_ANALIZER
 
     if (pin_trigger >= 0)
@@ -203,7 +245,7 @@ void logic_analyzer_ll_config(int *data_pins, int pin_trigger, int trigger_edge,
     logic_analyzer_ll_set_pin(data_pins, pin_trigger, trigger_edge);
     // set dma descriptor
     I2S0.rx_eof_num = frame->fb.len / sizeof(uint32_t); // count in 32 bit word
-    I2S0.in_link.addr = ((uint32_t) & (frame->dma[0])) ;
+    I2S0.in_link.addr = ((uint32_t) & (frame->dma[0]));
     // pre start
     I2S0.conf.rx_start = 0;
     I2S_ISR_ENABLE(in_suc_eof);
@@ -211,12 +253,12 @@ void logic_analyzer_ll_config(int *data_pins, int pin_trigger, int trigger_edge,
 }
 void IRAM_ATTR logic_analyzer_ll_start()
 {
-    I2S0.conf.rx_start = 1; // enable  transfer
+    I2S0.conf.rx_start = 1;                        // enable  transfer
     gpio_matrix_in(0x38, I2S0I_V_SYNC_IDX, false); // start transfer
 }
 void logic_analyzer_ll_triggered_start(int pin_trigger)
 {
-    I2S0.conf.rx_start = 1; // enable transfer
+    I2S0.conf.rx_start = 1;        // enable transfer
     gpio_intr_enable(pin_trigger); // start transfer on irq
 }
 void IRAM_ATTR logic_analyzer_ll_stop()

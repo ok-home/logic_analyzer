@@ -197,6 +197,7 @@ static void logic_analyzer_read_json(void *arg)
     char json_string[JSON_QUEUE_LEN];
     char name[16];
     char val[16];
+    esp_err_t ret = 0;
 
     read_json_queue = xQueueCreate(JSON_QUEUE_SIZE, JSON_QUEUE_LEN);
     if (read_json_queue == NULL)
@@ -236,8 +237,14 @@ static void logic_analyzer_read_json(void *arg)
             if (strncmp(END_CFG_MSG, json_string, 6) == 0)
             {
                 la_cfg.logic_analyzer_cb = la_cb;
-                start_logic_analyzer(&la_cfg);
-                ESP_LOGI(TAG, "start la");
+                ret = start_logic_analyzer(&la_cfg);
+                if(ret)
+                {
+                    ESP_LOGE(TAG, "ERR start LA - ret code %X",ret);
+                    send_ws_json("ERR start LA");
+
+                }
+                else {ESP_LOGI(TAG, "start la");}
             }
             else
             {
