@@ -359,6 +359,7 @@
                 //analyzerData = data; //byte data
                 analyzerData = new Uint16Array(data);
                 console.log("bin " + analyzerData.length);
+                statusstr.innerHTML = "bin " + analyzerData.length;
                 curr_canvas_x_point = 0;
                 curr_array_start_point = 0;
                 click_array_point = curr_array_start_point;//zoom point
@@ -369,6 +370,7 @@
             } else {
                 // text frame
                 console.log("text " + data);
+                statusstr.innerHTML = "text " + data;
             }
         }
     }
@@ -392,17 +394,22 @@
         if (obj.rowID) {
             if (obj.rowID == "endcfg") {
                 console.log("end cfg recieve");
+                statusstr.innerHTML = "end cfg recieve";
                 return;
             }
             document.querySelector('#' + obj.rowID).val = obj.rowVal;
 
             if (obj.rowID.indexOf('smp00') == 0) {
+                if( Number(obj.rowVal)>0){
                 max_cnt = curr_cnt = Number(obj.rowVal);
+                }
                 document.querySelector('#smp01').value = obj.rowVal;
             }
             if (obj.rowID.indexOf('clk00') == 0) {
+                if( Number(obj.rowVal)>0){
                 clock_cnt = Number(obj.rowVal);
                 clock_time_sek = 1 / clock_cnt;
+                }
                 document.querySelector('#clk01').value = obj.rowVal;
             }
         }

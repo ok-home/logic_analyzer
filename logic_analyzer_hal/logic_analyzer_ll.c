@@ -55,14 +55,8 @@ static intr_handle_t isr_handle;
 //  trigger isr handle
 static void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
-    BaseType_t HPTaskAwoken = pdFALSE;
-    // ll start
-    I2S0.conf.rx_start = 1;
+    gpio_matrix_in(0x38, I2S0I_V_SYNC_IDX, false);
     gpio_intr_disable((int)pin);
-    if (HPTaskAwoken == pdTRUE)
-    {
-        portYIELD_FROM_ISR();
-    }
 }
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
 {
@@ -191,8 +185,9 @@ static void logic_analyzer_ll_set_pin(int *data_pins, int pin_trigger, int trigg
 
 #endif
 
+    // v-sync - stop transfer - set to 0 - set to 1 on stert function
+    gpio_matrix_in(0x30, I2S0I_V_SYNC_IDX, false);
     // cam mode signals must be set to hight
-    gpio_matrix_in(0x38, I2S0I_V_SYNC_IDX, false);
     gpio_matrix_in(0x38, I2S0I_H_SYNC_IDX, false);
     gpio_matrix_in(0x38, I2S0I_H_ENABLE_IDX, false);
 }
@@ -216,11 +211,13 @@ void logic_analyzer_ll_config(int *data_pins, int pin_trigger, int trigger_edge,
 }
 void IRAM_ATTR logic_analyzer_ll_start()
 {
-    I2S0.conf.rx_start = 1;
+    I2S0.conf.rx_start = 1; // enable  transfer
+    gpio_matrix_in(0x38, I2S0I_V_SYNC_IDX, false); // start transfer
 }
 void logic_analyzer_ll_triggered_start(int pin_trigger)
 {
-    gpio_intr_enable(pin_trigger);
+    I2S0.conf.rx_start = 1; // enable transfer
+    gpio_intr_enable(pin_trigger); // start transfer on irq
 }
 void IRAM_ATTR logic_analyzer_ll_stop()
 {
