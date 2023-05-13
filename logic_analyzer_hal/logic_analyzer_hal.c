@@ -106,7 +106,7 @@ static void logic_analyzer_task(void *arg)
     while (1)
     {
         noTimeout = ulTaskNotifyTake(pdFALSE, cfg->meashure_timeout); // portMAX_DELAY
-        if (noTimeout)
+        if (noTimeout) 
         {
             // dma data ready
             // sample sequence in 32 word - adr0=sample1, adr1=sample0 
@@ -140,9 +140,18 @@ static void logic_analyzer_task(void *arg)
 esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
 {
     esp_err_t ret = 0;
-    if (logic_analyzer_started)
+    if (logic_analyzer_started ) 
+    {
+        if(config->meashure_timeout==0) // if timeout == 0 -> restart
+        {
+            config->logic_analyzer_cb(NULL, 0, 0); // timeout or restart
+            logic_analyzer_stop();              // todo stop & clear on task or external ??
+            vTaskDelete(logic_analyzer_task_handle);
+            ret = ESP_OK;
+            goto _retcode;
+        }
         return 9;//ESP_ERR_INVALID_ARG; // todo change err code
-
+    }
     logic_analyzer_started = 1;
     // check cb pointer
     if (config->logic_analyzer_cb == NULL)

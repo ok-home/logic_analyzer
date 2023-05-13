@@ -175,7 +175,6 @@ static void logic_analyzer_ll_set_pin(int *data_pins, int pin_trigger, int trigg
 {
     //
     // trigger pin
-    // attention - pin trigger gpio not defined on self diagnostic
     // attention - pin trigger irq remove default pin irq on self diagnostic
     //
     vTaskDelay(5);

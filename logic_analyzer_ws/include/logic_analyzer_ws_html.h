@@ -41,6 +41,7 @@ enum rowID_name {
     ROW_EDG,
     ROW_SMP,
     ROW_CLK,
+    ROW_TIMEOUT,
     ROW_LST,
     ROW_START,
     ROW_ZOOM,
@@ -54,6 +55,7 @@ const char *rowID[] = {
     [ROW_EDG] = "edg",
     [ROW_SMP] = "smp",
     [ROW_CLK] = "clk",
+    [ROW_TIMEOUT]="tmo",
     [ROW_LST] = "lst",
     [ROW_START] = "beg",
     [ROW_ZOOM] = "zom",
@@ -67,6 +69,7 @@ enum rowLabel{
     ROW_LBL_EDGE,
     ROW_LBL_SAMPLE,
     ROW_LBL_CLOCK,
+    ROW_LBL_TIMEOUT,
     ROW_LBL_START,
     ROW_LBL_ZOOM,
     ROW_LBL_MEASH_SAMPLES,
@@ -79,6 +82,7 @@ const char *rowLbl[] = {
     [ROW_LBL_EDGE] = "Trigger Edge",
     [ROW_LBL_SAMPLE] = "Sample Count",
     [ROW_LBL_CLOCK] = "Sample Clock",
+    [ROW_LBL_TIMEOUT]="Timeout",
     [ROW_LBL_START] = "Start",
     [ROW_LBL_ZOOM] = "Zoom to fit",
     [ROW_LBL_MEASH_SAMPLES] = "Samples",
@@ -110,7 +114,8 @@ enum DATALIST_ROW{
     DATALIST_EDGE = 1,
     DATALIST_SAMPLE = 2,
     DATALIST_CLK = 3,
-    DATALIST_MAX = 4
+    DATALIST_TIMEOUT = 4,
+    DATALIST_MAX = 5
 };
 typedef struct {
     int32_t     value;
@@ -178,5 +183,13 @@ const options_list_t options[]={
     {5000000,"5 MHz","lst03"},
     {10000000,"10 MHz","lst03"},
     {20000000,"20 MHz","lst03"},
-    {40000000,"40 MHz","lst03"}
+    {40000000,"40 MHz","lst03"},
+    {0,"Restart LA","lst04"},
+    {1,"1 Sek","lst04"},
+    {2,"2 Sek","lst04"},
+    {5,"5 Sek","lst04"},
+    {10,"10 Sek","lst04"},
+    {20,"20 Sek","lst04"},
+    {50,"50 Sek","lst04"},
+    {-1,"No Timeout","lst04"}
 };

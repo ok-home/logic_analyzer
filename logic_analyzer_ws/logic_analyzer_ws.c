@@ -31,7 +31,7 @@ static TaskHandle_t draw_html_handle = 0;
 static TaskHandle_t read_json_handle = 0;
 static QueueHandle_t read_json_queue = 0;
 
-static esp_err_t send_ws_json(const char *json_string);
+static esp_err_t send_ws_string(const char *json_string);
 
 static void la_cb(uint16_t *sample_buf, int samples, int sample_rate)
 {
@@ -42,29 +42,29 @@ static void la_cb(uint16_t *sample_buf, int samples, int sample_rate)
     if (samples)
     {
         sprintf(jsonstr, "{\"rowID\":\"%s%02d\",\"rowVal\":\"%d\"}", rowID[ROW_MSMP], 0, samples);
-        ret = send_ws_json(jsonstr);
+        ret = send_ws_string(jsonstr);
         sprintf(jsonstr, "{\"rowID\":\"%s%02d\",\"rowVal\":\"%d\"}", rowID[ROW_MCLK], 0, sample_rate);
-        ret = send_ws_json(jsonstr);
+        ret = send_ws_string(jsonstr);
 
         memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
         ws_pkt.type = HTTPD_WS_TYPE_BINARY;
         ws_pkt.payload = (uint8_t *)sample_buf; // la cb buff
         ws_pkt.len = samples * 2;
         ESP_LOGI(TAG, "Start samples transfer %d", ws_pkt.len);
-        send_ws_json("Start samples transfer");
+        send_ws_string("Start samples transfer");
         ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt);
         if (ret)
         {
             ESP_LOGE(TAG, "Samples transfer err %d", ret);
-            send_ws_json("Samples transfer err");
+            send_ws_string("Samples transfer err");
         }
         ESP_LOGI(TAG, "Samples transfer done");
-        send_ws_json("Samples transfer done");
+        send_ws_string("Samples transfer done");
     }
     else
     {
         ESP_LOGE(TAG, "Error - callback imeout deteсted");
-        send_ws_json("Error - callback imeout deteсted");
+        send_ws_string("Error - callback imeout deteсted");
     }
 }
 
@@ -93,13 +93,13 @@ static esp_err_t json_to_str_parm(char *jsonstr, char *nameStr, char *valStr) //
         valStr[0] = 0;
     return ESP_OK;
 }
-static esp_err_t send_ws_json(const char *json_string)
+static esp_err_t send_ws_string(const char *string)
 {
     esp_err_t ret;
     httpd_ws_frame_t ws_pkt;
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
     ws_pkt.type = HTTPD_WS_TYPE_TEXT;
-    ws_pkt.payload = (uint8_t *)json_string;
+    ws_pkt.payload = (uint8_t *)string;
     ws_pkt.len = strlen((char *)ws_pkt.payload);
     ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt);
     if (ret)
@@ -116,7 +116,7 @@ static esp_err_t draw_html_datalist(void)
     {
         sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\"}",
                 hdrID[HDR_DATALIST], rowID[ROW_LST], i);
-        ret = send_ws_json(jsonstr);
+        ret = send_ws_string(jsonstr);
     }
     return ret;
 }
@@ -128,7 +128,7 @@ static esp_err_t draw_html_options(void)
     {
         sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s\",\"rowVal\":\"%ld\",\"rowLbl\":\"%s\"}",
                 hdrID[HDR_OPTIONS], options[i].datalist, options[i].value, options[i].label);
-        ret = send_ws_json(jsonstr);
+        ret = send_ws_string(jsonstr);
     }
     return ret;
 }
@@ -140,23 +140,29 @@ static esp_err_t draw_html_config(void)
     {
         sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s%02d\",\"rowType\":\"%s\",\"rowMax\":\"%d\",\"rowMin\":\"%d\",\"rowVal\":\"%d\",\"rowStep\":\"%d\",\"rowDis\":\"%d\",\"rowList\":\"%s%02d\",\"rowEvent\":\"%d\"}",
                 hdrID[HDR_CONFIG], rowID[ROW_PIN], i, rowLbl[ROW_LBL_PIN], i, rowType[ROW_NUMBER], MAX_GPIO, MIN_GPIO, la_cfg.pin[i], 1, 0, rowID[ROW_LST], DATALIST_PIN, CHECK_CFG_DATA_EVENT);
-        ret = send_ws_json(jsonstr);
+        ret = send_ws_string(jsonstr);
     }
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowMax\":\"%d\",\"rowMin\":\"%d\",\"rowVal\":\"%d\",\"rowStep\":\"%d\",\"rowDis\":\"%d\",\"rowList\":\"%s%02d\",\"rowEvent\":\"%d\"}",
             hdrID[HDR_CONFIG], rowID[ROW_TRG], 0, rowLbl[ROW_LBL_TRIG], rowType[ROW_NUMBER], MAX_GPIO, MIN_GPIO, la_cfg.pin_trigger, 1, 0, rowID[ROW_LST], DATALIST_PIN, CHECK_CFG_DATA_EVENT);
-    ret = send_ws_json(jsonstr);
+    ret = send_ws_string(jsonstr);
 
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowMax\":\"%d\",\"rowMin\":\"%d\",\"rowVal\":\"%d\",\"rowStep\":\"%d\",\"rowDis\":\"%d\",\"rowList\":\"%s%02d\",\"rowEvent\":\"%d\"}",
             hdrID[HDR_CONFIG], rowID[ROW_EDG], 0, rowLbl[ROW_LBL_EDGE], rowType[ROW_NUMBER], 2, 1, la_cfg.trigger_edge, 1, 0, rowID[ROW_LST], DATALIST_EDGE, CHECK_CFG_DATA_EVENT);
-    ret = send_ws_json(jsonstr);
+    ret = send_ws_string(jsonstr);
 
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowMax\":\"%d\",\"rowMin\":\"%d\",\"rowVal\":\"%d\",\"rowStep\":\"%d\",\"rowDis\":\"%d\",\"rowList\":\"%s%02d\",\"rowEvent\":\"%d\"}",
             hdrID[HDR_CONFIG], rowID[ROW_SMP], 0, rowLbl[ROW_LBL_SAMPLE], rowType[ROW_NUMBER], MAX_SAMPLE_CNT, MIN_SAMPLE_CNT, la_cfg.number_of_samples, 100, 0, rowID[ROW_LST], DATALIST_SAMPLE, CHECK_CFG_DATA_EVENT);
-    ret = send_ws_json(jsonstr);
+    ret = send_ws_string(jsonstr);
 
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowMax\":\"%d\",\"rowMin\":\"%d\",\"rowVal\":\"%d\",\"rowStep\":\"%d\",\"rowDis\":\"%d\",\"rowList\":\"%s%02d\",\"rowEvent\":\"%d\"}",
             hdrID[HDR_CONFIG], rowID[ROW_CLK], 0, rowLbl[ROW_LBL_CLOCK], rowType[ROW_NUMBER], MAX_CLK, MIN_CLK, la_cfg.sample_rate, 1000, 0, rowID[ROW_LST], DATALIST_CLK, CHECK_CFG_DATA_EVENT);
-    ret = send_ws_json(jsonstr);
+    ret = send_ws_string(jsonstr);
+    sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowMax\":\"%d\",\"rowMin\":\"%d\",\"rowVal\":\"%d\",\"rowStep\":\"%d\",\"rowDis\":\"%d\",\"rowList\":\"%s%02d\",\"rowEvent\":\"%d\"}",
+            hdrID[HDR_CONFIG], rowID[ROW_TIMEOUT], 0, rowLbl[ROW_LBL_TIMEOUT], rowType[ROW_NUMBER], 50, -1, 
+            la_cfg.meashure_timeout >0 ? la_cfg.meashure_timeout/100:la_cfg.meashure_timeout,// TICK = 10 MSek
+            1, 0, rowID[ROW_LST], DATALIST_TIMEOUT, CHECK_CFG_DATA_EVENT);
+    ret = send_ws_string(jsonstr);
+
 
     return ret;
 }
@@ -167,23 +173,23 @@ static esp_err_t draw_html_start(void)
 
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowVal\":\"%s\",\"rowDis\":\"%d\",\"rowEvent\":\"%d\"}",
             hdrID[HDR_START], rowID[ROW_START], 0, rowLbl[ROW_LBL_START], rowType[ROW_BUTTON], rowLbl[ROW_LBL_START], 0, START_EVENT);
-    ret = send_ws_json(jsonstr);
+    ret = send_ws_string(jsonstr);
 
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowVal\":\"%s\",\"rowDis\":\"%d\",\"rowEvent\":\"%d\"}",
             hdrID[HDR_START], rowID[ROW_ZOOM], 0, rowLbl[ROW_LBL_ZOOM], rowType[ROW_BUTTON], rowLbl[ROW_LBL_ZOOM], 0, ZOOM_EVENT);
-    ret = send_ws_json(jsonstr);
+    ret = send_ws_string(jsonstr);
 
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowVal\":\"%s\",\"rowDis\":\"%d\",\"rowEvent\":\"%d\"}",
             hdrID[HDR_START], rowID[ROW_SAVE], 0, rowLbl[ROW_LBL_SAVE], rowType[ROW_BUTTON], rowLbl[ROW_LBL_SAVE], 0, SAVE_EVENT);
-    ret = send_ws_json(jsonstr);
+    ret = send_ws_string(jsonstr);
 
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowDis\":\"%d\",\"rowEvent\":\"%d\"}",
             hdrID[HDR_START], rowID[ROW_MSMP], 1, rowLbl[ROW_LBL_MEASH_SAMPLES], rowType[ROW_TEXT], 1, NO_EVENT);
-    ret = send_ws_json(jsonstr);
+    ret = send_ws_string(jsonstr);
 
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowDis\":\"%d\",\"rowEvent\":\"%d\"}",
             hdrID[HDR_START], rowID[ROW_MCLK], 1, rowLbl[ROW_LBL_MEASH_CLOCK], rowType[ROW_TEXT], 1, NO_EVENT);
-    ret = send_ws_json(jsonstr);
+    ret = send_ws_string(jsonstr);
 
     return ret;
 }
@@ -235,6 +241,11 @@ static void logic_analyzer_read_json(void *arg)
             {
                 la_cfg.sample_rate = atoi(val);
             }
+            else if (strncmp(rowID[ROW_TIMEOUT], name, 3) == 0)
+            {
+                la_cfg.meashure_timeout = atoi(val)>0 ? atoi(val)*100 : atoi(val);
+                ESP_LOGI(TAG,"Timeout=%d",la_cfg.meashure_timeout);
+            }
         }
         else
         {
@@ -245,12 +256,12 @@ static void logic_analyzer_read_json(void *arg)
                 if (ret)
                 {
                     ESP_LOGE(TAG, "Start logic analyzer error %X", ret);
-                    send_ws_json("Start logic analyzer error");
+                    send_ws_string("Start logic analyzer error");
                 }
                 else
                 {
                     ESP_LOGI(TAG, "Start logic analyzer OK");
-                    send_ws_json("Start logic analyzer OK");
+                    send_ws_string("Start logic analyzer OK");
                 }
             }
             else

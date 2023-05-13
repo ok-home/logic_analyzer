@@ -12,15 +12,16 @@
 #include "freertos/task.h"
 #include "driver/ledc.h"
 #include "driver/gpio.h"
+#include "hal/gpio_hal.h"
 
 #include "logic_analyzer_pin_definition.h"
 
 #define LEDC_TIMER LEDC_TIMER_0
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
 #define LEDC_CHANNEL LEDC_CHANNEL_0
-#define LEDC_DUTY_RES LEDC_TIMER_4_BIT // Set duty resolution to 
-#define LEDC_DUTY (8)                  // Set duty to 50%. 
-#define LEDC_FREQUENCY (100000)       // Frequency in Hertz. Set frequency at 100 kHz
+#define LEDC_DUTY_RES LEDC_TIMER_4_BIT // Set duty resolution to
+#define LEDC_DUTY (8)                  // Set duty to 50%.
+#define LEDC_FREQUENCY (100000)        // Frequency in Hertz. Set frequency at 100 kHz
 
 static void example_ledc_init(void)
 {
@@ -44,6 +45,66 @@ static void example_ledc_init(void)
         .hpoint = 0};
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
 }
+portMUX_TYPE gpio_spinlock = portMUX_INITIALIZER_UNLOCKED;
+uint32_t mask = 1 << GPIO_BLINK;
+
+void IRAM_ATTR on_off()
+{
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+    portENTER_CRITICAL(&gpio_spinlock);
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+    gpio_set_level(GPIO_BLINK, 1);
+    gpio_set_level(GPIO_BLINK, 0);
+
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+
+    portEXIT_CRITICAL(&gpio_spinlock);
+}
 
 void led_blink(void *p)
 {
@@ -55,6 +116,10 @@ void led_blink(void *p)
     // gpio_set_direction(15,GPIO_MODE_INPUT_OUTPUT);
     while (1)
     {
+
+        gpio_set_level(GPIO_BLINK, 1);
+        gpio_set_level(GPIO_BLINK, 0);
+        portENTER_CRITICAL(&gpio_spinlock);
         gpio_set_level(GPIO_BLINK, 1);
         gpio_set_level(GPIO_BLINK, 0);
         gpio_set_level(GPIO_BLINK, 1);
@@ -83,26 +148,32 @@ void led_blink(void *p)
         gpio_set_level(GPIO_BLINK, 0);
         gpio_set_level(GPIO_BLINK, 1);
         gpio_set_level(GPIO_BLINK, 0);
-        gpio_set_level(GPIO_BLINK, 1);
-        gpio_set_level(GPIO_BLINK, 0);
-/*        
-    uint32_t mask = 1<<GPIO_BLINK;
-        
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
-    */
-    
-    
-    
-    
+
+        GPIO.out_w1ts = mask;
+        GPIO.out_w1tc = mask;
+        GPIO.out_w1ts = mask;
+        GPIO.out_w1tc = mask;
+        GPIO.out_w1ts = mask;
+        GPIO.out_w1tc = mask;
+        GPIO.out_w1ts = mask;
+        GPIO.out_w1tc = mask;
+        GPIO.out_w1ts = mask;
+        GPIO.out_w1tc = mask;
+        GPIO.out_w1ts = mask;
+        GPIO.out_w1tc = mask;
+        GPIO.out_w1ts = mask;
+        GPIO.out_w1tc = mask;
+        GPIO.out_w1ts = mask;
+        GPIO.out_w1tc = mask;
+        GPIO.out_w1ts = mask;
+        GPIO.out_w1tc = mask;
+        GPIO.out_w1ts = mask;
+        GPIO.out_w1tc = mask;
+
+        portEXIT_CRITICAL(&gpio_spinlock);
+
+        on_off();
+
         vTaskDelay(1);
     }
 }
@@ -110,11 +181,10 @@ void test_sample_init(void)
 {
 
     // Set the LEDC peripheral configuration
-     example_ledc_init();
+    example_ledc_init();
     // Set duty to 50%
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-    xTaskCreate(led_blink, "tt", 2048*2, NULL, 1, NULL);
-
+    xTaskCreate(led_blink, "tt", 2048 * 2, NULL, 1, NULL);
 }
