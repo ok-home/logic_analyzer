@@ -147,7 +147,6 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     // check cb pointer
     if (config->logic_analyzer_cb == NULL)
     {
-        ret = ESP_ERR_INVALID_ARG;
         goto _ret;
     }
 
@@ -156,30 +155,25 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     {
         if (config->pin[i] > 39)
         {
-            ret = ESP_ERR_INVALID_ARG;
             goto _ret;
         }
     }
     if (config->pin_trigger > 39)
     {
-        ret = ESP_ERR_INVALID_ARG;
         goto _ret;
     }
     else if ((config->trigger_edge >= 0 && config->trigger_edge < GPIO_INTR_MAX) == 0)
     {
-        ret = ESP_ERR_INVALID_ARG;
         goto _ret;
     }
     // check sample rate
     if (config->sample_rate > LA_MAX_SAMPLE_RATE || config->sample_rate < LA_MIN_SAMPLE_RATE)
     {
-        ret = ESP_ERR_INVALID_ARG;
         goto _ret;
     }
     // check number of samples
     if (config->number_of_samples >= 32768)
     {
-        ret = ESP_ERR_INVALID_ARG;
         goto _ret;
     }
     // allocate frame buffer
@@ -188,7 +182,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     if (la_frame.fb.buf == NULL)
     {
         ret = ESP_ERR_NO_MEM;
-        goto _ret;
+        goto _retcode;
     }
     //  allocate dma descriptor buffer
     la_frame.dma = allocate_dma_descriptors(la_frame.fb.len, la_frame.fb.buf);
@@ -230,7 +224,10 @@ _freedma_ret:
     free(la_frame.dma);
 _freebuf_ret:
     free(la_frame.fb.buf);
-_ret:
+_retcode:
     logic_analyzer_started = 0;
     return ret;
+_ret:
+    logic_analyzer_started = 0;
+    return ESP_ERR_INVALID_ARG;
 }

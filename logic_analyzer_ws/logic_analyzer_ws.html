@@ -358,8 +358,8 @@
             if (data instanceof ArrayBuffer) {
                 //analyzerData = data; //byte data
                 analyzerData = new Uint16Array(data);
-                console.log("bin " + analyzerData.length);
-                statusstr.innerHTML = "bin " + analyzerData.length;
+                //console.log("bin " + analyzerData.length);
+                statusstr.innerHTML = "Received " + analyzerData.length+ " samples";
                 curr_canvas_x_point = 0;
                 curr_array_start_point = 0;
                 click_array_point = curr_array_start_point;//zoom point
@@ -369,8 +369,8 @@
                 }
             } else {
                 // text frame
-                console.log("text " + data);
-                statusstr.innerHTML = "text " + data;
+                //console.log("text " + data);
+                statusstr.innerHTML = data;
             }
         }
     }
@@ -393,8 +393,8 @@
     function data_input(obj) {
         if (obj.rowID) {
             if (obj.rowID == "endcfg") {
-                console.log("end cfg recieve");
-                statusstr.innerHTML = "end cfg recieve";
+                //console.log("end cfg recieve");
+                statusstr.innerHTML = "recieved logic analyzer config";
                 return;
             }
             document.querySelector('#' + obj.rowID).val = obj.rowVal;

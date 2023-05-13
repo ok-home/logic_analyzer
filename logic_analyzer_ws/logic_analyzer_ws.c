@@ -8,20 +8,20 @@
 #include "logic_analyzer_pin_definition.h"
 #include "logic_analyzer_hal.h"
 
-static const char *TAG = "LogicAnalyzer_ws";
+static const char *TAG = "LA_WS";
 
 #define JSON_QUEUE_LEN 64
 #define JSON_QUEUE_SIZE 4
 
 static logic_analyzer_config_t la_cfg = {
-    .pin = {LA_PIN_0,LA_PIN_1,LA_PIN_2,LA_PIN_3,LA_PIN_4,LA_PIN_5,LA_PIN_6,LA_PIN_7,LA_PIN_8,LA_PIN_9,LA_PIN_10,LA_PIN_11,LA_PIN_12,LA_PIN_13,LA_PIN_14,LA_PIN_15},
+    .pin = {LA_PIN_0, LA_PIN_1, LA_PIN_2, LA_PIN_3, LA_PIN_4, LA_PIN_5, LA_PIN_6, LA_PIN_7, LA_PIN_8, LA_PIN_9, LA_PIN_10, LA_PIN_11, LA_PIN_12, LA_PIN_13, LA_PIN_14, LA_PIN_15},
     .pin_trigger = LA_PIN_TRIGGER,
     .trigger_edge = LA_PIN_EDGE,
     .number_of_samples = LA_SAMPLE_COUNT,
     .sample_rate = LA_SAMPLE_RATE,
-    .meashure_timeout = LA_DEFAULT_TiMEOUT 
-};
-typedef struct async_resp_arg {
+    .meashure_timeout = LA_DEFAULT_TiMEOUT};
+typedef struct async_resp_arg
+{
     httpd_handle_t hd;
     int fd;
 } async_resp_arg_t;
@@ -39,29 +39,32 @@ static void la_cb(uint16_t *sample_buf, int samples, int sample_rate)
     esp_err_t ret = 0;
     httpd_ws_frame_t ws_pkt;
 
-    if(samples)
+    if (samples)
     {
-    sprintf(jsonstr, "{\"rowID\":\"%s%02d\",\"rowVal\":\"%d\"}", rowID[ROW_MSMP], 0, samples);
-    ret = send_ws_json(jsonstr);
-    sprintf(jsonstr, "{\"rowID\":\"%s%02d\",\"rowVal\":\"%d\"}", rowID[ROW_MCLK], 0, sample_rate);
-    ret = send_ws_json(jsonstr);
+        sprintf(jsonstr, "{\"rowID\":\"%s%02d\",\"rowVal\":\"%d\"}", rowID[ROW_MSMP], 0, samples);
+        ret = send_ws_json(jsonstr);
+        sprintf(jsonstr, "{\"rowID\":\"%s%02d\",\"rowVal\":\"%d\"}", rowID[ROW_MCLK], 0, sample_rate);
+        ret = send_ws_json(jsonstr);
 
-    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
-    ws_pkt.type = HTTPD_WS_TYPE_BINARY;
-    ws_pkt.payload = (uint8_t *)sample_buf; // la cb buff
-    ws_pkt.len = samples * 2;
-    ESP_LOGI(TAG, "START BIN  %p,%d,%d", ra.hd, ra.fd, ws_pkt.len);
-    ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt);
-    if (ret)
-    {
-        ESP_LOGE(TAG, "ERR - BINARY SEND %d", ret);
-    }
-    ESP_LOGI(TAG, "Binary send done");
+        memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+        ws_pkt.type = HTTPD_WS_TYPE_BINARY;
+        ws_pkt.payload = (uint8_t *)sample_buf; // la cb buff
+        ws_pkt.len = samples * 2;
+        ESP_LOGI(TAG, "Start samples transfer %d", ws_pkt.len);
+        send_ws_json("Start samples transfer");
+        ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt);
+        if (ret)
+        {
+            ESP_LOGE(TAG, "Samples transfer err %d", ret);
+            send_ws_json("Samples transfer err");
+        }
+        ESP_LOGI(TAG, "Samples transfer done");
+        send_ws_json("Samples transfer done");
     }
     else
     {
-          ESP_LOGE(TAG, "Binary LA err - no data (zero size callback)");
-          send_ws_json("Binary LA err - no data (zero size callback)");
+        ESP_LOGE(TAG, "Error - callback imeout deteсted");
+        send_ws_json("Error - callback imeout deteсted");
     }
 }
 
@@ -101,7 +104,7 @@ static esp_err_t send_ws_json(const char *json_string)
     ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt);
     if (ret)
     {
-        ESP_LOGE(TAG, "err ws_send_data json %d", ret);
+        ESP_LOGE(TAG, "err ws_send_data string %d", ret);
     }
     return ret;
 }
@@ -203,6 +206,7 @@ static void logic_analyzer_read_json(void *arg)
     if (read_json_queue == NULL)
     {
         ESP_LOGE(TAG, "ERR Create json Queue");
+        vTaskDelete(NULL);
     }
     while (1)
     {
@@ -238,17 +242,20 @@ static void logic_analyzer_read_json(void *arg)
             {
                 la_cfg.logic_analyzer_cb = la_cb;
                 ret = start_logic_analyzer(&la_cfg);
-                if(ret)
+                if (ret)
                 {
-                    ESP_LOGE(TAG, "ERR start LA - ret code %X",ret);
-                    send_ws_json("ERR start LA");
-
+                    ESP_LOGE(TAG, "Start logic analyzer error %X", ret);
+                    send_ws_json("Start logic analyzer error");
                 }
-                else {ESP_LOGI(TAG, "start la");}
+                else
+                {
+                    ESP_LOGI(TAG, "Start logic analyzer OK");
+                    send_ws_json("Start logic analyzer OK");
+                }
             }
             else
             {
-                ESP_LOGI(TAG, "receive undefined string %s", json_string);
+                ESP_LOGE(TAG, "Receive undefined string %s", json_string);
             }
         }
     }
@@ -323,7 +330,6 @@ static esp_err_t logic_analyzer_ws_handler(httpd_req_t *req)
         }
         if (ws_pkt.type == HTTPD_WS_TYPE_TEXT)
         {
-            //            ESP_LOGI(TAG, "Got packet with message: %s", ws_pkt.payload);
             xQueueSend(read_json_queue, ws_pkt.payload, portMAX_DELAY);
         }
     }
@@ -344,8 +350,15 @@ static const httpd_uri_t la_ws = {
     .is_websocket = true};
 
 // register uri handlers on runing server
-void logic_analyzer_register_uri_handlers(httpd_handle_t server)
+esp_err_t logic_analyzer_register_uri_handlers(httpd_handle_t server)
 {
-        httpd_register_uri_handler(server, &la_ws);
-        httpd_register_uri_handler(server, &la_gh);
+    esp_err_t ret = ESP_OK;
+    ret = httpd_register_uri_handler(server, &la_ws);
+    if (ret)
+        goto _ret;
+    ret = httpd_register_uri_handler(server, &la_gh);
+    if (ret)
+        goto _ret;
+_ret:
+    return ret;
 }

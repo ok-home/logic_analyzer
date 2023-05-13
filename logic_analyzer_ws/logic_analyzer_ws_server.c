@@ -36,10 +36,15 @@ static httpd_handle_t start_webserver(void)
     {
         // Registering the ws handler
         ESP_LOGI(TAG, "Registering URI handlers");
-        logic_analyzer_register_uri_handlers(server);
+        if(logic_analyzer_register_uri_handlers(server))
+        {
+        ESP_LOGE(TAG, "Error LA register_uri_handlers");
+        goto _ret;
+        }   
         return server;
     }
-    ESP_LOGI(TAG, "Error starting server!");
+_ret:
+    ESP_LOGE(TAG, "Error starting server!");
     return NULL;
 }
 
