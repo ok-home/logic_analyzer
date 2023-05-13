@@ -1,17 +1,17 @@
 menu "Logic Analyzer Configuration"
 
 
-    config ANALYZER_IN_APP_MODE
-        bool "in-app mode"
-        default y
+    config ANALYZER_SEPARATE_MODE
+        bool "Separate mode"
+        default n
         help
             In-app or separate device mode.
 
     config ANALYZER_USE_PORT_ASSIGN
-        bool "use default port assignment"
-        default y
+        bool "Use port assignment"
+        default n
         help
-            use default port assignments for channels.
+            use  port assignments for channels.
         
     if ANALYZER_USE_PORT_ASSIGN
 
@@ -120,7 +120,7 @@ menu "Logic Analyzer Configuration"
     endif
 
     config ANALYZER_USE_WS
-        bool "logic analyzer output data to http websocket"
+        bool "Logic analyzer output data to http websocket"
         default y
         help
             logic analyzer output data to http websocket
