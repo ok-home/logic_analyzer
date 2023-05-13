@@ -28,17 +28,14 @@ static void sump_get_metadata();
 static void sump_capture_and_send_samples();
 static void sump_la_cb(uint16_t *buf, int cnt, int clk);
 
-logic_analyzer_config_t la_cfg =
-    {
+logic_analyzer_config_t la_cfg = {
         .pin = {LA_PIN_0,LA_PIN_1,LA_PIN_2,LA_PIN_3,LA_PIN_4,LA_PIN_5,LA_PIN_6,LA_PIN_7,LA_PIN_8,LA_PIN_9,LA_PIN_10,LA_PIN_11,LA_PIN_12,LA_PIN_13,LA_PIN_14,LA_PIN_15},
-
         .pin_trigger = LA_PIN_TRIGGER,
         .trigger_edge = LA_PIN_EDGE,
         .number_of_samples = LA_SAMPLE_COUNT,
         .sample_rate = LA_SAMPLE_RATE,
         .meashure_timeout = LA_DEFAULT_TiMEOUT, // portMAX_DELAY,
         .logic_analyzer_cb = sump_la_cb};
-
 static void sump_capture_and_send_samples()
 {
     la_cfg.number_of_samples = readCount;

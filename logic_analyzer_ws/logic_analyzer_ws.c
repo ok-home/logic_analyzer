@@ -19,7 +19,8 @@ static logic_analyzer_config_t la_cfg = {
     .trigger_edge = LA_PIN_EDGE,
     .number_of_samples = LA_SAMPLE_COUNT,
     .sample_rate = LA_SAMPLE_RATE,
-    .meashure_timeout = LA_DEFAULT_TiMEOUT};
+    .meashure_timeout = LA_DEFAULT_TiMEOUT,
+    .logic_analyzer_cb = NULL};
 typedef struct async_resp_arg
 {
     httpd_handle_t hd;
@@ -30,10 +31,9 @@ static async_resp_arg_t ra;
 static TaskHandle_t draw_html_handle = 0;
 static TaskHandle_t read_json_handle = 0;
 static QueueHandle_t read_json_queue = 0;
-
 static esp_err_t send_ws_string(const char *json_string);
 
-static void la_cb(uint16_t *sample_buf, int samples, int sample_rate)
+static void logic_analyzer_cb(uint16_t *sample_buf, int samples, int sample_rate)
 {
     char jsonstr[64];
     esp_err_t ret = 0;
@@ -67,7 +67,6 @@ static void la_cb(uint16_t *sample_buf, int samples, int sample_rate)
         send_ws_string("Error - callback imeout deteсted");
     }
 }
-
 static esp_err_t json_to_str_parm(char *jsonstr, char *nameStr, char *valStr) // распаковать строку json в пару  name/val
 {
     int r; // количество токенов
@@ -251,7 +250,7 @@ static void logic_analyzer_read_json(void *arg)
         {
             if (strncmp(END_CFG_MSG, json_string, 6) == 0)
             {
-                la_cfg.logic_analyzer_cb = la_cb;
+                la_cfg.logic_analyzer_cb = logic_analyzer_cb;
                 ret = start_logic_analyzer(&la_cfg);
                 if (ret)
                 {

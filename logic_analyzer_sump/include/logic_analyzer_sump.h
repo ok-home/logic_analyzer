@@ -7,7 +7,7 @@
 // logic analyzer max count sample
 #define MAX_SAMPLE_COUNT (MAX_CAPTURE_SIZE / 2)
 // logic analyzer max sample clock HZ (sigrok not use this)
-#define MAX_SAMPLE_RATE 20000000
+#define MAX_SAMPLE_RATE 40000000
 
 // define uart port - default port
 #ifdef CONFIG_ANALYZER_USE_SUMP

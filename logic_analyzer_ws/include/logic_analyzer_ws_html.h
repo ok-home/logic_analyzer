@@ -81,12 +81,12 @@ const char *rowLbl[] = {
     [ROW_LBL_TRIG] = "Trigger",
     [ROW_LBL_EDGE] = "Trigger Edge",
     [ROW_LBL_SAMPLE] = "Sample Count",
-    [ROW_LBL_CLOCK] = "Sample Clock",
-    [ROW_LBL_TIMEOUT]="Timeout",
+    [ROW_LBL_CLOCK] = "Sample Clock Hz",
+    [ROW_LBL_TIMEOUT]="Timeout Sek",
     [ROW_LBL_START] = "Start",
     [ROW_LBL_ZOOM] = "Zoom to fit",
     [ROW_LBL_MEASH_SAMPLES] = "Samples",
-    [ROW_LBL_MEASH_CLOCK] = "Clock",
+    [ROW_LBL_MEASH_CLOCK] = "Clock Hz",
     [ROW_LBL_SAVE] = "Save to RowBin"
 };
 

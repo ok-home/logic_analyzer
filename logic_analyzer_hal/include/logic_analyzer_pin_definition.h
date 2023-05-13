@@ -36,6 +36,7 @@
 #define LA_PIN_EDGE (CONFIG_ANALYZER_TRIG_EDGE)
 #define LA_SAMPLE_COUNT (CONFIG_ANALYZER_SAMPLES_COUNT)
 #define LA_SAMPLE_RATE (CONFIG_ANALYZER_SAMPLE_RATE)
+#define LA_DEFAULT_TiMEOUT (CONFIG_ANALYZER_TIMEOUT*100)
 
 #else
 
@@ -62,10 +63,9 @@
 #define LA_PIN_EDGE (1)
 #define LA_SAMPLE_COUNT (1000)
 #define LA_SAMPLE_RATE (1000000)
-
-#endif
-// define logic analyzrer timeout freertos tick
-// default 20 sek
 #define LA_DEFAULT_TiMEOUT (2000)
+#endif
+
+
 
 

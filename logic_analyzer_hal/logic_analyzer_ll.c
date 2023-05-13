@@ -252,7 +252,7 @@ void logic_analyzer_ll_config(int *data_pins, int pin_trigger, int trigger_edge,
     I2S_ISR_ENABLE(in_suc_eof);
     I2S0.in_link.start = 1;
 }
-void IRAM_ATTR logic_analyzer_ll_start()
+void logic_analyzer_ll_start()
 {
     I2S0.conf.rx_start = 1;                        // enable  transfer
     gpio_matrix_in(0x38, I2S0I_V_SYNC_IDX, false); // start transfer
@@ -262,7 +262,7 @@ void logic_analyzer_ll_triggered_start(int pin_trigger)
     I2S0.conf.rx_start = 1;        // enable transfer
     gpio_intr_enable(pin_trigger); // start transfer on irq
 }
-void IRAM_ATTR logic_analyzer_ll_stop()
+void logic_analyzer_ll_stop()
 {
     I2S0.conf.rx_start = 0;
     I2S_ISR_DISABLE(in_suc_eof);

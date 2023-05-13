@@ -114,9 +114,14 @@ menu "Logic Analyzer Configuration"
 
         config ANALYZER_SAMPLE_RATE
             int "Sample rate HZ"
-            range 5000 20000000
-            default 1000000
+            range 5000 40000000
+            default 10000000
 
+        config ANALYZER_TIMEOUT
+            int "Meashured timeout Sek"
+            range 2 50
+            default 20
+    
     endif
 
     config ANALYZER_USE_WS

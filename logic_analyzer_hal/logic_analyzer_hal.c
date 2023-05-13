@@ -17,7 +17,7 @@ static la_frame_t la_frame = {
 
 static TaskHandle_t logic_analyzer_task_handle = 0; // main task handle
 static int logic_analyzer_started = 0;              // flag start dma
-
+//
 // sample sequence in 32 word - adr0=sample1, adr1=sample0 
 // swap sample sequence
 static inline void swap_buf(uint16_t* buf,int cnt){
@@ -150,7 +150,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
             ret = ESP_OK;
             goto _retcode;
         }
-        return 9;//ESP_ERR_INVALID_ARG; // todo change err code
+        return ESP_ERR_INVALID_STATE;
     }
     logic_analyzer_started = 1;
     // check cb pointer
