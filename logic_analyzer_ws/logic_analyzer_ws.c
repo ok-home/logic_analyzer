@@ -1,12 +1,13 @@
 #include <esp_log.h>
 #include <esp_http_server.h>
 #include <freertos/queue.h>
-#include "logic_analyzer_ws.h"
-#include "logic_analyzer_ws_html.h"
-#include "jsmn.h"
 
 #include "logic_analyzer_pin_definition.h"
 #include "logic_analyzer_hal.h"
+
+#include "logic_analyzer_ws.h"
+#include "logic_analyzer_ws_html.h"
+#include "jsmn.h"
 
 static const char *TAG = "LA_WS";
 

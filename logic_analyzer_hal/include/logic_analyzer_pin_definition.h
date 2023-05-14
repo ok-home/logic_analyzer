@@ -12,6 +12,18 @@
 #define I2C_PIN_SDA (26)
 #define I2C_PIN_SCL (27)
 
+
+
+#define LA_CLK_SAMPLE_RATE 80000000
+#define LA_MAX_SAMPLE_RATE 40000000
+#define LA_MIN_SAMPLE_RATE 5000
+
+#define LA_MAX_PIN 16
+#define LA_MIN_GPIO -1
+#define LA_MAX_GPIO 39
+#define LA_MAX_SAMPLE_CNT 32764
+#define LA_MIN_SAMPLE_CNT 100
+
 // define logic analyzer channel pin
 // -1 - pin disabled
 #ifdef CONFIG_ANALYZER_USE_PORT_ASSIGN
@@ -56,15 +68,15 @@
 #define LA_PIN_13 (-1)
 #define LA_PIN_14 (-1)
 #define LA_PIN_15 (-1)
-// define logic analyzrer trigger pin 
-// -1 disable
-// sigrok redefine this pin
 #define LA_PIN_TRIGGER (-1)
 #define LA_PIN_EDGE (1)
 #define LA_SAMPLE_COUNT (1000)
 #define LA_SAMPLE_RATE (1000000)
 #define LA_DEFAULT_TiMEOUT (2000)
 #endif
+
+
+
 
 
 

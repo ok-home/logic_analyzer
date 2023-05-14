@@ -9,6 +9,9 @@
 #include "logic_analyzer_hal.h"
 #include "logic_analyzer_ll.h"
 
+#define LA_TASK_STACK 2048
+#define DMA_FRAME 4092
+
 // frame buff & dma descripter
 static la_frame_t la_frame = {
     .fb.buf = NULL,

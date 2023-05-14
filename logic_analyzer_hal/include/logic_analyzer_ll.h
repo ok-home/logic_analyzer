@@ -11,11 +11,8 @@
 #include "esp32/rom/lldesc.h"
 #include "esp_private/periph_ctrl.h"
 
-#define LA_CLK_SAMPLE_RATE 80000000
-#define LA_MAX_SAMPLE_RATE 40000000
-#define LA_MIN_SAMPLE_RATE 5000
-#define LA_TASK_STACK 2048
-#define DMA_FRAME 4092
+#include "logic_analyzer_pin_definition.h"
+
 
 #ifdef __cplusplus
 extern "C" {

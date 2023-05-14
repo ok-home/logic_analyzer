@@ -1,24 +1,12 @@
 
-#define MAX_PIN 16
-/*
-#define MIN_GPIO "-1"
-#define MAX_GPIO "39"
-#define MAX_SAMPLE_CNT "32764"
-#define MIN_SAMPLE_CNT "100"
-#define SAMPLE_STEP "100"
-#define MAX_CLK "20000000"
-#define MIN_CLK "5000"
-#define CLK_STEP "1000"
-*/
-#define MIN_GPIO -1
-#define MAX_GPIO 39
-#define MAX_SAMPLE_CNT 32764
-#define MIN_SAMPLE_CNT 100
-#define MAX_CLK 40000000
-#define MIN_CLK 5000
+#define MAX_PIN LA_MAX_PIN
 
-
-
+#define MIN_GPIO LA_MIN_GPIO
+#define MAX_GPIO LA_MAX_GPIO
+#define MAX_SAMPLE_CNT LA_MAX_SAMPLE_CNT
+#define MIN_SAMPLE_CNT LA_MIN_SAMPLE_CNT
+#define MAX_CLK LA_MAX_SAMPLE_RATE
+#define MIN_CLK LA_MIN_SAMPLE_RATE
 
 #define END_CFG_MSG "endcfg"
 
