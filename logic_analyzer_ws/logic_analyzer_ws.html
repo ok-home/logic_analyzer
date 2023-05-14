@@ -5,14 +5,15 @@
     #parent {
         width: 100%;
         height: 430px;
-        border: 1px solid #000;
         overflow: auto;
+        background-color: lightgray;
     }
 
     .chs {
         width: 100%;
         float: left;
         text-align: center;
+        background-color: lightgray;
     }
 
     .cl1 {
@@ -25,25 +26,28 @@
 
     .cl01 {
         float: left;
-        width: 100%;
+        width: 95%;
         text-align: center;
         margin-top: 2px;
         margin-bottom: 2px;
+        color: green;
     }
 
     .cl02 {
         float: left;
-        width: 100%;
+        width: 95%;
         text-align: center;
         margin-top: 2px;
         margin-bottom: 2px;
+        color: green;
     }
 
-    .button {
-        border: 0;
-        line-height: 1.5;
-        padding: 0 10px;
-        font-size: 1rem;
+    input[type=button] {
+        border: 2;
+        background-color: green;
+        color: white;
+        line-height: 2.5;
+        padding: 0 0px;
         text-align: center;
         border-radius: 5px;
     }
@@ -51,15 +55,15 @@
 
 <head>
     <title>ESP32 logic analyzer</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" >
-    <meta http-equiv="content-type" content="text/html; charset=utf-8" >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
 </head>
 
 <body>
     <div class="chs" id="start">
     </div>
     <div id="parent">
-        <canvas id="myCanvas" width="2050" height="400" style="border:1px solid #000000;"></canvas>
+        <canvas id="myCanvas" style="border:1px solid #000000; background-color: lightgray;"></canvas>
     </div>
     <div class="chs" id="config">
     </div>
@@ -149,9 +153,17 @@
     const min_cnt = 32;
     const max_channels = 16;
 
+    const color_black = "black";
+    const color_time = "blue";
+    const color_left_border = "red";
+
     let statusstr = document.getElementById("EchoString");
     let canvas = document.getElementById("myCanvas");
     let ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+    canvas.width = window.innerWidth - 25;
+    //canvas.width = 2050;
+    canvas.height = 415;
 
     let x_canvas = canvas.width;
     let y_canvas = canvas.height;
@@ -226,10 +238,12 @@
             ctx.beginPath();
             ctx.lineWidth = 1;
             ctx.setLineDash([]);
+            ctx.fillStyle = color_left_border;
             ctx.textAlign = "center";
             ctx.fillText(l_channelName.chName, x_bord / 2, y + y_channel_step / 2 - 5);
             ctx.fillText(l_channelName.gpioName, x_bord / 2, y + y_channel_step / 2 + 5);
             ctx.stroke();
+            ctx.fillStyle = color_black;
             // end left border
         }
         if (l_channel == -1) // top border
@@ -272,9 +286,9 @@
         }
         l_channels = cfgCntCh.length;
         for (let idx = 0; idx < l_channels; idx++) {
-            drawLine( l_arr, cfgCntCh[idx], idx, l_channels, l_start, l_cnt);
+            drawLine(l_arr, cfgCntCh[idx], idx, l_channels, l_start, l_cnt);
         }
-        drawLine( l_arr, -1, -1, l_channels, l_start, l_cnt);//draw top border
+        drawLine(l_arr, -1, -1, l_channels, l_start, l_cnt);//draw top border
         imgMarker = ctx.getImageData(x_bord + marker_canvas_x_point - 50, 30, 100, 20, { willReadFrequently: true });
         drawTimeMarker();
     }
@@ -286,7 +300,9 @@
 
         ctx.moveTo(x + x_bord, 0);
         ctx.lineTo(x + x_bord, y_canvas);
+        ctx.strokeStyle = color_time;
         ctx.stroke();
+        ctx.strokeStyle = color_black;
     }
 </script>
 <script> // event & validate html config data
@@ -314,10 +330,22 @@
     }
     function sendAllCfg() {
         let str;
-        let tmpl = document.querySelector('#config').querySelectorAll('input');
-        for (let tmp of tmpl) {
-            str = JSON.stringify({ rowID: tmp.id, rowVal: tmp.value });
+        let startkey = document.getElementById("beg00");
+        let startcolor = startkey.style.background;
+        startkey.style.background = "red";
+        startkey.value = "Stop";
+        if (startcolor == "red") {
+            str = JSON.stringify({ rowID: "tmo00", rowVal: "0" }); //reset timeout
             socket.send(str);
+            startkey.style.background = "green";
+            startkey.value = "Start";
+        }
+        else {
+            let tmpl = document.querySelector('#config').querySelectorAll('input');
+            for (let tmp of tmpl) {
+                str = JSON.stringify({ rowID: tmp.id, rowVal: tmp.value });
+                socket.send(str);
+            }
         }
         socket.send("endcfg");
     }
@@ -359,14 +387,17 @@
                 //analyzerData = data; //byte data
                 analyzerData = new Uint16Array(data);
                 //console.log("bin " + analyzerData.length);
-                statusstr.innerHTML = "Received " + analyzerData.length+ " samples";
+                statusstr.innerHTML = "Received " + analyzerData.length + " samples";
                 curr_canvas_x_point = 0;
                 curr_array_start_point = 0;
                 click_array_point = curr_array_start_point;//zoom point
                 curr_cnt = max_cnt;
-                if(analyzerData.length>0){
-                drawLineS(analyzerData, max_channels, 0, max_cnt);
+                if (analyzerData.length > 0) {
+                    document.getElementById("beg00").style.background = "green";
+                    document.getElementById("beg00").value = "Start";
+                    drawLineS(analyzerData, max_channels, 0, max_cnt);
                 }
+
             } else {
                 // text frame
                 //console.log("text " + data);
@@ -400,15 +431,15 @@
             document.querySelector('#' + obj.rowID).val = obj.rowVal;
 
             if (obj.rowID.indexOf('smp00') == 0) {
-                if( Number(obj.rowVal)>0){
-                max_cnt = curr_cnt = Number(obj.rowVal);
+                if (Number(obj.rowVal) > 0) {
+                    max_cnt = curr_cnt = Number(obj.rowVal);
                 }
                 document.querySelector('#smp01').value = obj.rowVal;
             }
             if (obj.rowID.indexOf('clk00') == 0) {
-                if( Number(obj.rowVal)>0){
-                clock_cnt = Number(obj.rowVal);
-                clock_time_sek = 1 / clock_cnt;
+                if (Number(obj.rowVal) > 0) {
+                    clock_cnt = Number(obj.rowVal);
+                    clock_time_sek = 1 / clock_cnt;
                 }
                 document.querySelector('#clk01').value = obj.rowVal;
             }
@@ -426,16 +457,20 @@
         if (clock_time_sek >= 1e-2) { tick_mul = 1e0; tick_pre = " S"; }
 
         ctx.textAlign = "right";
+        ctx.fillStyle = color_time;
         ctx.fillText((tick * clock_time_sek * tick_mul).toFixed(3), x, y);
         ctx.textAlign = "left";
         ctx.fillText(tick_pre, x, y);
+        ctx.fillStyle = color_black;
     }
     function drawTimeMarker() {
         ctx.beginPath();
         ctx.moveTo(x_bord + marker_canvas_x_point - 5, 45);
         ctx.lineTo(x_bord + marker_canvas_x_point + 5, 45);
         ctx.lineTo(x_bord + marker_canvas_x_point, 50);
+        ctx.fillStyle = color_time;
         ctx.fill();
+        ctx.fillStyle = color_black;
         drawTime(click_array_point - mark_click_array_point, x_bord + marker_canvas_x_point, 45);
     }
     canvas.addEventListener('mousedown', function (evt) {

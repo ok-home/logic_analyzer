@@ -172,15 +172,15 @@ static esp_err_t draw_html_start(void)
     esp_err_t ret = 0;
 
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowVal\":\"%s\",\"rowDis\":\"%d\",\"rowEvent\":\"%d\"}",
-            hdrID[HDR_START], rowID[ROW_START], 0, rowLbl[ROW_LBL_START], rowType[ROW_BUTTON], rowLbl[ROW_LBL_START], 0, START_EVENT);
+            hdrID[HDR_START], rowID[ROW_START], 0, "", rowType[ROW_BUTTON], rowLbl[ROW_LBL_START], 0, START_EVENT);
     ret = send_ws_string(jsonstr);
 
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowVal\":\"%s\",\"rowDis\":\"%d\",\"rowEvent\":\"%d\"}",
-            hdrID[HDR_START], rowID[ROW_ZOOM], 0, rowLbl[ROW_LBL_ZOOM], rowType[ROW_BUTTON], rowLbl[ROW_LBL_ZOOM], 0, ZOOM_EVENT);
+            hdrID[HDR_START], rowID[ROW_ZOOM], 0, "", rowType[ROW_BUTTON], rowLbl[ROW_LBL_ZOOM], 0, ZOOM_EVENT);
     ret = send_ws_string(jsonstr);
 
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowVal\":\"%s\",\"rowDis\":\"%d\",\"rowEvent\":\"%d\"}",
-            hdrID[HDR_START], rowID[ROW_SAVE], 0, rowLbl[ROW_LBL_SAVE], rowType[ROW_BUTTON], rowLbl[ROW_LBL_SAVE], 0, SAVE_EVENT);
+            hdrID[HDR_START], rowID[ROW_SAVE], 0, "", rowType[ROW_BUTTON], rowLbl[ROW_LBL_SAVE], 0, SAVE_EVENT);
     ret = send_ws_string(jsonstr);
 
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowDis\":\"%d\",\"rowEvent\":\"%d\"}",
