@@ -15,7 +15,9 @@
 			"gpio_periph.h": "c",
 			"gpio_struct.h": "c",
 			"logic_analyzer_ws_html.h": "c",
-			"logic_analyzer_ws.h": "c"
+			"logic_analyzer_ws.h": "c",
+			"gpio_reg.h": "c",
+			"logic_analyzer_ll.h": "c"
 		}
 	}
 }

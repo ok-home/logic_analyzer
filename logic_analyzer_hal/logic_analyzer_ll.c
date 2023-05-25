@@ -55,7 +55,7 @@ typedef enum
 
 static intr_handle_t isr_handle;
 //  trigger isr handle
-static void IRAM_ATTR la_ll_trigger_isr(void *pin)
+void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
     gpio_matrix_in(0x38, I2S0I_V_SYNC_IDX, false);
     gpio_intr_disable((int)pin);
@@ -245,10 +245,13 @@ void logic_analyzer_ll_start()
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
     I2S0.conf.rx_start = 1;      // enable transfer
+    ll_hi_lewel_triggered_isr_start(pin_trigger,trigger_edge);
+    /*
     gpio_install_isr_service(0); // default
     gpio_set_intr_type(pin_trigger, trigger_edge);
     gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
     gpio_intr_enable(pin_trigger); // start transfer on irq
+    */
 }
 void logic_analyzer_ll_stop()
 {
