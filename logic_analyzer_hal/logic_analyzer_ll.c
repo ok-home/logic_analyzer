@@ -14,7 +14,7 @@
 
 #ifdef CONFIG_ANALYZER_SEPARATE_MODE
 #define SEPARATE_MODE_LOGIC_ANALIZER
-#else 
+#else
 #undef SEPARATE_MODE_LOGIC_ANALIZER
 #endif
 
@@ -173,7 +173,7 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     I2S0.clkm_conf.clkm_div_num = ldiv.div_8;          // clk div_8
     I2S0.sample_rate_conf.rx_bck_div_num = ldiv.div_6; // bclk div_6
 }
-static void logic_analyzer_ll_set_pin(int *data_pins, int pin_trigger, int trigger_edge)
+static void logic_analyzer_ll_set_pin(int *data_pins)
 {
     //
     // trigger pin
@@ -181,14 +181,6 @@ static void logic_analyzer_ll_set_pin(int *data_pins, int pin_trigger, int trigg
     //
     vTaskDelay(5);
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
-
-    if (pin_trigger >= 0)
-    {
-        gpio_install_isr_service(0); // default
-        gpio_set_intr_type(pin_trigger, trigger_edge);
-        gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
-        gpio_intr_disable(pin_trigger);
-    }
 
     for (int i = 0; i < 16; i++)
     {
@@ -218,13 +210,6 @@ static void logic_analyzer_ll_set_pin(int *data_pins, int pin_trigger, int trigg
             gpio_matrix_in(data_pins[i], I2S0I_DATA_IN0_IDX + i, false); // connect pin to signal
         }
     }
-    if (pin_trigger >= 0)
-    {
-        gpio_install_isr_service(0); // default
-        gpio_set_intr_type(pin_trigger, trigger_edge);
-        gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
-        gpio_intr_disable(pin_trigger);
-    }
 
 #endif
 
@@ -234,7 +219,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins, int pin_trigger, int trigg
     gpio_matrix_in(0x38, I2S0I_H_SYNC_IDX, false);
     gpio_matrix_in(0x38, I2S0I_H_ENABLE_IDX, false);
 }
-void logic_analyzer_ll_config(int *data_pins, int pin_trigger, int trigger_edge, int sample_rate, la_frame_t *frame)
+void logic_analyzer_ll_config(int *data_pins,int sample_rate, la_frame_t *frame)
 {
     // Enable and configure I2S peripheral
     periph_module_enable(PERIPH_I2S0_MODULE);
@@ -243,7 +228,7 @@ void logic_analyzer_ll_config(int *data_pins, int pin_trigger, int trigger_edge,
     logic_analyzer_ll_reset();
     logic_analyzer_ll_set_mode();
     logic_analyzer_ll_set_clock(sample_rate);
-    logic_analyzer_ll_set_pin(data_pins, pin_trigger, trigger_edge);
+    logic_analyzer_ll_set_pin(data_pins);
     // set dma descriptor
     I2S0.rx_eof_num = frame->fb.len / sizeof(uint32_t); // count in 32 bit word
     I2S0.in_link.addr = ((uint32_t) & (frame->dma[0]));
@@ -257,9 +242,12 @@ void logic_analyzer_ll_start()
     I2S0.conf.rx_start = 1;                        // enable  transfer
     gpio_matrix_in(0x38, I2S0I_V_SYNC_IDX, false); // start transfer
 }
-void logic_analyzer_ll_triggered_start(int pin_trigger)
+void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
-    I2S0.conf.rx_start = 1;        // enable transfer
+    I2S0.conf.rx_start = 1;      // enable transfer
+    gpio_install_isr_service(0); // default
+    gpio_set_intr_type(pin_trigger, trigger_edge);
+    gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
     gpio_intr_enable(pin_trigger); // start transfer on irq
 }
 void logic_analyzer_ll_stop()

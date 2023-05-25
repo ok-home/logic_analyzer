@@ -23,6 +23,7 @@ static int logic_analyzer_started = 0;              // flag start dma
 //
 // sample sequence in 32 word - adr0=sample1, adr1=sample0 
 // swap sample sequence
+//
 static inline void swap_buf(uint16_t* buf,int cnt){
     uint16_t tmp;
     for( int i=0;i<cnt;i+=2)
@@ -204,7 +205,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         goto _freebuf_ret;
     }
     // configure I2S  - pin definition, pin trigger, sample frame & dma frame, clock divider
-    logic_analyzer_ll_config(config->pin, config->pin_trigger, config->trigger_edge, config->sample_rate, &la_frame);
+    logic_analyzer_ll_config(config->pin,config->sample_rate, &la_frame);
     // start main task - check logic analyzer get data & call cb
     if (pdPASS != xTaskCreate(logic_analyzer_task, "la_task", LA_TASK_STACK*4, config, configMAX_PRIORITIES - 2, &logic_analyzer_task_handle))
     {
@@ -226,7 +227,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     }
     else
     {
-        logic_analyzer_ll_triggered_start(config->pin_trigger);
+        logic_analyzer_ll_triggered_start(config->pin_trigger,config->trigger_edge);
     }
     return ESP_OK;
 
