@@ -105,13 +105,13 @@ void ll_hi_lewel_triggered_isr_start(int pin_trigger,int trigger_edge)
         
     ESP_LOGI("TISR","cfg before %lx",REG_READ(la_hi_interrupt_state.gpio_pin_cfg_reg));
         uint32_t reg_cfg = REG_READ(la_hi_interrupt_state.gpio_pin_cfg_reg);
-        if((reg_cfg & 0x1f) == 0) // all gpio  interrupt  disable
+        if((reg_cfg & (0x1f<<13)) == 0) // all gpio  interrupt  disable
         {
             reg_cfg &= ~(0x7<<7); // clear edge
         }
         if((reg_cfg & ( 0x7<<7)) == 0 ) // intr edge not defined
             {
-                reg_cfg |= trigger_edge<<7; // set edge
+                reg_cfg |= (trigger_edge<<7); // set edge
             }
 
         REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg,reg_cfg);
