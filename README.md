@@ -35,7 +35,7 @@
   - Connect to device
   - Choose the driver - Openbench logic Sniffer & SUMP
   - Serial Port - Speed - 921600 ( скорость можно переопределить, на моем кабеле работает на этой скорости )
-  - Scan for Device - должен появиться ESP32 wiht 16 channels
+  - Scan for Device - должен появиться ESP32 with 16 channels
   - Дальше читаем руководство по PulseView.
   # Подключение Web интерфейса ----- заходим на страничку по адресу http://xxxxxxx/la
   # Интерфейс программы

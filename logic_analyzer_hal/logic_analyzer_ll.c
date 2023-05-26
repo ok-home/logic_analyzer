@@ -213,7 +213,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
 
 #endif
 
-    // v-sync - stop transfer - set to 0 - set to 1 on stert function
+    // v-sync - stop transfer - set to 0 - set to 1 on start function
     gpio_matrix_in(0x30, I2S0I_V_SYNC_IDX, false);
     // cam mode signals must be set to hight
     gpio_matrix_in(0x38, I2S0I_H_SYNC_IDX, false);
