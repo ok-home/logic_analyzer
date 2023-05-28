@@ -1,68 +1,68 @@
-| Supported Targets | 
-| ----------------- | 
+| Supported Targets |
+| ----------------- |
 
-# Логический анализатор на ESP32
+# Logic analyzer on ESP32
 
 ![PulseView](/sigrok_esp.jpg)
 ![WebSocket](/la_ws.jpg)
 
-## Основные параметры
- - 16 каналов.
- - 40 мегагерц. - максимальная частота сэмплов
- - 32764 - максимальное количество сэмплов в кадре ( буфер захвата ). Объем ограничен максимальным размером свободной DRAM.
- - 1 канал триггера захвата. Триггер организован на прерываниях по фронтам. ESP32 прерывания обрабатываются примерно 2 мкСек - Соответственно задержка от триггера до начала данных, около 2-х мкСек.
- - Используется внутренний клок сэмплов, нет необходимости ставить перемычки для подачи синхроимпульсов или использовать внешний генератор. Пины под синхроимпульсы не используются.
- - Анализатор позволяет работать на измеряемом устройстве. Устанавливаем софт на пациента настраиваем GPIO на каналы ( проверено - простой GPIO, I2C, LED PWM, думаю что остальное также будет работать ), показывает как входные так и выходные сигналы пациента. Ограничения по триггеру в этом режиме - нельзя назначить триггер на пин (GPIO) у которого назначено прерывание на софте пациента ( анализатор перенастроит на себя )
- - Можно сделать анализатор как отдельное устройство, но не вижу особого смысла На Ali достаточное количество дешевых аналогов с похожими харатеристиками. Основное преимущество самодиагностики - прилинковали софт к проекту и смотрим что там происходит. Понятно что софт пациента может уже использовать всю DRAM - тогда сильно уменьшится объем сэмплов - но хотя бы уровни и небольшое количество отсчетов все равно увидим.
- ## В качестве визуализации используется Sigrok PulseView 
-  - Открытый софт
-  - Много анализаторов протокола
-  - используется UART для получения данных, протокол передачи "Openbench logic Sniffer & SUMP"
-  - по умолчанию используется UART0 ESP32 можно ( а лучше нужно ) использовать другой порт если он есть на вашем устройстве.
- ## Добавлен простой web интерфейс
-  - Подключение совсем без проводов
-  - Простая настройка GPIO на каналы
-  - Просмотр сэмплов ( без анализа интерфейсов )
-  - Сохранение данных в .bin формате который потом можно при необходимости передать в тот же Sigrok PulseView ( 16 каналов )
-  - Подключение к wifi - example_connect в menuconfig
-  ## Известные баги
-  - при использовании UART0 - необходимо отключить весь дигностический вывод ESP32 (LOG LEVEL - NONE ), это не баг но существенное ограничение.
-  - PulseView - для получения данных нужно нажать RUN 2 раза с интервалом 1-2 секунды ( причину не знаю )
-  - PulseView - в режиме триггера не работает с кадрами меньше 1к ( причину не знаю )
-  - PulseView - не принимает параметр максимальной частоты сэмплов - легко увидите частоты 50/100/200 мегаГерц.
-  - PulseView - не работает предвыборка триггера ( ставим 0% ) - просто не делал, и в текущей архитектуре невозможно.
-  # Подключение PulseView
-  - Connect to device
-  - Choose the driver - Openbench logic Sniffer & SUMP
-  - Serial Port - Speed - 921600 ( скорость можно переопределить, на моем кабеле работает на этой скорости )
-  - Scan for Device - должен появиться ESP32 with 16 channels
-  - Дальше читаем руководство по PulseView.
-  # Подключение Web интерфейса ----- заходим на страничку по адресу http://xxxxxxx/la
-  # Интерфейс программы
-  ## Условно состоит из 3-х частей
-  ### include/logic_analyzer_hal.h
-  - Получает сэмплы в буфер ESP32
-  - logic_analyzer_config_t - конфигурация захвата
-  - start_logic_analyzer(logic_analyzer_config_t *config) - старт захвата
-  - void (*logic_analyzer_cb_t)(uint16_t *samle_buf, int samples, int sample_rate) - каллбэк после захвата данных
-  ### include/logic_analyzer_sump.h
-  - работа с PulseView 
-  - logic_analyzer_sump(); 
-  ### include/logic_analyzer_ws_server.h
-  - Стартуем web сервер с поддержкой websocket
-  - logic_analyzer_ws_server()
-  ### include/logic_analyzer_ws.h
-  - если на вашем устройстве уже установлен сервер - просто зарегистрируйте uri handler
-  - logic_analyzer_register_uri_handlers(httpd_handle_t server);
-  ## Пример с тестовыми сэмплами
-  ### logic_analyzer_example
-  - test_sample_init() - включает простой генератор на 500 килогерц, и пачку GPIO имульсов с большой скважностью. Никаких дополнительных подключений, проводков и пр. не нужно, уже будет показывать внутренности. При желании можете поставить 2 перемычки на пины (18-22,19-23) - продублирует сигналы на GPIO.
-  - test_air() - подключен дополнительный модуль i2c - CJMCU_8118  - то что было под руками.
-  - вишенка на торте - подключаемся любым каналом на GPIO1 (TXD0) и смотрим свой же uart0 (только web)
-  ## В основном для SUMP/Sigrok -  настройки вынесены в menuconfig
+## Main parameters
+  - 16 channels.
+  - 40 megahertz. - maximum sample rate
+  - 32764 - maximum number of samples per frame (capture buffer). The volume is limited by the maximum size of free DRAM.
+  - 1 capture trigger channel. The trigger is organized on interrupts along the fronts. ESP32 interrupts are processed approximately 2 µs - Accordingly, the delay from the trigger to the beginning of the data, about 2 µs.
+  - Uses the internal clock of samples, no need to set jumpers to supply sync pulses or use an external generator. Pins for sync pulses are not used.
+  - The analyzer allows you to work on the measured device. We install the software on the patient, configure the GPIO for channels (checked - simple GPIO, I2C, LED PWM, I think that the rest will also work), shows both input and output signals of the patient. Trigger restrictions in this mode - you cannot assign a trigger to a pin (GPIO) that has an interrupt assigned to the patient software (the analyzer will reconfigure itself)
+  - You can make the analyzer as a separate device, but I don't see much point. Ali has enough cheap analogues with similar characteristics. The main advantage of self-diagnostics is that we linked the software to the project and see what happens there. It is clear that the patient's software can already use the entire DRAM - then the volume of samples will greatly decrease - but we will still see at least the levels and a small number of samples.
+  ## Sigrok PulseView is used as visualization
+   - Open software
+   - Lots of protocol analyzers
+   - used UART to receive data, transfer protocol "Openbench logic Sniffer & SUMP"
+   - the default is UART0 ESP32 you can (or rather you need to) use a different port if it is on your device.
+  ## Added a simple web interface
+   - Completely wireless connection
+   - Easy GPIO configuration per channels
+   - View samples (without interface analysis)
+   - Saving data in .bin format, which can then be transferred, if necessary, to the same Sigrok PulseView (16 channels)
+   - Connect to wifi - example_connect in menuconfig
+   ## Known bugs
+   - when using UART0 - it is necessary to disable all ESP32 diagnostic output (LOG LEVEL - NONE ), this is not a bug but a significant limitation.
+   - PulseView - to receive data, you need to press RUN 2 times with an interval of 1-2 seconds (I don’t know the reason)
+   - PulseView - in trigger mode does not work with frames less than 1k (I don't know why)
+   - PulseView - does not accept the maximum sample rate parameter - you can easily see frequencies of 50/100/200 megahertz.
+   - PulseView - trigger prefetch does not work (set 0% ) - just didn't do it, and it's impossible in the current architecture.
+   # Connecting PulseView
+   - Connect to device
+   - Choose the driver - Openbench logic Sniffer & SUMP
+   - Serial Port - Speed - 921600 (speed can be overridden, it works on my cable at this speed)
+   - Scan for Device - ESP32 with 16 channels should appear
+   - Further we read the manual on PulseView.
+   # Connecting the Web interface ----- go to the page at http://xxxxxxx/la
+   # Program interface
+   ## Conditionally consists of 3 parts
+   ### include/logic_analyzer_hal.h
+   - Gets samples into ESP32 buffer
+   - logic_analyzer_config_t - capture configuration
+   - start_logic_analyzer(logic_analyzer_config_t *config) - capture start
+   - void (*logic_analyzer_cb_t)(uint16_t *samle_buf, int samples, int sample_rate) - callback after data capture
+   ### include/logic_analyzer_sump.h
+   - work with PulseView
+   - logic_analyzer_sump();
+   ### include/logic_analyzer_ws_server.h
+   - Start a web server with websocket support
+   - logic_analyzer_ws_server()
+   ### include/logic_analyzer_ws.h
+   - if a server is already installed on your device - just register uri handler
+   - logic_analyzer_register_uri_handlers(httpd_handle_t server);
+   ## Example with test samples
+   ### logic_analyzer_example
+   - test_sample_init() - turns on a simple 500 kHz generator, and a bunch of GPIO pulses with a large duty cycle. No additional connections, wiring, etc. are needed, it will already show the insides. If you wish, you can put 2 jumpers on the pins (18-22,19-23) - it will duplicate the signals on the GPIO.
+   - test_air() - an additional i2c module is connected - CJMCU_8118 - what was at hand.
+   - icing on the cake - we connect with any channel to GPIO1 (TXD0) and watch our own uart0 (only web)
+   ## Mainly for SUMP/Sigrok - settings moved to menuconfig
 
-## В проекте использованы части кода
- - [esp32-cam](https://github.com/espressif/esp32-camera) for I2S DMA
- - [EUA/ESP32_LogicAnalyzer](https://github.com/EUA/ESP32_LogicAnalyzer) for SUMP
+## Parts of the code used in the project
+  - [esp32-cam](https://github.com/espressif/esp32-camera) for I2S DMA
+  - [EUA/ESP32_LogicAnalyzer](https://github.com/EUA/ESP32_LogicAnalyzer) for SUMP
 
-### Проект делался под себя поэтому пожелания добавления и исправления только при желании и возможности.
+### The project was made for myself, so the wishes of adding and correcting only if desired and possible.
