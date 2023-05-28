@@ -12,6 +12,9 @@
 #define I2C_PIN_SDA (26)
 #define I2C_PIN_SCL (27)
 
+#define GPIO_IRQ_PIN_26 (26)
+#define GPIO_IRQ_PIN_27 (27)
+
 
 
 #define LA_CLK_SAMPLE_RATE 80000000

@@ -7,7 +7,7 @@
 
 .data
 _l5_intr_stack:
-.space      60
+.space      16
 
     .section .iram1,"ax" 
 	.literal_position

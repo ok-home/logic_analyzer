@@ -48,6 +48,46 @@ static void example_ledc_init(void)
 portMUX_TYPE gpio_spinlock = portMUX_INITIALIZER_UNLOCKED;
 uint32_t mask = 1 << GPIO_BLINK;
 
+void IRAM_ATTR isr_26_handle(void *p)
+{
+    gpio_set_level(GPIO_IRQ_PIN_26,0);
+
+}
+void IRAM_ATTR isr_27_handle(void *p)
+{
+    gpio_set_level(GPIO_IRQ_PIN_27,1);
+
+}
+
+void irq_gpio_blink(void *p)
+{
+    gpio_reset_pin(GPIO_IRQ_PIN_26);
+    gpio_reset_pin(GPIO_IRQ_PIN_27);
+    gpio_set_direction(GPIO_IRQ_PIN_26,GPIO_MODE_INPUT_OUTPUT);
+    gpio_set_direction(GPIO_IRQ_PIN_27,GPIO_MODE_INPUT_OUTPUT);
+
+    gpio_set_level(GPIO_IRQ_PIN_26,0);
+    gpio_set_level(GPIO_IRQ_PIN_27,1);
+
+    gpio_install_isr_service(0); // default
+    gpio_set_intr_type(GPIO_IRQ_PIN_26,GPIO_INTR_POSEDGE);
+    gpio_set_intr_type(GPIO_IRQ_PIN_27,GPIO_INTR_NEGEDGE);
+    gpio_isr_handler_add(GPIO_IRQ_PIN_26, isr_26_handle, NULL);
+    gpio_isr_handler_add(GPIO_IRQ_PIN_27, isr_27_handle, NULL);
+    gpio_intr_enable(GPIO_IRQ_PIN_26);
+    gpio_intr_enable(GPIO_IRQ_PIN_27);
+
+    while(1)
+    {
+        vTaskDelay(1);
+    gpio_set_level(GPIO_IRQ_PIN_26,1);
+    gpio_set_level(GPIO_IRQ_PIN_27,0);
+
+    }
+
+}
+
+
 void IRAM_ATTR on_off()
 {
     gpio_set_level(GPIO_BLINK, 1);
@@ -105,8 +145,7 @@ void IRAM_ATTR on_off()
 
     portEXIT_CRITICAL(&gpio_spinlock);
 }
-
-void led_blink(void *p)
+void gpio_blink(void *p)
 {
     gpio_config_t io_cfg = {
         .pin_bit_mask = 1ULL << GPIO_BLINK,
@@ -186,5 +225,6 @@ void test_sample_init(void)
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-    xTaskCreate(led_blink, "tt", 2048 * 2, NULL, 1, NULL);
+    xTaskCreate(gpio_blink, "tt", 2048 * 2, NULL, 1, NULL);
+    xTaskCreate(irq_gpio_blink, "irq", 2048 * 2, NULL, 1, NULL);
 }
