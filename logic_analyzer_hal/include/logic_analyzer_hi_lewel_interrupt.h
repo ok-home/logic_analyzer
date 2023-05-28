@@ -13,10 +13,12 @@ typedef struct hi_interrupt_state {
     uint32_t gpio_stat_clr_reg;  // gpio pin clear status reg (0-31) (32-39)  
     uint32_t gpio_pin_cfg_reg;   // gpio pin config reg (0-39 )   
     uint32_t gpio_pin_cfg_int_ena_core_bit; // pro ? app -  inverted for clr (~ena_bit)
+    uint32_t gpio_pin_cfg_trig_data;
+    uint32_t gpio_pin_cfg_backup_data;
     uint32_t i2s_set_vsync_reg; // imux vsync reg i2s
     uint32_t i2s_set_vsync_bit; // 0x38 - set bit
 } hi_interrupt_state_t;
 
 #define HI_INTERRUPT_NUMBER 31
 // i2s0 - 191 signal, i2s1 194 signal ( 190 check to bypass ) check bypass iomux - | 1<<7
-#define HI_INTERRUPT_SET_VSYNC 0x38
+#define HI_INTERRUPT_SET_VSYNC 0xb8

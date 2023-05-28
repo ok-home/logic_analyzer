@@ -8,6 +8,11 @@
 */
 #include "logic_analyzer_hal.h"
 #include "logic_analyzer_ll.h"
+#include "logic_analyzer_hi_lewel_interrupt.h"
+#include "soc/soc.h"
+#include "soc/dport_access.h"
+
+extern hi_interrupt_state_t la_hi_interrupt_state;
 
 #define LA_TASK_STACK 2048
 #define DMA_FRAME 4092
@@ -123,6 +128,11 @@ static void logic_analyzer_task(void *arg)
 
         else
         {
+        // disable interrupt on core
+        _DPORT_REG_WRITE(la_hi_interrupt_state.dport_int_map_reg, la_hi_interrupt_state.dport_int_map_data_disable);
+        // clear GPIO interrupt enable on core
+        REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, la_hi_interrupt_state.gpio_pin_cfg_backup_data);
+
             cfg->logic_analyzer_cb(NULL, 0, 0); // timeout
             logic_analyzer_stop();              // todo stop & clear on task or external ??
             vTaskDelete(logic_analyzer_task_handle);
@@ -144,16 +154,30 @@ static void logic_analyzer_task(void *arg)
 esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
 {
     esp_err_t ret = 0;
-    if (logic_analyzer_started ) 
+    if(config->meashure_timeout==0)  // restart
     {
-        if(config->meashure_timeout==0) // if timeout == 0 -> restart
-        {
+       if (logic_analyzer_started )  
+       {
+        // disable interrupt on core
+        _DPORT_REG_WRITE(la_hi_interrupt_state.dport_int_map_reg, la_hi_interrupt_state.dport_int_map_data_disable);
+        // clear GPIO interrupt enable on core
+        REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, la_hi_interrupt_state.gpio_pin_cfg_backup_data);
+
             config->logic_analyzer_cb(NULL, 0, 0); // timeout or restart
             logic_analyzer_stop();              // todo stop & clear on task or external ??
             vTaskDelete(logic_analyzer_task_handle);
+      }
+       else
+       {
+            config->logic_analyzer_cb(NULL, 0, 0); // timeout or restart
+       }
             ret = ESP_OK;
             goto _retcode;
-        }
+
+    }
+
+    if (logic_analyzer_started ) 
+    {
         return ESP_ERR_INVALID_STATE;
     }
     logic_analyzer_started = 1;

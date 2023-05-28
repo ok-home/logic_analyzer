@@ -12,17 +12,29 @@ hi_interrupt_state_t la_hi_interrupt_state = {
     .dport_int_map_data_disable = 6,
 };
 
-// _DPORT_REG_READ(DPORT_PRO_GPIO_INTERRUPT_MAP_REG), _DPORT_REG_READ(DPORT_APP_GPIO_INTERRUPT_MAP_REG)
 void ll_triggered_isr_alloc(void *p)
 {
     ESP_LOGI("AISR","start");
     ESP_INTR_DISABLE(HI_INTERRUPT_NUMBER);
+
+    la_hi_interrupt_state.gpio_pin_cfg_backup_data = REG_READ(la_hi_interrupt_state.gpio_pin_cfg_reg);
+    REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg,0);
+    REG_WRITE(la_hi_interrupt_state.gpio_stat_clr_reg,la_hi_interrupt_state.gpio_mask);
     intr_matrix_set(la_hi_interrupt_state.cpu, ETS_GPIO_INTR_SOURCE, HI_INTERRUPT_NUMBER);   
+
     ESP_INTR_ENABLE(HI_INTERRUPT_NUMBER);
-    REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg,REG_READ(la_hi_interrupt_state.gpio_pin_cfg_reg)|(~la_hi_interrupt_state.gpio_pin_cfg_int_ena_core_bit));
-    ESP_LOGI("AISR","cfg after %lx",REG_READ(la_hi_interrupt_state.gpio_pin_cfg_reg));
-    ESP_LOGI("AISR","exit");
-    vTaskDelay(10); // debug delay
+
+    REG_WRITE(la_hi_interrupt_state.gpio_stat_clr_reg,la_hi_interrupt_state.gpio_mask);
+    REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg,la_hi_interrupt_state.gpio_pin_cfg_trig_data );
+/*
+        ESP_LOGI("TISR","regs mapreg=%lx dstatreg=%lx gstatreg=%lx cfgreg=%lx",
+        _DPORT_REG_READ(la_hi_interrupt_state.dport_int_map_reg),
+        _DPORT_REG_READ(la_hi_interrupt_state.dport_int_stat_reg),
+        REG_READ(la_hi_interrupt_state.gpio_stat_reg),
+        REG_READ(la_hi_interrupt_state.gpio_pin_cfg_reg));
+*/
+//    ESP_LOGI("AISR","exit");
+//    vTaskDelay(10); // debug delay
     vTaskDelete(NULL);
 }
 
@@ -62,6 +74,7 @@ void ll_hi_lewel_triggered_isr_start(int pin_trigger,int trigger_edge)
         int_free_app = 0;
         break;
     }
+//    la_hi_interrupt_state.cpu = 0;
     ESP_LOGI("TISR","pro=%ld app=%ld cpu=%ld",_DPORT_REG_READ(DPORT_PRO_GPIO_INTERRUPT_MAP_REG),_DPORT_REG_READ(DPORT_APP_GPIO_INTERRUPT_MAP_REG),la_hi_interrupt_state.cpu);
     if((int_free_app|int_free_pro) == 0) // all gpio int ( app&pro ) predefined - slow gpio int
     {
@@ -82,12 +95,13 @@ void ll_hi_lewel_triggered_isr_start(int pin_trigger,int trigger_edge)
         la_hi_interrupt_state.gpio_stat_reg = (pin_trigger < 32) ? GPIO_STATUS_REG : GPIO_STATUS1_REG ; // hi/low interupt status register ( 0-31 )( 32-39 )
         la_hi_interrupt_state.gpio_stat_clr_reg = (pin_trigger < 32) ? GPIO_STATUS_W1TC_REG : GPIO_STATUS1_W1TC_REG ; // hi/low interupt status clear register ( 0-31 )( 32-39 )
         la_hi_interrupt_state.gpio_pin_cfg_reg = GPIO_PIN0_REG+(4*pin_trigger); // gpio config register corresponded with trigger pin
-        la_hi_interrupt_state.gpio_pin_cfg_int_ena_core_bit = (la_hi_interrupt_state.cpu == 0) ? ~(1<<15) : ~(1<<13); // app/pro enable interrupt in cfg gpio register - 0 for fast clear
+        la_hi_interrupt_state.gpio_pin_cfg_int_ena_core_bit = (la_hi_interrupt_state.cpu == 0) ? (1<<15) : (1<<13); // app/pro enable interrupt in cfg gpio register - 0 for fast clear
+        la_hi_interrupt_state.gpio_pin_cfg_trig_data = 0;
+        la_hi_interrupt_state.gpio_pin_cfg_backup_data = REG_READ(la_hi_interrupt_state.gpio_pin_cfg_reg);
         la_hi_interrupt_state.i2s_set_vsync_reg = GPIO_FUNC191_IN_SEL_CFG_REG;  // i2s0/i2s1
         la_hi_interrupt_state.i2s_set_vsync_bit = HI_INTERRUPT_SET_VSYNC;
 
-        ESP_LOGI("TISR","v_sync check bit=%lx vsync=%lx hsync=%lx",la_hi_interrupt_state.i2s_set_vsync_bit,REG_READ(la_hi_interrupt_state.i2s_set_vsync_reg),REG_READ(GPIO_FUNC190_IN_SEL_CFG_REG));
-        ESP_LOGI("TISR","cfg mapreg=%lx dstatreg=%lx mask=%lx gstatreg=%lx sclrreg=%lx cfgreg=%lx intena=%lx",
+/*        ESP_LOGI("TISR","cfg mapreg=%lx dstatreg=%lx mask=%lx gstatreg=%lx sclrreg=%lx cfgreg=%lx intena=%lx",
             la_hi_interrupt_state.dport_int_map_reg,
             la_hi_interrupt_state.dport_int_stat_reg,
             la_hi_interrupt_state.gpio_mask,
@@ -95,6 +109,14 @@ void ll_hi_lewel_triggered_isr_start(int pin_trigger,int trigger_edge)
             la_hi_interrupt_state.gpio_stat_clr_reg,
             la_hi_interrupt_state.gpio_pin_cfg_reg,
             la_hi_interrupt_state.gpio_pin_cfg_int_ena_core_bit);
+*/
+
+        ESP_LOGI("TISR","regs mapreg=%lx dstatreg=%lx gstatreg=%lx cfgreg=%lx",
+        _DPORT_REG_READ(la_hi_interrupt_state.dport_int_map_reg),
+        _DPORT_REG_READ(la_hi_interrupt_state.dport_int_stat_reg),
+        REG_READ(la_hi_interrupt_state.gpio_stat_reg),
+        REG_READ(la_hi_interrupt_state.gpio_pin_cfg_reg));
+
 
         // for shared interrupt (gpio pin interrupt defined on both cores )  ( simultaneously on 2 cores )
         // if interrupt edge predefined and interrupt enable on core
@@ -102,25 +124,12 @@ void ll_hi_lewel_triggered_isr_start(int pin_trigger,int trigger_edge)
         
         // mask ????????????????????????????? clear ???????????????
 
-        
-    ESP_LOGI("TISR","cfg before %lx",REG_READ(la_hi_interrupt_state.gpio_pin_cfg_reg));
-        uint32_t reg_cfg = REG_READ(la_hi_interrupt_state.gpio_pin_cfg_reg);
-        if((reg_cfg & (0x1f<<13)) == 0) // all gpio  interrupt  disable
-        {
-            reg_cfg &= ~(0x7<<7); // clear edge
-        }
-        if((reg_cfg & ( 0x7<<7)) == 0 ) // intr edge not defined
-            {
-                reg_cfg |= (trigger_edge<<7); // set edge
-            }
-
-        REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg,reg_cfg);
-        ESP_LOGI("TISR","cfg after %lx",REG_READ(la_hi_interrupt_state.gpio_pin_cfg_reg));
+    la_hi_interrupt_state.gpio_pin_cfg_trig_data = (trigger_edge<<7) |  la_hi_interrupt_state.gpio_pin_cfg_int_ena_core_bit;   
 
     // alloc hi level int on free core        
         xTaskCreatePinnedToCore(ll_triggered_isr_alloc, "trigg_alloc", 4096, NULL, /*uxTaskPriorityGet(NULL)*/20, NULL, la_hi_interrupt_state.cpu);
-        vTaskDelay(10); // debug delay
-        ESP_LOGI("TISR","exit isr cfg");
+//        vTaskDelay(10); // debug delay
+//        ESP_LOGI("TISR","exit isr cfg");
     }
 
 }

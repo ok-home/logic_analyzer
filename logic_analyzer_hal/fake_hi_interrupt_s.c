@@ -55,10 +55,10 @@ void xt_highint5(void)
     _REG_WRITE(la_hi_interrupt_state.i2s_set_vsync_reg, la_hi_interrupt_state.i2s_set_vsync_bit);
     // disable interrupt on core
     _REG_WRITE(la_hi_interrupt_state.dport_int_map_reg, la_hi_interrupt_state.dport_int_map_data_disable);
-    // clear interrupt status if not shared
-    _REG_WRITE(la_hi_interrupt_state.gpio_stat_clr_reg, la_hi_interrupt_state.gpio_mask);
     // clear GPIO interrupt enable on core
-    _REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, _REG_READ(la_hi_interrupt_state.gpio_pin_cfg_reg) & la_hi_interrupt_state.gpio_pin_cfg_int_ena_core_bit);
+    _REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, la_hi_interrupt_state.gpio_pin_cfg_backup_data);
+    // clear interrupt status if not shared
+    //_REG_WRITE(la_hi_interrupt_state.gpio_stat_clr_reg, la_hi_interrupt_state.gpio_mask);
     // restore reg
     // iret
 }

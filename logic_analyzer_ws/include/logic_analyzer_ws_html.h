@@ -172,7 +172,7 @@ const options_list_t options[]={
     {10000000,"10 MHz","lst03"},
     {20000000,"20 MHz","lst03"},
     {40000000,"40 MHz","lst03"},
-    {0,"Restart LA","lst04"},
+   // {0,"Restart LA","lst04"},
     {1,"1 Sek","lst04"},
     {2,"2 Sek","lst04"},
     {5,"5 Sek","lst04"},
