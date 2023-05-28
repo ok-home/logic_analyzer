@@ -50,43 +50,38 @@ uint32_t mask = 1 << GPIO_BLINK;
 
 void IRAM_ATTR isr_26_handle(void *p)
 {
-    gpio_set_level(GPIO_IRQ_PIN_26,0);
-
+    gpio_set_level(GPIO_IRQ_PIN_26, 0);
 }
 void IRAM_ATTR isr_27_handle(void *p)
 {
-    gpio_set_level(GPIO_IRQ_PIN_27,1);
-
+    gpio_set_level(GPIO_IRQ_PIN_27, 1);
 }
 
 void irq_gpio_blink(void *p)
 {
     gpio_reset_pin(GPIO_IRQ_PIN_26);
     gpio_reset_pin(GPIO_IRQ_PIN_27);
-    gpio_set_direction(GPIO_IRQ_PIN_26,GPIO_MODE_INPUT_OUTPUT);
-    gpio_set_direction(GPIO_IRQ_PIN_27,GPIO_MODE_INPUT_OUTPUT);
+    gpio_set_direction(GPIO_IRQ_PIN_26, GPIO_MODE_INPUT_OUTPUT);
+    gpio_set_direction(GPIO_IRQ_PIN_27, GPIO_MODE_INPUT_OUTPUT);
 
-    gpio_set_level(GPIO_IRQ_PIN_26,0);
-    gpio_set_level(GPIO_IRQ_PIN_27,1);
+    gpio_set_level(GPIO_IRQ_PIN_26, 0);
+    gpio_set_level(GPIO_IRQ_PIN_27, 1);
 
     gpio_install_isr_service(0); // default
-    gpio_set_intr_type(GPIO_IRQ_PIN_26,GPIO_INTR_POSEDGE);
-    gpio_set_intr_type(GPIO_IRQ_PIN_27,GPIO_INTR_NEGEDGE);
+    gpio_set_intr_type(GPIO_IRQ_PIN_26, GPIO_INTR_POSEDGE);
+    gpio_set_intr_type(GPIO_IRQ_PIN_27, GPIO_INTR_LOW_LEVEL);
     gpio_isr_handler_add(GPIO_IRQ_PIN_26, isr_26_handle, NULL);
     gpio_isr_handler_add(GPIO_IRQ_PIN_27, isr_27_handle, NULL);
     gpio_intr_enable(GPIO_IRQ_PIN_26);
     gpio_intr_enable(GPIO_IRQ_PIN_27);
 
-    while(1)
+    while (1)
     {
         vTaskDelay(1);
-    gpio_set_level(GPIO_IRQ_PIN_26,1);
-    gpio_set_level(GPIO_IRQ_PIN_27,0);
-
+        gpio_set_level(GPIO_IRQ_PIN_26, 1);
+        gpio_set_level(GPIO_IRQ_PIN_27, 0);
     }
-
 }
-
 
 void IRAM_ATTR on_off()
 {
