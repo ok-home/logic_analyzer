@@ -1,5 +1,5 @@
 idf_component_register(SRCS  "logic_analyzer_triggered_isr_start.c" "logic_analyzer_hal.c" "logic_analyzer_ll.c"
-                            "fake_hi_interrupt_s.s"
+                            "logic_analyzer_hi_interrupt_handler.s"
                     INCLUDE_DIRS "./include"
                     REQUIRES driver
 )

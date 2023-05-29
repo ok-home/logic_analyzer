@@ -56,3 +56,10 @@ xt_highint5:
 .global la_include_hi_interrupt
 la_include_hi_interrupt:
 
+/*
+// add to Cmake
+//
+// target_link_libraries(${COMPONENT_LIB} INTERFACE "-u la_include_hi_interrupt")
+//
+*/
+

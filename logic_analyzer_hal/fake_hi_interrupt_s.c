@@ -2,41 +2,46 @@
 // fake interrupt handler
 // for create asm file
 // /home/ok-home/.espressif/tools/xtensa-esp32-elf/esp-2022r1-11.2.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc /home/ok-home/myex/logic_analizer/logic_analyzer_hal/fake_hi_interrupt_s.c -S -O3
+
 // header
 /*
-
-#include <xtensa/coreasm.h>
-#include <xtensa/corebits.h>
-#include <xtensa/config/system.h>
-#include <xtensa/hal.h>
-
-
 .data
 _l5_intr_stack:
-.space      60
+.space      16
 
     .section .iram1,"ax" 
-    .global     xt_highint5   
-    .type       xt_highint5,@function
-    .align      4
-xt_highint5:
+	.literal_position
+	.literal .LC0, la_hi_interrupt_state
+	.align	4
+	.global	xt_highint5
+	.type	xt_highint5, @function
 
+xt_highint5:
+//
     movi    a0,     _l5_intr_stack
-    s32i    a3,     a0,     0    
-    s32i    a4,     a0,     4   
+    s32i    a8,     a0,     0    
+    s32i    a9,     a0,     4 
+    s32i    a10,    a0,     8
+//	s32i    a11,    a0,     12   
+
+//  start of replacement block
 */
+
 // footer
 /*
-SAVE_EXIT:
-    movi    a0,     _l5_intr_stack
-    l32i    a3,     a0,     0
-    l32i    a4,     a0,     4
+//	end of replacement block
 
-    rsr     a0, EXCSAVE_5   
+    movi    a0,     _l5_intr_stack
+    l32i    a8,     a0,     0
+    l32i    a9,     a0,     4
+    l32i    a10,    a0,     8
+//	l32i    a11,    a0,     12
+//
+	rsr.excsave5 a0
     rfi     5
 
-.global ld_include_my_isr_file
-ld_include_my_isr_file:
+.global la_include_hi_interrupt
+la_include_hi_interrupt:
 */
 //
 #include <stdint.h>
@@ -51,14 +56,20 @@ void xt_highint5(void)
 {
     // save reg
     //  default use int31
+
+    // start of replacement block
+
     //  start dma - set vsync bit to 1
     _REG_WRITE(la_hi_interrupt_state.i2s_set_vsync_reg, la_hi_interrupt_state.i2s_set_vsync_bit);
     // disable interrupt on core
     _REG_WRITE(la_hi_interrupt_state.dport_int_map_reg, la_hi_interrupt_state.dport_int_map_data_disable);
-    // clear GPIO interrupt enable on core
+    // clear GPIO interrupt enable on core - restore gpio cfg data
     _REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, la_hi_interrupt_state.gpio_pin_cfg_backup_data);
-    // clear interrupt status if not shared
+    // clear interrupt status if not shared // not used now
     //_REG_WRITE(la_hi_interrupt_state.gpio_stat_clr_reg, la_hi_interrupt_state.gpio_mask);
+
+    //	end of replacement block
+
     // restore reg
     // iret
 }

@@ -128,10 +128,7 @@ static void logic_analyzer_task(void *arg)
 
         else
         {
-        // disable interrupt on core
-        _DPORT_REG_WRITE(la_hi_interrupt_state.dport_int_map_reg, la_hi_interrupt_state.dport_int_map_data_disable);
-        // clear GPIO interrupt enable on core
-        REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, la_hi_interrupt_state.gpio_pin_cfg_backup_data);
+            ll_hi_lewel_triggered_isr_timeout_stop(void); // restore gpio irq reg
 
             cfg->logic_analyzer_cb(NULL, 0, 0); // timeout
             logic_analyzer_stop();              // todo stop & clear on task or external ??
@@ -158,11 +155,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     {
        if (logic_analyzer_started )  
        {
-        // disable interrupt on core
-        _DPORT_REG_WRITE(la_hi_interrupt_state.dport_int_map_reg, la_hi_interrupt_state.dport_int_map_data_disable);
-        // clear GPIO interrupt enable on core
-        REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, la_hi_interrupt_state.gpio_pin_cfg_backup_data);
-
+            ll_hi_lewel_triggered_isr_timeout_stop(void); // restore gpio irq reg
             config->logic_analyzer_cb(NULL, 0, 0); // timeout or restart
             logic_analyzer_stop();              // todo stop & clear on task or external ??
             vTaskDelete(logic_analyzer_task_handle);
