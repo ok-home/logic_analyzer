@@ -1,6 +1,10 @@
+#pragma once
 //
 // used on hi level interrupt
 //
+#ifdef __cplusplus
+extern "C" {
+#endif
 void la_ll_trigger_isr(void *pin);
 
 typedef struct hi_interrupt_state {
@@ -22,3 +26,8 @@ typedef struct hi_interrupt_state {
 #define HI_INTERRUPT_NUMBER 31
 // i2s0 - 191 signal, i2s1 194 signal ( 190 check to bypass ) check bypass iomux - | 1<<7
 #define HI_INTERRUPT_SET_VSYNC 0xb8
+
+
+#ifdef __cplusplus
+}
+#endif

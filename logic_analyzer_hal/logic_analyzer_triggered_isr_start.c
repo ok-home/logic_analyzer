@@ -1,3 +1,12 @@
+/* logic analyzer ll example
+
+   This example code is in the Public Domain (or CC0 licensed, at your option.)
+
+   Unless required by applicable law or agreed to in writing, this
+   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+   CONDITIONS OF ANY KIND, either express or implied.
+*/
+
 #include "soc/dport_reg.h"
 #include "soc/gpio_reg.h"
 #include "soc/soc.h"
@@ -6,14 +15,17 @@
 #include "logic_analyzer_hi_level_interrupt.h"
 #include "esp_log.h"
 
+
 hi_interrupt_state_t la_hi_interrupt_state;
 
 void ll_hi_level_triggered_isr_timeout_stop(void)
 {
+    #ifdef CONFIG_ESP_SYSTEM_CHECK_INT_LEVEL_4
     // disable interrupt on core
     _DPORT_REG_WRITE(la_hi_interrupt_state.dport_int_map_reg, la_hi_interrupt_state.dport_int_map_data_disable);
     // clear GPIO interrupt enable on core // restore cfg register
     REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, la_hi_interrupt_state.gpio_pin_cfg_backup_data);
+    #endif
 
 }
 

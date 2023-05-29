@@ -219,7 +219,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
     gpio_matrix_in(0x38, I2S0I_H_SYNC_IDX, false);
     gpio_matrix_in(0x38, I2S0I_H_ENABLE_IDX, false);
 }
-void logic_analyzer_ll_config(int *data_pins,int sample_rate, la_frame_t *frame)
+void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame)
 {
     // Enable and configure I2S peripheral
     periph_module_enable(PERIPH_I2S0_MODULE);
@@ -244,14 +244,15 @@ void logic_analyzer_ll_start()
 }
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
-    I2S0.conf.rx_start = 1;      // enable transfer
-    ll_hi_level_triggered_isr_start(pin_trigger,trigger_edge);
-    /*
+    I2S0.conf.rx_start = 1; // enable transfer
+#ifdef CONFIG_ESP_SYSTEM_CHECK_INT_LEVEL_4
+    ll_hi_level_triggered_isr_start(pin_trigger, trigger_edge);
+#else
     gpio_install_isr_service(0); // default
     gpio_set_intr_type(pin_trigger, trigger_edge);
     gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
     gpio_intr_enable(pin_trigger); // start transfer on irq
-    */
+#endif
 }
 void logic_analyzer_ll_stop()
 {
