@@ -4,7 +4,7 @@
 | ESP32             | 
 | ----------------- |
 
-# Logic analyzer on ESP32
+# Logic analyzer on ESP32 for self-diagnostics
 
 ![WebSocket](/la_ws.jpg)
 ![PulseView](/sigrok_esp.jpg)
