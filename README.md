@@ -1,4 +1,6 @@
-| Supported Targets |
+| ----------------- |
+| Supported Targets |  
+| ESP32             | 
 | ----------------- |
 
 # Logic analyzer on ESP32
@@ -57,7 +59,6 @@
    ## Example with test samples
    ### logic_analyzer_example
    - test_sample_init() - turns on a simple 500 kHz generator, and a bunch of GPIO pulses with a large duty cycle. No additional connections, wiring, etc. are needed, it will already show the insides. If you wish, you can put 2 jumpers on the pins (18-22,19-23) - it will duplicate the signals on the GPIO.
-   - test_air() - an additional i2c module is connected - CJMCU_8118 - what was at hand.
    - icing on the cake - we connect with any channel to GPIO1 (TXD0) and watch our own uart0 (only web)
    ## Mainly for SUMP/Sigrok - settings moved to menuconfig
 
