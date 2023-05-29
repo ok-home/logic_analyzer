@@ -1,4 +1,4 @@
-![Ru](/README-RU.md)
+[Ru](/README-RU.md)
 
 | Supported Targets |  
 | ESP32             | 
