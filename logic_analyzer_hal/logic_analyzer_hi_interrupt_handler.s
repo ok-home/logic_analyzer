@@ -1,9 +1,3 @@
-#include <xtensa/coreasm.h>
-#include <xtensa/corebits.h>
-#include <xtensa/config/system.h>
-#include <xtensa/hal.h>
-#include <xtensa/config/specreg.h>
-
 
 .data
 _l5_intr_stack:
