@@ -245,7 +245,7 @@ void logic_analyzer_ll_start()
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
     I2S0.conf.rx_start = 1;      // enable transfer
-    ll_hi_lewel_triggered_isr_start(pin_trigger,trigger_edge);
+    ll_hi_level_triggered_isr_start(pin_trigger,trigger_edge);
     /*
     gpio_install_isr_service(0); // default
     gpio_set_intr_type(pin_trigger, trigger_edge);

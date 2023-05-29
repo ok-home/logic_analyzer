@@ -1,5 +1,5 @@
 //
-// used on hi lewel interrupt
+// used on hi level interrupt
 //
 void la_ll_trigger_isr(void *pin);
 

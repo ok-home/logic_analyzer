@@ -80,9 +80,9 @@ void logic_analyzer_ll_deinit_dma_eof_isr();
 */
 int logic_analyzer_ll_get_sample_rate(int sample_rate);
 
-// from hi-lewel nterrupt
-void ll_hi_lewel_triggered_isr_start(int pin_trigger,int trigger_edge);
-void ll_hi_lewel_triggered_isr_timeout_stop(void);
+// from hi-level nterrupt
+void ll_hi_level_triggered_isr_start(int pin_trigger,int trigger_edge);
+void ll_hi_level_triggered_isr_timeout_stop(void);
 
 #ifdef __cplusplus
 }

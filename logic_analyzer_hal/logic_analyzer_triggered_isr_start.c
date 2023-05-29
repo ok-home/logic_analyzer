@@ -3,12 +3,12 @@
 #include "soc/soc.h"
 #include "rom/ets_sys.h"
 #include "logic_analyzer_ll.h"
-#include "logic_analyzer_hi_lewel_interrupt.h"
+#include "logic_analyzer_hi_level_interrupt.h"
 #include "esp_log.h"
 
 hi_interrupt_state_t la_hi_interrupt_state;
 
-void ll_hi_lewel_triggered_isr_timeout_stop(void)
+void ll_hi_level_triggered_isr_timeout_stop(void)
 {
     // disable interrupt on core
     _DPORT_REG_WRITE(la_hi_interrupt_state.dport_int_map_reg, la_hi_interrupt_state.dport_int_map_data_disable);
@@ -38,17 +38,17 @@ void ll_triggered_isr_alloc(void *arg)
 
     REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, 0); // disable all interrupt on GPIO
     REG_WRITE(la_hi_interrupt_state.gpio_stat_clr_reg, la_hi_interrupt_state.gpio_mask); // clear intr status
-    intr_matrix_set(la_hi_interrupt_state.cpu, ETS_GPIO_INTR_SOURCE, HI_INTERRUPT_NUMBER); // route gpio interrupt on hi-lewel int
+    intr_matrix_set(la_hi_interrupt_state.cpu, ETS_GPIO_INTR_SOURCE, HI_INTERRUPT_NUMBER); // route gpio interrupt on hi-level int
 
     ESP_INTR_ENABLE(HI_INTERRUPT_NUMBER);
 
     REG_WRITE(la_hi_interrupt_state.gpio_stat_clr_reg, la_hi_interrupt_state.gpio_mask); // clear intr status
-    REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, la_hi_interrupt_state.gpio_pin_cfg_trig_data); //enable GPIO interrupt on hi-lewel core
+    REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, la_hi_interrupt_state.gpio_pin_cfg_trig_data); //enable GPIO interrupt on hi-level core
 
     vTaskDelete(NULL);
 }
 
-void ll_hi_lewel_triggered_isr_start(int pin_trigger, int trigger_edge)
+void ll_hi_level_triggered_isr_start(int pin_trigger, int trigger_edge)
 {
     int int_free_pro = 0;
     int int_free_app = 0;

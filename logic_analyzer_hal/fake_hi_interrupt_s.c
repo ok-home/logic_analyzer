@@ -48,7 +48,7 @@ la_include_hi_interrupt:
 #define _REG_READ(_r)        (*(volatile uint32_t *)(_r))
 #define _REG_WRITE(_r, _v)   (*(volatile uint32_t *)(_r)) = (_v)
 
-#include "./include/logic_analyzer_hi_lewel_interrupt.h"
+#include "./include/logic_analyzer_hi_level_interrupt.h"
 
 extern hi_interrupt_state_t la_hi_interrupt_state;
 
