@@ -27,7 +27,7 @@ void ll_triggered_isr_alloc(void *arg)
     uint32_t trigger_edge = (uint32_t)arg;
     la_hi_interrupt_state.gpio_pin_cfg_trig_data = 0;
     la_hi_interrupt_state.gpio_pin_cfg_backup_data = REG_READ(la_hi_interrupt_state.gpio_pin_cfg_reg);
-    tmp_trig = (la_hi_interrupt_state.gpio_pin_cfg_backup_data >> 7) & 0x7;
+    uint32_t tmp_trig = (la_hi_interrupt_state.gpio_pin_cfg_backup_data >> 7) & 0x7;
     if (tmp_trig == 0 || (la_hi_interrupt_state.gpio_pin_cfg_backup_data & (0x1f<<13))==0)
         {
             tmp_trig = trigger_edge;

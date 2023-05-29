@@ -128,7 +128,7 @@ static void logic_analyzer_task(void *arg)
 
         else
         {
-            ll_hi_level_triggered_isr_timeout_stop(void); // restore gpio irq reg
+            ll_hi_level_triggered_isr_timeout_stop(); // restore gpio irq reg
 
             cfg->logic_analyzer_cb(NULL, 0, 0); // timeout
             logic_analyzer_stop();              // todo stop & clear on task or external ??
@@ -155,7 +155,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     {
        if (logic_analyzer_started )  
        {
-            ll_hi_level_triggered_isr_timeout_stop(void); // restore gpio irq reg
+            ll_hi_level_triggered_isr_timeout_stop(); // restore gpio irq reg
             config->logic_analyzer_cb(NULL, 0, 0); // timeout or restart
             logic_analyzer_stop();              // todo stop & clear on task or external ??
             vTaskDelete(logic_analyzer_task_handle);
