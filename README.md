@@ -1,5 +1,4 @@
 [Ru](/README-RU.md)
-
 | Supported Targets |  
 | ESP32             | 
 | ----------------- |
