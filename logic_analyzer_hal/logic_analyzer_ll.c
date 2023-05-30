@@ -175,10 +175,7 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
 }
 static void logic_analyzer_ll_set_pin(int *data_pins)
 {
-    //
-    // trigger pin
-    // attention - pin trigger irq remove default pin irq on self diagnostic
-    //
+
     vTaskDelay(5);
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
 
@@ -251,6 +248,7 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
     gpio_install_isr_service(0); // default
     gpio_set_intr_type(pin_trigger, trigger_edge);
     gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
+    gpio_intr_disable(pin_trigger);
     gpio_intr_enable(pin_trigger); // start transfer on irq
 #endif
 }
