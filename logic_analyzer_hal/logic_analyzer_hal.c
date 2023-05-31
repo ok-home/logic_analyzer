@@ -49,7 +49,7 @@ static inline void swap_buf(uint16_t* buf,int cnt){
  * @return
  *     - dma descriptor ( NULL if no mem )
  */
-static lldesc_t *allocate_dma_descriptors(uint16_t size, uint8_t *buffer)
+static lldesc_t *allocate_dma_descriptors(uint32_t size, uint8_t *buffer)
 {
     uint32_t count = size / DMA_FRAME;     //  dma frames count
     uint32_t last_size = size % DMA_FRAME; // last frame bytes
@@ -202,13 +202,16 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     {
         goto _ret;
     }
-    // check number of samples
-    if (config->number_of_samples >= 32768)
-    {
-        goto _ret;
-    }
+    // check number of samples // remove - auto max sample block
+    //if (config->number_of_samples >= 70000)// 32768)
+    //{
+    //    goto _ret;
+    //}
     // allocate frame buffer
     // test  - check maximum available buffer size
+    uint32_t largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_DMA);
+    if(largest_free_block < config->number_of_samples * 2)
+        {config->number_of_samples=(largest_free_block/4)*2;}
     ESP_LOGI("DMA HEAP Before","All_dma_heap=%d Largest_dma_heap_block=%d",heap_caps_get_free_size(MALLOC_CAP_DMA),heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
     la_frame.fb.len = config->number_of_samples * 2;
     la_frame.fb.buf = heap_caps_calloc(la_frame.fb.len,1, MALLOC_CAP_DMA);
