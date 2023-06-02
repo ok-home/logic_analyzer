@@ -90,7 +90,6 @@ void ll_hi_level_triggered_isr_timeout_stop(void);
 /*
 * I2S0/I2S1 menuconfig select
 */
-#define CONFIG_ANALYZER_USE_I2S_CHANNEL_0 1
 
 #ifdef CONFIG_ANALYZER_USE_I2S_CHANNEL_0
 
@@ -103,7 +102,7 @@ void ll_hi_level_triggered_isr_timeout_stop(void);
 #define ETS_I2SX_INTR_SOURCE ETS_I2S0_INTR_SOURCE
 #define GPIO_FUNC_V_SYNC_IN_SEL_CFG_REG GPIO_FUNC191_IN_SEL_CFG_REG
 
-#elseif CONFIG_ANALYZER_USE_I2S_CHANNEL_1
+#elif CONFIG_ANALYZER_USE_I2S_CHANNEL_1
 
 #define PERIPH_I2SX_MODULE PERIPH_I2S1_MODULE
 #define I2SX I2S1
