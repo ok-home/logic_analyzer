@@ -119,9 +119,8 @@ void ll_hi_level_triggered_isr_start(int pin_trigger, int trigger_edge)
         la_hi_interrupt_state.gpio_stat_clr_reg = (pin_trigger < 32) ? GPIO_STATUS_W1TC_REG : GPIO_STATUS1_W1TC_REG;                                      // hi/low interupt status clear register ( 0-31 )( 32-39 )
         la_hi_interrupt_state.gpio_pin_cfg_reg = GPIO_PIN0_REG + (4 * pin_trigger);                                                                       // gpio config register corresponded with trigger pin
         la_hi_interrupt_state.gpio_pin_cfg_int_ena_core_bit = (la_hi_interrupt_state.cpu == 0) ? (1 << 15) : (1 << 13);                                   // app/pro enable interrupt in cfg gpio register - 0 for fast clear
-                                                                                                                                                          //        la_hi_interrupt_state.gpio_pin_cfg_trig_data = 0;
-                                                                                                                                                          //        la_hi_interrupt_state.gpio_pin_cfg_backup_data = REG_READ(la_hi_interrupt_state.gpio_pin_cfg_reg);
-        la_hi_interrupt_state.i2s_set_vsync_reg = GPIO_FUNC191_IN_SEL_CFG_REG;                                                                            // i2s0/i2s1
+
+        la_hi_interrupt_state.i2s_set_vsync_reg = GPIO_FUNC_V_SYNC_IN_SEL_CFG_REG;                                                                            // i2s0/i2s1
         la_hi_interrupt_state.i2s_set_vsync_bit = HI_INTERRUPT_SET_VSYNC;
 
         // alloc hi level int on free core

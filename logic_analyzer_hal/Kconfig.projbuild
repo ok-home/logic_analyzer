@@ -1,6 +1,17 @@
 menu "Logic Analyzer Configuration"
 
 
+    choice ANALYZER_USE_I2S_CHANNEL
+        prompt "I2S Channel Number"
+        default ANALYZER_USE_I2S_CHANNEL_0
+
+        config ANALYZER_USE_I2S_CHANNEL_0
+            bool "I2S0"
+
+        config ANALYZER_USE_I2S_CHANNEL_1
+            bool "I2S1"
+    endchoice
+
     config ANALYZER_SEPARATE_MODE
         bool "Separate mode"
         default n
