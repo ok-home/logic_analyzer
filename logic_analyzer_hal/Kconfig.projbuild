@@ -120,7 +120,7 @@ menu "Logic Analyzer Configuration"
 
         config ANALYZER_SAMPLES_COUNT
             int "Samples count"
-            range 100 32764
+            range 100 60000
             default 1000
 
         config ANALYZER_SAMPLE_RATE
