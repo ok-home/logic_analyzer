@@ -23,7 +23,7 @@ typedef struct {
     int pin_trigger;            // trigger GPIO pin, -1 - disable
     int trigger_edge;           // POS_EDGE/NEG_EDGE/ANY_EDGE
     int number_of_samples;      // Number of samples in 16 bit word
-    int sample_rate;            // Sample rate in HZ ( 4 000-20 000 000 )
+    int sample_rate;            // Sample rate in HZ ( 4 000-40 000 000 )
     int meashure_timeout;       // MAX meashured time in FreeRtos Tick - call cb function with zero buff&samples on timeout
     logic_analyzer_cb_t logic_analyzer_cb ; // logic analyzer callback
 } logic_analyzer_config_t;
@@ -36,7 +36,7 @@ typedef struct {
  *     - ESP_OK Success
  *     - ESP_ERR_INVALID_ARG Parameter error
  *     - ESP_ERR_NO_MEM No memory to initialize logic_analyzer
- *     - 9 - logic_analyzer already working
+ *     - ESP_ERR_INVALID_STATE  logic_analyzer already working
  *     - ESP_FAIL Initialize fail
  */
 esp_err_t start_logic_analyzer(logic_analyzer_config_t *config);

@@ -242,7 +242,7 @@ void logic_analyzer_ll_start()
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
     I2SX.conf.rx_start = 1; // enable transfer
-#ifdef CONFIG_ESP_SYSTEM_CHECK_INT_LEVEL_4
+#ifdef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
     ll_hi_level_triggered_isr_start(pin_trigger, trigger_edge);
 #else
     gpio_install_isr_service(0); // default

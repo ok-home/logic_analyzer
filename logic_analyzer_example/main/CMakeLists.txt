@@ -3,6 +3,6 @@ idf_component_register(
                     "logic_analyzer_example.c"
                     "../logic_analyzer_test_sample/logic_analyzer_test_sample.c"
                 REQUIRES  
-                    #logic_analyzer_sump 
-                    #logic_analyzer_ws
+                    logic_analyzer
+                    driver
 )

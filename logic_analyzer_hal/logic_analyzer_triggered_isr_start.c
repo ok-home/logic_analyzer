@@ -19,7 +19,7 @@ hi_interrupt_state_t la_hi_interrupt_state;
 
 void ll_hi_level_triggered_isr_timeout_stop(void)
 {
-#ifdef CONFIG_ESP_SYSTEM_CHECK_INT_LEVEL_4
+#ifdef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
     // disable interrupt on core
     _DPORT_REG_WRITE(la_hi_interrupt_state.dport_int_map_reg, la_hi_interrupt_state.dport_int_map_data_disable);
     // clear GPIO interrupt enable on core // restore cfg register
