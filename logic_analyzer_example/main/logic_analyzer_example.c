@@ -9,6 +9,7 @@
 #ifdef CONFIG_ANALYZER_USE_WS
 #include "logic_analyzer_ws_server.h"
 #endif
+
 void app_main(void)
 {
     extern void test_sample_init();
@@ -26,7 +27,6 @@ void app_main(void)
     // test uart out
     while(1)
     {
-        //ESP_LOGI("TEST MSG","TEST 123456789");
         vTaskDelay(100);
     }
 }

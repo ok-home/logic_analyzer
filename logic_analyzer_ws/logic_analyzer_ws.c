@@ -244,7 +244,6 @@ static void logic_analyzer_read_json(void *arg)
             else if (strncmp(rowID[ROW_TIMEOUT], name, 3) == 0)
             {
                 la_cfg.meashure_timeout = atoi(val)>0 ? atoi(val)*100 : atoi(val);
-//                ESP_LOGI(TAG,"Timeout=%d",la_cfg.meashure_timeout);
             }
         }
         else

@@ -215,7 +215,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     {
         config->number_of_samples = (largest_free_block / 4) * 2;
     }
-    ESP_LOGI("DMA HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
+    ESP_LOGD("DMA HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
     la_frame.fb.len = config->number_of_samples * 2;
     la_frame.fb.buf = heap_caps_calloc(la_frame.fb.len, 1, MALLOC_CAP_DMA);
     if (la_frame.fb.buf == NULL)
@@ -223,7 +223,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         ret = ESP_ERR_NO_MEM;
         goto _retcode;
     }
-    ESP_LOGI("DMA HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
+    ESP_LOGD("DMA HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
     //  allocate dma descriptor buffer
     la_frame.dma = allocate_dma_descriptors(la_frame.fb.len, la_frame.fb.buf);
     if (la_frame.dma == NULL)
@@ -231,7 +231,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         ret = ESP_ERR_NO_MEM;
         goto _freebuf_ret;
     }
-    ESP_LOGI("DMA HEAP After Descr", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
+    ESP_LOGD("DMA HEAP After Descr", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
     // configure I2S  - pin definition, pin trigger, sample frame & dma frame, clock divider
     logic_analyzer_ll_config(config->pin, config->sample_rate, &la_frame);
     // start main task - check logic analyzer get data & call cb

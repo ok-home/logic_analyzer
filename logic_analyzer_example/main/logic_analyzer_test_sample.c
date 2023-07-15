@@ -14,7 +14,21 @@
 #include "driver/gpio.h"
 #include "hal/gpio_hal.h"
 
-#include "logic_analyzer_pin_definition.h"
+
+// definition test sample
+// output pin ledc example
+#define LEDC_OUTPUT_IO (18)
+// output pin gpio blink example 
+#define GPIO_BLINK (19)
+// input wired example pins
+#define IN_PORT_1 (22)
+#define IN_PORT_2 (23)
+// i2c sample example pins
+#define I2C_PIN_SDA (26)
+#define I2C_PIN_SCL (27)
+
+#define GPIO_IRQ_PIN_26 (26)
+#define GPIO_IRQ_PIN_27 (27)
 
 #define LEDC_TIMER LEDC_TIMER_0
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
