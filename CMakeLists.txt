@@ -48,6 +48,9 @@ if(CONFIG_ANALYZER_USE_SUMP)
     list( APPEND includedir 
         logic_analyzer_sump/include 
     )
+    list( APPEND priv_includedir 
+        logic_analyzer_sump/private_include 
+    )
 endif()
 
 idf_component_register(

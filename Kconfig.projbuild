@@ -1,6 +1,5 @@
 menu "Logic Analyzer Configuration"
 
-
     choice ANALYZER_USE_I2S_CHANNEL
         prompt "I2S Channel Number"
         default ANALYZER_USE_I2S_CHANNEL_0
@@ -26,11 +25,59 @@ menu "Logic Analyzer Configuration"
         help
             In-app or separate device mode.
 
-    config ANALYZER_USE_PORT_ASSIGN
-        bool "Use port assignment"
+    config ANALYZER_USE_WS
+        bool "Logic analyzer output data to http websocket"
+        default y
+        help
+            logic analyzer output data to http websocket
+        
+    if  ANALYZER_USE_WS
+        config ANALYZER_START_WS_SERVER
+        bool "Start WS server"
+        default y
+            help
+                Start new WS server, or only register_uri_handlers on existing WS server.
+    endif
+        
+    config ANALYZER_USE_SUMP
+        bool "Direct connect to Sizrok PulseView"
         default n
         help
-            use  port assignments for channels.
+            direct connect to Sigrok PulseView via sump protocol.
+        
+    if ANALYZER_USE_SUMP
+        
+        config ANALYZER_SUMP_UART_PORT_NUMBER
+            int "uart port number 0-2"
+            default 0
+            help
+                UART port number.
+        
+        config ANALYZER_SUMP_UART_PORT_BAUD_RATE
+            int "uart port baud rate"
+            default 921600
+            help
+                UART port baud rate.
+        
+        config ANALYZER_SUMP_UART_PORT_RX_PIN
+            int "uart port rx pin"
+            default 3
+            help
+                UART port port rx pin.
+        
+        config ANALYZER_SUMP_UART_PORT_TX_PIN
+            int "uart port tx pin"
+            default 1
+            help
+                UART port port tx pin.
+                
+    endif 
+
+    config ANALYZER_USE_PORT_ASSIGN
+        bool "Use GPIO assignments for channels"
+        default n
+        help
+            use GPIO assignments for channels.
         
     if ANALYZER_USE_PORT_ASSIGN
 
@@ -142,54 +189,5 @@ menu "Logic Analyzer Configuration"
             default 20
     
     endif
-
-    config ANALYZER_USE_WS
-        bool "Logic analyzer output data to http websocket"
-        default y
-        help
-            logic analyzer output data to http websocket
-
-    if  ANALYZER_USE_WS
-        config ANALYZER_START_WS_SERVER
-            bool "Start WS server"
-            default y
-            help
-                Start new WS server, or only register_uri_handlers on existing WS server.
-    endif
-
-    config ANALYZER_USE_SUMP
-            bool "Direct connect to Sizrok PulseView"
-            default n
-            help
-                direct connect to Sigrok PulseView via sump protocol.
-
-    if ANALYZER_USE_SUMP
-
-        config ANALYZER_SUMP_UART_PORT_NUMBER
-            int "uart port number 0-2"
-            default 0
-            help
-                UART port number.
-
-        config ANALYZER_SUMP_UART_PORT_BAUD_RATE
-            int "uart port baud rate"
-            default 921600
-            help
-                UART port baud rate.
-
-        config ANALYZER_SUMP_UART_PORT_RX_PIN
-            int "uart port rx pin"
-            default 3
-            help
-                UART port port rx pin.
-
-        config ANALYZER_SUMP_UART_PORT_TX_PIN
-            int "uart port tx pin"
-            default 1
-            help
-                UART port port tx pin.
-        
-    endif 
-
 
 endmenu

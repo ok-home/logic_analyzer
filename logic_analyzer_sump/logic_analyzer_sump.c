@@ -14,6 +14,7 @@
 #include "logic_analyzer_pin_definition.h"
 #include "logic_analyzer_hal.h"
 
+#include "logic_analyzer_sump_definition.h"
 #include "logic_analyzer_sump.h"
 
 static int first_trigger_pin = 0;
