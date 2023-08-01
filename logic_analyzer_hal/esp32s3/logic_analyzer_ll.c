@@ -80,8 +80,8 @@ static void logic_analyzer_ll_reset()
     LCD_CAM.cam_ctrl1.cam_reset = 0;
     LCD_CAM.cam_ctrl1.cam_afifo_reset = 1;
     LCD_CAM.cam_ctrl1.cam_afifo_reset = 0;
-    GDMA.channel[dma_num].in.conf0.in_rst = 1;
-    GDMA.channel[dma_num].in.conf0.in_rst = 0;
+    //GDMA.channel[dma_num].in.conf0.in_rst = 1;
+    //GDMA.channel[dma_num].in.conf0.in_rst = 0;
 
 }
 static void logic_analyzer_ll_set_mode()
@@ -130,8 +130,17 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
 {
 
     vTaskDelay(5);
-
+    #define PCLK_PIN_TMP 10
     // route clk(pclk) pin ??????
+    // clk out xclk
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[PCLK_PIN_TMP], PIN_FUNC_GPIO);
+    gpio_set_direction(PCLK_PIN_TMP, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(PCLK_PIN_TMP, GPIO_FLOATING);
+    gpio_matrix_out(PCLK_PIN_TMP, CAM_CLK_IDX, false, false);
+    //clk in - pclk
+    PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[PCLK_PIN_TMP]);
+    gpio_matrix_in(PCLK_PIN_TMP, CAM_PCLK_IDX, false);
+
 /**/
     //
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
@@ -230,10 +239,9 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
     logic_analyzer_ll_set_clock(sample_rate);
     logic_analyzer_ll_set_mode();
     logic_analyzer_ll_set_pin(data_pins);
-
+    logic_analyzer_ll_cam_dma_init();
     logic_analyzer_ll_reset();
 
-    logic_analyzer_ll_cam_dma_init();
     // set dma descriptor
     LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = frame->fb.len; // count in byte
     GDMA.channel[cam->dma_num].in.link.addr = ((uint32_t) & (frame->dma[0]));
@@ -243,8 +251,8 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
     LCD_CAM.cam_ctrl.cam_update = 1;
     LCD_CAM.cam_ctrl1.cam_start = 1;
 
-
-    I2S_ISR_ENABLE(in_suc_eof);
+    GDMA.channel[dma_num].in.int_ena.in_suc_eof = 1;
+    GDMA.channel[dma_num].in.int_clr.in_suc_eof = 1;
 
 }
 void logic_analyzer_ll_start()
@@ -271,17 +279,27 @@ void logic_analyzer_ll_stop()
 {
     LCD_CAM.cam_ctrl1.cam_start = 0;
     GDMA.channel[dma_num].in.link.start = 0;
-    
-    I2S_ISR_DISABLE(in_suc_eof);
+    GDMA.channel[dma_num].in.link.addr = 0x0;
+
+    GDMA.channel[dma_num].in.int_ena.in_suc_eof = 0;
+    GDMA.channel[dma_num].in.int_clr.in_suc_eof = 1;
 }
 int logic_analyzer_ll_get_sample_rate(int sample_rate)
 {
-    div_68_t ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
-    return LA_CLK_SAMPLE_RATE / (ldiv.div_6 * ldiv.div_8);
+    int  ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
+    return LA_CLK_SAMPLE_RATE / ldiv;
 }
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
 {
-    return esp_intr_alloc(ETS_I2SX_INTR_SOURCE, ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM, la_ll_dma_isr, (void *)task, &isr_handle);
+	esp_err_t ret = ESP_OK;
+    ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
+                                     ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
+                                     (uint32_t)&GDMA.channel[dma_num].in.int_st, GDMA_IN_SUC_EOF_CH0_INT_ST_M,
+                                     la_ll_dma_isr, (void *)task, &isr_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "DMA interrupt allocation of camera failed");
+		return ret;
+	}
 }
 void logic_analyzer_ll_deinit_dma_eof_isr()
 {
