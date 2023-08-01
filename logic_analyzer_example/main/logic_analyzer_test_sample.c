@@ -21,14 +21,14 @@
 // output pin gpio blink example 
 #define GPIO_BLINK (19)
 // input wired example pins
-#define IN_PORT_1 (22)
-#define IN_PORT_2 (23)
+#define IN_PORT_1 (21)
+#define IN_PORT_2 (22)
 // i2c sample example pins
-#define I2C_PIN_SDA (26)
-#define I2C_PIN_SCL (27)
+#define I2C_PIN_SDA (23)
+#define I2C_PIN_SCL (25)
 
-#define GPIO_IRQ_PIN_26 (26)
-#define GPIO_IRQ_PIN_27 (27)
+#define GPIO_IRQ_PIN_26 (23)
+#define GPIO_IRQ_PIN_27 (25)
 
 #define LEDC_TIMER LEDC_TIMER_0
 #define LEDC_MODE LEDC_LOW_SPEED_MODE

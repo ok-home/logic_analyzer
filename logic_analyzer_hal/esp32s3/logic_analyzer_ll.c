@@ -130,7 +130,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
 {
 
     vTaskDelay(5);
-    #define PCLK_PIN_TMP 10
+    #define PCLK_PIN_TMP 0
     // route clk(pclk) pin ??????
     // clk out xclk
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[PCLK_PIN_TMP], PIN_FUNC_GPIO);
