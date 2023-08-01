@@ -1,20 +1,7 @@
 #pragma once
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_heap_caps.h"
-#include <driver/gpio.h>
-#include "hal/gpio_types.h"
-#include "hal/gpio_ll.h"
-#include "soc/gpio_struct.h"
-#include "soc/i2s_struct.h"
-#include "soc/dport_reg.h"
-#include "soc/gpio_reg.h"
-#include "esp32/rom/lldesc.h"
-#include "esp_private/periph_ctrl.h"
-
+#include "logic_analyzer_const_definition.h"
 #include "logic_analyzer_pin_definition.h"
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -86,34 +73,6 @@ int logic_analyzer_ll_get_sample_rate(int sample_rate);
 void ll_hi_level_triggered_isr_start(int pin_trigger,int trigger_edge);
 void ll_hi_level_triggered_isr_timeout_stop(void);
 
-
-/*
-* I2S0/I2S1 menuconfig select
-*/
-
-#ifdef CONFIG_ANALYZER_USE_I2S_CHANNEL_0
-
-#define PERIPH_I2SX_MODULE PERIPH_I2S0_MODULE
-#define I2SX I2S0
-#define I2SXI_V_SYNC_IDX I2S0I_V_SYNC_IDX
-#define I2SXI_H_SYNC_IDX I2S0I_H_SYNC_IDX
-#define I2SXI_H_ENABLE_IDX I2S0I_H_ENABLE_IDX
-#define I2SXI_DATA_IN0_IDX I2S0I_DATA_IN0_IDX
-#define ETS_I2SX_INTR_SOURCE ETS_I2S0_INTR_SOURCE
-#define GPIO_FUNC_V_SYNC_IN_SEL_CFG_REG GPIO_FUNC191_IN_SEL_CFG_REG
-
-#elif CONFIG_ANALYZER_USE_I2S_CHANNEL_1
-
-#define PERIPH_I2SX_MODULE PERIPH_I2S1_MODULE
-#define I2SX I2S1
-#define I2SXI_V_SYNC_IDX I2S1I_V_SYNC_IDX
-#define I2SXI_H_SYNC_IDX I2S1I_H_SYNC_IDX
-#define I2SXI_H_ENABLE_IDX I2S1I_H_ENABLE_IDX
-#define I2SXI_DATA_IN0_IDX I2S1I_DATA_IN0_IDX
-#define ETS_I2SX_INTR_SOURCE ETS_I2S1_INTR_SOURCE
-#define GPIO_FUNC_V_SYNC_IN_SEL_CFG_REG GPIO_FUNC194_IN_SEL_CFG_REG
-
-#endif
 
 
 #ifdef __cplusplus

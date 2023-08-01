@@ -1,17 +1,13 @@
 set( srcs 
 
     logic_analyzer_hal/logic_analyzer_hal.c
-    logic_analyzer_hal/logic_analyzer_ll.c
-   
 )
-if(CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT)
-    list( APPEND srcs 
-        logic_analyzer_hal/logic_analyzer_triggered_isr_start.c
-        logic_analyzer_hal/logic_analyzer_hi_interrupt_handler.s 
-        )
-endif()
-set( includedir logic_analyzer_hal/include )
-set( priv_includedir logic_analyzer_hal/private_include )
+set( includedir 
+    logic_analyzer_hal/include 
+    )
+set( priv_includedir 
+    logic_analyzer_hal/private_include 
+    )
 set( priv_require 
     driver
     protocol_examples_common
@@ -20,6 +16,32 @@ set( priv_require
     nvs_flash 
     esp_eth    
     )
+
+  if(IDF_TARGET STREQUAL "esp32")
+    list(APPEND srcs
+        logic_analyzer_hal/esp32/logic_analyzer_ll.c      
+    )
+    list(APPEND priv_includedir
+        logic_analyzer_hal/esp32/private_include
+    )
+  endif()
+
+  if(IDF_TARGET STREQUAL "esp32s3")
+    list(APPEND srcs
+        logic_analyzer_hal/esp32s3/logic_analyzer_ll.c      
+    )
+    list(APPEND priv_includedir
+        logic_analyzer_hal/esp32s3/private_include
+    )
+  endif()
+
+
+if(CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT)
+    list( APPEND srcs 
+        logic_analyzer_hal/logic_analyzer_triggered_isr_start.c
+        logic_analyzer_hal/logic_analyzer_hi_interrupt_handler.s 
+        )
+endif()
 
 if(CONFIG_ANALYZER_USE_WS)
     list( APPEND srcs
