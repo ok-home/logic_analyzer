@@ -6,7 +6,7 @@
 
 # Logic analyzer on ESP32 for self-diagnostics
 
-## master branch in debug use Realise-1.1 branch
+## master branch in debug use Release-1.1 branch
 
 ![WebSocket](/la_ws.jpg)
 ![PulseView](/sigrok_esp.jpg)

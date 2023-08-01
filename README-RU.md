@@ -6,7 +6,7 @@
 
 # Логический анализатор на ESP32 для самодиагностики
 
-# master branch в отладке, используйте Realise-1.1
+# master branch в отладке, используйте Release-1.1
 
 ![WebSocket](/la_ws.jpg)
 ![PulseView](/sigrok_esp.jpg)
