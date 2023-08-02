@@ -50,13 +50,13 @@ static int dma_num = 0;
 //  trigger isr handle
 void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
-    gpio_matrix_in(0x38, CAM_H_ENABLE_IDX, false); // enable cam
+    gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); // enable cam
     gpio_intr_disable((int)pin);
 }
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
 {
     BaseType_t HPTaskAwoken = pdFALSE;
-
+    ESP_LOGI(TAG,"EOF"); // ABORT ??
     typeof(GDMA.channel[dma_num].in.int_st) status = GDMA.channel[dma_num].in.int_st;
     if (status.val == 0) {
         return;
@@ -73,53 +73,13 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
         portYIELD_FROM_ISR();
     }
 }
-static void logic_analyzer_ll_reset()
-{
-    LCD_CAM.cam_ctrl1.cam_reset = 1;
-    LCD_CAM.cam_ctrl1.cam_reset = 0;
-    LCD_CAM.cam_ctrl1.cam_afifo_reset = 1;
-    LCD_CAM.cam_ctrl1.cam_afifo_reset = 0;
-    //GDMA.channel[dma_num].in.conf0.in_rst = 1;
-    //GDMA.channel[dma_num].in.conf0.in_rst = 0;
-
-}
-static void logic_analyzer_ll_set_mode()
-{
-    LCD_CAM.cam_ctrl.val = 0;
-    LCD_CAM.cam_ctrl1.cam_start = 0; 
-    LCD_CAM.cam_ctrl.cam_stop_en = 0;
-    //LCD_CAM.cam_ctrl.cam_vsync_filter_thres = 4; // Filter by LCD_CAM clock
-    //LCD_CAM.cam_ctrl.cam_update = 0;
-    LCD_CAM.cam_ctrl.cam_byte_order = 0;
-    LCD_CAM.cam_ctrl.cam_bit_order = 0;
-    LCD_CAM.cam_ctrl.cam_line_int_en = 0;
-    LCD_CAM.cam_ctrl.cam_vs_eof_en = 0; //1: CAM_VSYNC to generate in_suc_eof. 0: in_suc_eof is controlled by reg_cam_rec_data_cyclelen
-
-    LCD_CAM.cam_ctrl1.val = 0;
-    //LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE - 1; // Cannot be assigned to 0, and it is easy to overflow
-    LCD_CAM.cam_ctrl1.cam_line_int_num = 0; // The number of hsyncs that generate hs interrupts
-    LCD_CAM.cam_ctrl1.cam_clk_inv = 0;
-    //LCD_CAM.cam_ctrl1.cam_vsync_filter_en = 1;
-    LCD_CAM.cam_ctrl1.cam_2byte_en = 1; // 16 bit
-    LCD_CAM.cam_ctrl1.cam_de_inv = 0;
-    LCD_CAM.cam_ctrl1.cam_hsync_inv = 0;
-    LCD_CAM.cam_ctrl1.cam_vsync_inv = 0;
-    LCD_CAM.cam_ctrl1.cam_vh_de_mode_en = 1;
-    LCD_CAM.cam_ctrl.cam_update = 1;
-
-}
-//
-// esp32 RefMan - 12.5
-// In the LCD mode, the frequency of WS is half of fBCK
-// LA_CLK_SAMPLE_RATE = pll160/2 = 80 000 000 hz
-//
 static int logic_analyzer_ll_convert_sample_rate(int sample_rate)
 {
     return 160000000/sample_rate;
 }
 static void logic_analyzer_ll_set_clock(int sample_rate)
 {
-    #define PCLK_PIN_TMP 0
+    #define PCLK_PIN_TMP 40
     // route clk(pclk) pin ??????
     // clk out xclk
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[PCLK_PIN_TMP], PIN_FUNC_GPIO);
@@ -127,8 +87,8 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     gpio_set_pull_mode(PCLK_PIN_TMP, GPIO_FLOATING);
     gpio_matrix_out(PCLK_PIN_TMP, CAM_CLK_IDX, false, false);
     //clk in - pclk
-    PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[12]);
-    gpio_matrix_in(12, CAM_PCLK_IDX, false);
+    //PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[PCLK_PIN_TMP]);
+    gpio_matrix_in(PCLK_PIN_TMP, CAM_PCLK_IDX, false);
 
     int ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
     // Configure clock divider
@@ -138,13 +98,48 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     LCD_CAM.cam_ctrl.cam_clk_sel = 3;//Select Camera module source clock. 0: no clock. 2: APLL. 3: CLK160. 
     ESP_LOGI(TAG,"ldiv = %d",ldiv);
 }
+
+static void logic_analyzer_ll_set_mode(int sample_rate)
+{
+    // attension !! 
+    // LCD_CAM.cam_ctrl1.cam_rec_data_bytelen -> logic_analyzer_ll_set_mode  clear len data
+    LCD_CAM.cam_ctrl.val = 0;
+    LCD_CAM.cam_ctrl1.val = 0;
+    LCD_CAM.cam_rgb_yuv.val = 0; // disable converter
+
+    logic_analyzer_ll_set_clock(sample_rate); // set clock divider
+
+    LCD_CAM.cam_ctrl.cam_stop_en = 0;   //Camera stop enable signal, 1: camera stops when GDMA Rx FIFO is full. 0: Do not stop. (R/W)
+    LCD_CAM.cam_ctrl.cam_vsync_filter_thres = 0; // Filter by LCD_CAM clock
+    LCD_CAM.cam_ctrl.cam_byte_order = 0;  //1: Invert data byte order, only valid in 16-bit mode. 0: Do not change. (R/W)
+    LCD_CAM.cam_ctrl.cam_bit_order = 0; //1: Change data bit order, change CAM_DATA_in[7:0] to CAM_DATA_in[0:7] in 8-bit mode, and bits[15:0] to bits[0:15] in 16-bit mode. 0: Do not change. (R/W)
+    LCD_CAM.cam_ctrl.cam_line_int_en = 0; //1: Enable to generate LCD_CAM_CAM_HS_INT. 0: Disable. (R/W)
+    LCD_CAM.cam_ctrl.cam_vs_eof_en = 0; // 1: Enable CAM_VSYNC to generate in_suc_eof. 0: in_suc_eof is controlled by LCD_CAM_CAM_REC_DATA_BYTELEN. (R/W)
+
+    LCD_CAM.cam_ctrl1.cam_line_int_num = 0; // Configure line number. When the number of received lines reaches this value + 1, LCD_CAM_CAM_HS_INT is triggered. (R/W)
+    LCD_CAM.cam_ctrl1.cam_clk_inv = 0; //1: Invert the input signal CAM_PCLK. 0: Do not invert. (R/W)
+    LCD_CAM.cam_ctrl1.cam_vsync_filter_en = 0; //1: Enable CAM_VSYNC filter function. 0: Bypass. (R/W)
+    LCD_CAM.cam_ctrl1.cam_2byte_en = 1; // 1: The width of input data is 16 bits. 0: The width of input data is 8 bits. (R/W)
+    LCD_CAM.cam_ctrl1.cam_de_inv = 0; //CAM_DE invert enable signal, valid in high level. (R/W)
+    LCD_CAM.cam_ctrl1.cam_hsync_inv = 0; //CAM_HSYNC invert enable signal, valid in high level. (R/W)
+    LCD_CAM.cam_ctrl1.cam_vsync_inv = 0; //CAM_VSYNC invert enable signal, valid in high level. (R/W)
+    LCD_CAM.cam_ctrl1.cam_vh_de_mode_en = 0; // 1: Input control signals are CAM_DE and CAM_HSYNC. CAM_VSYNC is 1. 0: Input control signals are CAM_DE and CAM_VSYNC. CAM_HSYNC and CAM_DE are all 1 at the the same time. (R/W)
+
+    LCD_CAM.cam_ctrl.cam_update = 1; //1: Update camera registers. This bit is cleared by hardware. 0: Do not care. (R/W)
+    // cam reset, cam fifo reset 
+    LCD_CAM.cam_ctrl1.cam_reset = 1;
+    LCD_CAM.cam_ctrl1.cam_reset = 0;
+    LCD_CAM.cam_ctrl1.cam_afifo_reset = 1;
+    LCD_CAM.cam_ctrl1.cam_afifo_reset = 0;
+
+
+}
+
 static void logic_analyzer_ll_set_pin(int *data_pins)
 {
 
-    vTaskDelay(5);
+    vTaskDelay(5); //??
 
-/**/
-    //
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
 
     for (int i = 0; i < 16; i++)
@@ -178,12 +173,20 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
 
 #endif
 
-    // CAM_H_ENABLE - stop transfer - set to 0 - set to 1 on start function - other set to 1 enable transfer
+    // CAM_V_SYNC_IDX - stop transfer - set to 0 - set to 1 on start function - other set to 1 enable transfer
     gpio_matrix_in(0x3C, CAM_V_SYNC_IDX, false); //0
     gpio_matrix_in(0x3C, CAM_H_SYNC_IDX, false); //0
     gpio_matrix_in(0x3C, CAM_H_ENABLE_IDX, false); //0
 }
-
+/*
+1. Set GDMA_IN_RST_CHn first to 1 and then to 0, to reset the state machine of GDMA’s receive channel and FIFO pointer;
+2. Load an inlink, and configure GDMA_INLINK_ADDR_CHn with address of the first receive descriptor;
+3. Configure GDMA_PERI_IN_SEL_CHn with the value corresponding to the peripheral to be connected, as shown in Table 3-1;
+4. Set GDMA_INLINK_START_CHn to enable GDMA’s receive channel for data transfer;
+5. Configure and enable the corresponding peripheral (SPI2, SPI3, UHCI0 (UART0, UART1, or UART2), I2S0,I2S1, AES, SHA, and ADC). See details in individual chapters of these peripherals;
+6. Wait for GDMA_IN_SUC_EOF_CHn_INT interrupt, which indicates that a data frame or packet has been
+received.
+*/
 static esp_err_t logic_analyzer_ll_cam_dma_init(void)
 {
     for (int x = (SOC_GDMA_PAIRS_PER_GROUP - 1); x >= 0; x--) {
@@ -210,23 +213,33 @@ static esp_err_t logic_analyzer_ll_cam_dma_init(void)
     GDMA.channel[dma_num].in.int_ena.val = 0;
 
     GDMA.channel[dma_num].in.conf0.val = 0;
+    GDMA.channel[dma_num].in.conf1.val = 0;
+
     GDMA.channel[dma_num].in.conf0.in_rst = 1;
     GDMA.channel[dma_num].in.conf0.in_rst = 0;
-
-    //internal SRAM only
-        GDMA.channel[dma_num].in.conf0.indscr_burst_en = 0;
-        GDMA.channel[dma_num].in.conf0.in_data_burst_en = 0;
-
+    GDMA.channel[dma_num].in.conf0.indscr_burst_en = 0;
+    GDMA.channel[dma_num].in.conf0.in_data_burst_en = 0;
     GDMA.channel[dma_num].in.conf1.in_check_owner = 0;
-    // GDMA.channel[cam->dma_num].in.conf1.in_ext_mem_bk_size = 2;
-
     GDMA.channel[dma_num].in.peri_sel.sel = 5;
-    //GDMA.channel[cam->dma_num].in.pri.rx_pri = 1;//rx prio 0-15
-    //GDMA.channel[cam->dma_num].in.sram_size.in_size = 6;//This register is used to configure the size of L2 Tx FIFO for Rx channel. 0:16 bytes, 1:24 bytes, 2:32 bytes, 3: 40 bytes, 4: 48 bytes, 5:56 bytes, 6: 64 bytes, 7: 72 bytes, 8: 80 bytes.
-    //GDMA.channel[cam->dma_num].in.wight.rx_weight = 7;//The weight of Rx channel 0-15
+    GDMA.channel[dma_num].in.link.stop = 1;
+
     return ESP_OK;
 }
-
+/*
+1. Configure clock according to Section 29.3.3. Note that in slave mode, the module clock frequency should be two times faster than the PCLK frequency of the image sensor.
+2. Configure signal pins according to Table 29-1.
+3. Set or clear LCD_CAM_CAM_VH_DE_MODE_EN according to the control signal HSYNC.
+4. Set needed RX channel mode and RX data mode, then set the bit LCD_CAM_CAM_UPDATE.
+5. Reset RX control unit (Camera_Ctrl) and Async Rx FIFO as described in Section 29.3.4.
+6. Enable corresponding interrupts, see Section 29.5.
+7. Configure GDMA inlink, and set the length of RX data in LCD_CAM_CAM_REC_DATA_BYTELEN.
+8. Start receiving data:
+• In master mode, when the slave is ready, set LCD_CAM_CAM_START to start receiving data.
+• In slave mode, set LCD_CAM_CAM_START. Receiving data starts after the master provides clock
+signal and control signal.
+9. Receive data and store the data to the specified address of ESP32-S3 memory. Then corresponding
+interrupts set in Step 6 will be generated.
+*/
 void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame)
 {
     // Enable and configure cam
@@ -237,44 +250,40 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
         REG_SET_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_LCD_CAM_RST);
         REG_CLR_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_LCD_CAM_RST);
     }
-
-    logic_analyzer_ll_set_clock(sample_rate);
     logic_analyzer_ll_set_pin(data_pins);
-    logic_analyzer_ll_set_mode();
-    logic_analyzer_ll_reset();
-
-// int ?????
-
+    logic_analyzer_ll_set_mode(sample_rate);
     logic_analyzer_ll_cam_dma_init();
 
 
     // set dma descriptor
-    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = frame->fb.len; // count in byte
     GDMA.channel[dma_num].in.link.addr = ((uint32_t) & (frame->dma[0]));
+    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = frame->fb.len; // count in byte
+    LCD_CAM.cam_ctrl.cam_update = 1;
     ESP_LOGI(TAG,"link s=%d l=%d eof=%d ptr%p next=%lx ",frame->dma[0].size,frame->dma[0].length,frame->dma[0].eof,frame->dma[0].buf,frame->dma[0].empty);
     ESP_LOGI(TAG,"regcnt=%d framecnt=%d link dma=%x ptr=%p ",LCD_CAM.cam_ctrl1.cam_rec_data_bytelen,frame->fb.len,GDMA.channel[dma_num].in.link.addr,frame->dma);
-    // pre start
-    //GDMA.channel[dma_num].in.link.start = 1;
-    //LCD_CAM.cam_ctrl.cam_update = 1;
-    //LCD_CAM.cam_ctrl1.cam_start = 1;
 
-    GDMA.channel[dma_num].in.int_ena.in_suc_eof = 1;
-    GDMA.channel[dma_num].in.int_clr.in_suc_eof = 1;
 
 }
 void logic_analyzer_ll_start()
 {
     //LCD_CAM.cam_ctrl.cam_update = 1;
-    LCD_CAM.cam_ctrl1.cam_start = 1;                       // enable  transfer
+    GDMA.channel[dma_num].in.int_ena.in_suc_eof = 1;
+    GDMA.channel[dma_num].in.int_clr.in_suc_eof = 1;
     GDMA.channel[dma_num].in.link.start = 1;
-    ESP_LOGI("TAG","cam start=%d dma start=%d int ena=%d eof=%lx",LCD_CAM.cam_ctrl1.cam_start,GDMA.channel[dma_num].in.link.start,GDMA.channel[dma_num].in.int_ena.in_suc_eof,GDMA.channel[dma_num].in.int_st.val);
+    LCD_CAM.cam_ctrl1.cam_start = 1;                       // enable  transfer
+
+    ESP_LOGI("TAG","cam start=%d dma start=%d dma park %d int ena=%d eof=%lx",LCD_CAM.cam_ctrl1.cam_start,GDMA.channel[dma_num].in.link.start,GDMA.channel[dma_num].in.link.park,GDMA.channel[dma_num].in.int_ena.in_suc_eof,GDMA.channel[dma_num].in.int_st.val);
     gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); //0
     gpio_matrix_in(0x38, CAM_H_SYNC_IDX, false); //0
     gpio_matrix_in(0x38, CAM_H_ENABLE_IDX, false); //0
 
-    ESP_LOGI(TAG,"regcnt=%d link dma=%x ",LCD_CAM.cam_ctrl1.cam_rec_data_bytelen,GDMA.channel[dma_num].in.link.addr);
-
+    gpio_matrix_in(0x3C, CAM_V_SYNC_IDX, false); //0
+    ets_delay_us(10);
+    gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); //0
+    
+    ESP_LOGI("TAG","cam start=%d dma start=%d dma park %d int ena=%d eof=%lx",LCD_CAM.cam_ctrl1.cam_start,GDMA.channel[dma_num].in.link.start,GDMA.channel[dma_num].in.link.park,GDMA.channel[dma_num].in.int_ena.in_suc_eof,GDMA.channel[dma_num].in.int_st.val);
 }
+
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
     LCD_CAM.cam_ctrl.cam_update = 1;
@@ -294,7 +303,6 @@ void logic_analyzer_ll_stop()
     LCD_CAM.cam_ctrl1.cam_start = 0;
     GDMA.channel[dma_num].in.link.start = 0;
     GDMA.channel[dma_num].in.link.addr = 0x0;
-
     GDMA.channel[dma_num].in.int_ena.in_suc_eof = 0;
     GDMA.channel[dma_num].in.int_clr.in_suc_eof = 1;
 }
