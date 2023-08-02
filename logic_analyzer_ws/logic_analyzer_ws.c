@@ -2,6 +2,7 @@
 #include <esp_http_server.h>
 #include <freertos/queue.h>
 
+#include "logic_analyzer_const_definition.h"
 #include "logic_analyzer_pin_definition.h"
 #include "logic_analyzer_hal.h"
 
