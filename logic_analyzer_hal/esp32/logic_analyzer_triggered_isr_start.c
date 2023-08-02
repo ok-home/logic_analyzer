@@ -96,7 +96,7 @@ void ll_hi_level_triggered_isr_start(int pin_trigger, int trigger_edge)
         break;
     }
 
-    ESP_LOGD("TISR", "pro=%ld app=%ld cpu=%ld", _DPORT_REG_READ(DPORT_PRO_GPIO_INTERRUPT_MAP_REG), _DPORT_REG_READ(DPORT_APP_GPIO_INTERRUPT_MAP_REG), la_hi_interrupt_state.cpu);
+    ESP_LOGI("TISR", "pro=%ld app=%ld cpu=%ld", _DPORT_REG_READ(DPORT_PRO_GPIO_INTERRUPT_MAP_REG), _DPORT_REG_READ(DPORT_APP_GPIO_INTERRUPT_MAP_REG), la_hi_interrupt_state.cpu);
 
     if ((int_free_app | int_free_pro) == 0) // all gpio int ( app&pro ) predefined - slow gpio int
     {

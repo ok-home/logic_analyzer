@@ -56,7 +56,7 @@ void IRAM_ATTR la_ll_trigger_isr(void *pin)
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
 {
     BaseType_t HPTaskAwoken = pdFALSE;
-    ESP_LOGI(TAG,"EOF"); // ABORT ??
+    //ESP_LOGI(TAG,"EOF"); // ABORT ??
     typeof(GDMA.channel[dma_num].in.int_st) status = GDMA.channel[dma_num].in.int_st;
     if (status.val == 0) {
         return;
@@ -83,11 +83,11 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     // route clk(pclk) pin ??????
     // clk out xclk
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[PCLK_PIN_TMP], PIN_FUNC_GPIO);
-    gpio_set_direction(PCLK_PIN_TMP, GPIO_MODE_INPUT_OUTPUT);
+    gpio_set_direction(PCLK_PIN_TMP, GPIO_MODE_OUTPUT);
     gpio_set_pull_mode(PCLK_PIN_TMP, GPIO_FLOATING);
     gpio_matrix_out(PCLK_PIN_TMP, CAM_CLK_IDX, false, false);
     //clk in - pclk
-    //PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[PCLK_PIN_TMP]);
+    PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[PCLK_PIN_TMP]);
     gpio_matrix_in(PCLK_PIN_TMP, CAM_PCLK_IDX, false);
 
     int ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
@@ -146,7 +146,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
     {
         if (data_pins[i] < 0) // pin disable - already 0
         {
-            gpio_matrix_in(0x30, CAM_DATA_IN0_IDX + i, false);
+            gpio_matrix_in(0x3C, CAM_DATA_IN0_IDX + i, false);
         }
         else
         {
@@ -160,7 +160,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
     {
         if (data_pins[i] < 0) // pin disable - already 0
         {
-            gpio_matrix_in(0x30, CAM_DATA_IN0_IDX + i, false);
+            gpio_matrix_in(0x3C, CAM_DATA_IN0_IDX + i, false);
         }
         else
         {
@@ -175,8 +175,8 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
 
     // CAM_V_SYNC_IDX - stop transfer - set to 0 - set to 1 on start function - other set to 1 enable transfer
     gpio_matrix_in(0x3C, CAM_V_SYNC_IDX, false); //0
-    gpio_matrix_in(0x3C, CAM_H_SYNC_IDX, false); //0
-    gpio_matrix_in(0x3C, CAM_H_ENABLE_IDX, false); //0
+    gpio_matrix_in(0x38, CAM_H_SYNC_IDX, false); //1
+    gpio_matrix_in(0x38, CAM_H_ENABLE_IDX, false); //1
 }
 /*
 1. Set GDMA_IN_RST_CHn first to 1 and then to 0, to reset the state machine of GDMA’s receive channel and FIFO pointer;
@@ -217,11 +217,11 @@ static esp_err_t logic_analyzer_ll_cam_dma_init(void)
 
     GDMA.channel[dma_num].in.conf0.in_rst = 1;
     GDMA.channel[dma_num].in.conf0.in_rst = 0;
-    GDMA.channel[dma_num].in.conf0.indscr_burst_en = 0;
-    GDMA.channel[dma_num].in.conf0.in_data_burst_en = 0;
+    GDMA.channel[dma_num].in.conf0.indscr_burst_en = 1;
+    GDMA.channel[dma_num].in.conf0.in_data_burst_en = 1;
     GDMA.channel[dma_num].in.conf1.in_check_owner = 0;
     GDMA.channel[dma_num].in.peri_sel.sel = 5;
-    GDMA.channel[dma_num].in.link.stop = 1;
+    //GDMA.channel[dma_num].in.link.stop = 1;
 
     return ESP_OK;
 }
@@ -256,38 +256,28 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
 
 
     // set dma descriptor
-    GDMA.channel[dma_num].in.link.addr = ((uint32_t) & (frame->dma[0]));
-    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = frame->fb.len; // count in byte
+    GDMA.channel[dma_num].in.link.addr = ((uint32_t) & (frame->dma[0]))&0xfffff;
+    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = frame->fb.len-1; // count in byte
     LCD_CAM.cam_ctrl.cam_update = 1;
     ESP_LOGI(TAG,"link s=%d l=%d eof=%d ptr%p next=%lx ",frame->dma[0].size,frame->dma[0].length,frame->dma[0].eof,frame->dma[0].buf,frame->dma[0].empty);
     ESP_LOGI(TAG,"regcnt=%d framecnt=%d link dma=%x ptr=%p ",LCD_CAM.cam_ctrl1.cam_rec_data_bytelen,frame->fb.len,GDMA.channel[dma_num].in.link.addr,frame->dma);
+    // pre start
+    GDMA.channel[dma_num].in.int_ena.in_suc_eof = 1;
+    GDMA.channel[dma_num].in.int_clr.in_suc_eof = 1;
+    GDMA.channel[dma_num].in.link.stop = 0;
+    GDMA.channel[dma_num].in.link.start = 1;
+    LCD_CAM.cam_ctrl1.cam_start = 1;                       // enable  transfer
 
+    ESP_LOGI("TAG","cam start=%d dma start=%d dma stop=%d dma park %d int ena=%d eof=%lx",LCD_CAM.cam_ctrl1.cam_start,GDMA.channel[dma_num].in.link.start,GDMA.channel[dma_num].in.link.stop,GDMA.channel[dma_num].in.link.park,GDMA.channel[dma_num].in.int_ena.in_suc_eof,GDMA.channel[dma_num].in.int_st.val);
 
 }
 void logic_analyzer_ll_start()
 {
-    //LCD_CAM.cam_ctrl.cam_update = 1;
-    GDMA.channel[dma_num].in.int_ena.in_suc_eof = 1;
-    GDMA.channel[dma_num].in.int_clr.in_suc_eof = 1;
-    GDMA.channel[dma_num].in.link.start = 1;
-    LCD_CAM.cam_ctrl1.cam_start = 1;                       // enable  transfer
-
-    ESP_LOGI("TAG","cam start=%d dma start=%d dma park %d int ena=%d eof=%lx",LCD_CAM.cam_ctrl1.cam_start,GDMA.channel[dma_num].in.link.start,GDMA.channel[dma_num].in.link.park,GDMA.channel[dma_num].in.int_ena.in_suc_eof,GDMA.channel[dma_num].in.int_st.val);
     gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); //0
-    gpio_matrix_in(0x38, CAM_H_SYNC_IDX, false); //0
-    gpio_matrix_in(0x38, CAM_H_ENABLE_IDX, false); //0
-
-    gpio_matrix_in(0x3C, CAM_V_SYNC_IDX, false); //0
-    ets_delay_us(10);
-    gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); //0
-    
-    ESP_LOGI("TAG","cam start=%d dma start=%d dma park %d int ena=%d eof=%lx",LCD_CAM.cam_ctrl1.cam_start,GDMA.channel[dma_num].in.link.start,GDMA.channel[dma_num].in.link.park,GDMA.channel[dma_num].in.int_ena.in_suc_eof,GDMA.channel[dma_num].in.int_st.val);
 }
 
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
-    LCD_CAM.cam_ctrl.cam_update = 1;
-    LCD_CAM.cam_ctrl1.cam_start = 1;                       // enable  transfer wait CAM_H_ENABLE on int
 #ifdef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
     ll_hi_level_triggered_isr_start(pin_trigger, trigger_edge);
 #else
@@ -309,7 +299,7 @@ void logic_analyzer_ll_stop()
 int logic_analyzer_ll_get_sample_rate(int sample_rate)
 {
     int  ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
-    return LA_CLK_SAMPLE_RATE / ldiv;
+    return 160000000 / ldiv;
 }
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
 {

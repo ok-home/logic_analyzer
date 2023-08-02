@@ -17,7 +17,8 @@
 			"logic_analyzer_ws_html.h": "c",
 			"logic_analyzer_ws.h": "c",
 			"gpio_reg.h": "c",
-			"logic_analyzer_ll.h": "c"
+			"logic_analyzer_ll.h": "c",
+			"dport_reg.h": "c"
 		}
 	}
 }

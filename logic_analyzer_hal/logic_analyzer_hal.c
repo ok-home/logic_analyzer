@@ -28,6 +28,7 @@ static int logic_analyzer_started = 0;              // flag start dma
 // sample sequence in 32 word - adr0=sample1, adr1=sample0
 // swap sample sequence
 //
+#ifdef CONFIG_IDF_TARGET_ESP32
 static inline void swap_buf(uint16_t *buf, int cnt)
 {
     uint16_t tmp;
@@ -38,6 +39,7 @@ static inline void swap_buf(uint16_t *buf, int cnt)
         buf[i + 1] = tmp;
     }
 }
+#endif
 
 /**
  * @brief allocate dma descriptor
@@ -120,7 +122,9 @@ static void logic_analyzer_task(void *arg)
             // dma data ready
             // sample sequence in 32 word - adr0=sample1, adr1=sample0
             // swap sample sequence
+#ifdef CONFIG_IDF_TARGET_ESP32
             swap_buf((uint16_t *)la_frame.fb.buf, la_frame.fb.len / 2);
+#endif            
             cfg->logic_analyzer_cb((uint16_t *)la_frame.fb.buf, la_frame.fb.len / 2, logic_analyzer_ll_get_sample_rate(cfg->sample_rate));
             logic_analyzer_stop(); // todo stop & clear on task or external ??
             vTaskDelete(logic_analyzer_task_handle);
