@@ -55,6 +55,7 @@ void IRAM_ATTR la_ll_trigger_isr(void *pin)
 }
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
 {
+    /* todo  - GDMA_IN_DSCR_EMPTY_CHn_INT: GDMA_IN_DONE_CHn_INT: -> non stop transfer */
     BaseType_t HPTaskAwoken = pdFALSE;
     typeof(GDMA.channel[dma_num].in.int_st) status = GDMA.channel[dma_num].in.int_st;
     if (status.val == 0) {
@@ -77,7 +78,8 @@ static int logic_analyzer_ll_convert_sample_rate(int sample_rate)
 }
 static void logic_analyzer_ll_set_clock(int sample_rate)
 {
-    // route clk(pclk) pin ??????
+    /* todo - use ledpwm to pclk<1 mHz*/
+
     // clk out xclk
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[PCLK_PIN_TMP], PIN_FUNC_GPIO);
     gpio_set_direction(PCLK_PIN_TMP, GPIO_MODE_OUTPUT);
@@ -98,6 +100,7 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
 
 static void logic_analyzer_ll_set_mode(int sample_rate)
 {
+    /* todo - non stop transfer vh_de_mode, vs_eof_en */
     // attension !! 
     // LCD_CAM.cam_ctrl1.cam_rec_data_bytelen -> logic_analyzer_ll_set_mode  clear len data
     LCD_CAM.cam_ctrl.val = 0;
@@ -132,7 +135,7 @@ static void logic_analyzer_ll_set_mode(int sample_rate)
 
 static void logic_analyzer_ll_set_pin(int *data_pins)
 {
-
+    /*todo use CAM_H_ENABLE_IDX for control nransfer ?*/
     vTaskDelay(5); //??
 
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
@@ -267,6 +270,7 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
 }
 void logic_analyzer_ll_start()
 {
+     /*todo use CAM_H_ENABLE_IDX for control nransfer ?*/
     gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); //0
 }
 
