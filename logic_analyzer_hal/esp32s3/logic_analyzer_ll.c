@@ -44,6 +44,22 @@
 #undef SEPARATE_MODE_LOGIC_ANALIZER
 #endif
 
+#define IN_DONE_DBG 6
+#define IN_DSCR_EMPTY_DBG 7
+#define IN_EOF_DBG 8 
+
+static void dbg_gpio(void)
+{
+    gpio_reset_pin(IN_DONE_DBG);
+    gpio_set_direction(IN_DONE_DBG,GPIO_MODE_OUTPUT);
+    gpio_reset_pin(IN_DSCR_EMPTY_DBG);
+    gpio_set_direction(IN_DSCR_EMPTY_DBG,GPIO_MODE_OUTPUT);
+    gpio_reset_pin(IN_EOF_DBG);
+    gpio_set_direction(IN_EOF_DBG,GPIO_MODE_OUTPUT);
+    gpio_set_level(IN_DONE_DBG,0);
+    gpio_set_level(IN_DSCR_EMPTY_DBG,0);
+    gpio_set_level(IN_EOF_DBG,0);
+}
 
 static intr_handle_t isr_handle;
 static int dma_num = 0;
@@ -62,8 +78,23 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
         return;
     }
     GDMA.channel[dma_num].in.int_clr.val = status.val;
+    if(status.in_done)
+    {
+        gpio_set_level(IN_DONE_DBG,1);
+        gpio_set_level(IN_DONE_DBG,0);
+        //vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
+    }
+        if(status.in_dscr_empty)
+    {
+        gpio_set_level(IN_DSCR_EMPTY_DBG,1);
+        gpio_set_level(IN_DSCR_EMPTY_DBG,0);
+        //vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
+    }
+
     if (status.in_suc_eof)
     {
+        gpio_set_level(IN_EOF_DBG,1);
+        gpio_set_level(IN_EOF_DBG,0);
 
         vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
     }
@@ -261,7 +292,15 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
     // pre start
     GDMA.channel[dma_num].in.int_ena.in_suc_eof = 1;
     GDMA.channel[dma_num].in.int_clr.in_suc_eof = 1;
-    GDMA.channel[dma_num].in.link.stop = 0;
+
+// DBG
+    GDMA.channel[dma_num].in.int_ena.in_done = 1;
+    GDMA.channel[dma_num].in.int_clr.in_done = 1;
+    GDMA.channel[dma_num].in.int_ena.in_dscr_empty = 1;
+    GDMA.channel[dma_num].in.int_clr.in_dscr_empty = 1;
+//DBG
+
+    //GDMA.channel[dma_num].in.link.stop = 0;
     GDMA.channel[dma_num].in.link.start = 1;
     LCD_CAM.cam_ctrl1.cam_start = 1;                       // enable  transfer
 
@@ -302,15 +341,18 @@ int logic_analyzer_ll_get_sample_rate(int sample_rate)
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
 {
 	esp_err_t ret = ESP_OK;
-    ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
+
+    dbg_gpio();
+
+/*    ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
                                      ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
                                      (uint32_t)&GDMA.channel[dma_num].in.int_st, GDMA_IN_SUC_EOF_CH0_INT_ST_M,
                                      la_ll_dma_isr, (void *)task, &isr_handle);
-
-/*    ret = esp_intr_alloc(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
+*/
+    ret = esp_intr_alloc(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
                                      ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
                                      la_ll_dma_isr, (void *)task, &isr_handle);
-*/
+
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "DMA interrupt allocation of camera failed");
 		return ret;
