@@ -1,6 +1,7 @@
 menu "Logic Analyzer Configuration"
 
     if IDF_TARGET_ESP32
+    
         choice ANALYZER_USE_I2S_CHANNEL
             prompt "I2S Channel Number"
             default ANALYZER_USE_I2S_CHANNEL_0
