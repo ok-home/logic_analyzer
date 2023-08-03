@@ -81,13 +81,13 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     /* todo - use ledpwm to pclk<1 mHz*/
 
     // clk out xclk
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[PCLK_PIN_TMP], PIN_FUNC_GPIO);
-    gpio_set_direction(PCLK_PIN_TMP, GPIO_MODE_OUTPUT);
-    gpio_set_pull_mode(PCLK_PIN_TMP, GPIO_FLOATING);
-    gpio_matrix_out(PCLK_PIN_TMP, CAM_CLK_IDX, false, false);
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN], PIN_FUNC_GPIO);
+    gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(CONFIG_ANALYZER_PCLK_PIN, GPIO_FLOATING);
+    gpio_matrix_out(CONFIG_ANALYZER_PCLK_PIN, CAM_CLK_IDX, false, false);
     //clk in - pclk
-    PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[PCLK_PIN_TMP]);
-    gpio_matrix_in(PCLK_PIN_TMP, CAM_PCLK_IDX, false);
+    PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN]);
+    gpio_matrix_in(CONFIG_ANALYZER_PCLK_PIN, CAM_PCLK_IDX, false);
 
     int ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
     // Configure clock divider

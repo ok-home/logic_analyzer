@@ -24,5 +24,4 @@
 #define LA_MAX_SAMPLE_CNT 60000
 #define LA_MIN_SAMPLE_CNT 100
 
-#define PCLK_PIN_TMP 40
 
