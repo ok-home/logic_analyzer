@@ -44,7 +44,7 @@ static inline void swap_buf(uint16_t *buf, int cnt)
 /**
  * @brief allocate dma descriptor
  *
- * @param uint16_t size - size of sample frame buffer (bytes)
+ * @param uint32_t size - size of sample frame buffer (bytes)
  * @param uint8_t *buffer - pointer of sample frame buffer
  *
  * @return
@@ -120,8 +120,8 @@ static void logic_analyzer_task(void *arg)
         if (noTimeout)
         {
             // dma data ready
-            // sample sequence in 32 word - adr0=sample1, adr1=sample0
-            // swap sample sequence
+            // esp32 -> sample sequence in 32 word - adr0=sample1, adr1=sample0
+            // swap sample sequence on esp32. 
 #ifdef CONFIG_IDF_TARGET_ESP32
             swap_buf((uint16_t *)la_frame.fb.buf, la_frame.fb.len / 2);
 #endif            
@@ -187,14 +187,14 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     }
 
     // check GPIO num - 0-39 or num < 0
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < LA_MAX_PIN; i++)
     {
-        if (config->pin[i] > 39)
+        if (config->pin[i] > LA_MAX_GPIO)
         {
             goto _ret;
         }
     }
-    if (config->pin_trigger > 39)
+    if (config->pin_trigger > LA_MAX_GPIO)
     {
         goto _ret;
     }

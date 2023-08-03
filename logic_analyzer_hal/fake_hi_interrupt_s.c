@@ -58,7 +58,8 @@ void xt_highint5(void)
     //  default use int31
 
     // start of replacement block
-
+    if(_REG_READ(la_hi_interrupt_state.gpio_stat_reg)&la_hi_interrupt_state.gpio_mask)
+    {
     //  start dma - set vsync bit to 1
     _REG_WRITE(la_hi_interrupt_state.i2s_set_vsync_reg, la_hi_interrupt_state.i2s_set_vsync_bit);
     // disable interrupt on core
@@ -67,7 +68,7 @@ void xt_highint5(void)
     _REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, la_hi_interrupt_state.gpio_pin_cfg_backup_data);
     // clear interrupt status if not shared // not used now
     //_REG_WRITE(la_hi_interrupt_state.gpio_stat_clr_reg, la_hi_interrupt_state.gpio_mask);
-
+    }
     //	end of replacement block
 
     // restore reg

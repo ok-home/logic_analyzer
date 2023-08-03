@@ -21,6 +21,14 @@ xt_highint5:
 //  start of replacement block
 	
 	l32r	a8, .LC0
+// check int status on test !!
+  	l32i.n a10, a8, 20
+  	l32i.n a9, a8, 16
+  	memw
+  	l32i.n a10, a10, 0
+  	bnone a10, a9, .L1
+//
+
 	l32i.n	a9, a8, 44
 	l32i.n	a10, a8, 48
 	memw
@@ -35,7 +43,7 @@ xt_highint5:
 	l32i.n	a8, a8, 40
 	memw
 	s32i.n	a8, a9, 0
-
+.L1:
 //	end of replacement block
 
     movi    a0,     _l5_intr_stack
@@ -56,4 +64,3 @@ la_include_hi_interrupt:
 // target_link_libraries(${COMPONENT_LIB} INTERFACE "-u la_include_hi_interrupt")
 //
 */
-

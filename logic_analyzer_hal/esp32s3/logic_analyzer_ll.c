@@ -18,14 +18,14 @@
 #include "esp_rom_gpio.h"
 #include "esp_log.h"
 
-//#if (ESP_IDF_VERSION_MAJOR >= 5)
+
 #include "soc/gpio_sig_map.h"
 #include "soc/gpio_periph.h"
 #include "soc/io_mux_reg.h"
 #define gpio_matrix_in(a,b,c) esp_rom_gpio_connect_in_signal(a,b,c)
 #define gpio_matrix_out(a,b,c,d) esp_rom_gpio_connect_out_signal(a,b,c,d)
 #define ets_delay_us(a) esp_rom_delay_us(a)
-//#endif
+
 
 #if !defined(SOC_GDMA_PAIRS_PER_GROUP) && defined(SOC_GDMA_PAIRS_PER_GROUP_MAX)
 #define SOC_GDMA_PAIRS_PER_GROUP SOC_GDMA_PAIRS_PER_GROUP_MAX
@@ -56,13 +56,11 @@ void IRAM_ATTR la_ll_trigger_isr(void *pin)
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
 {
     BaseType_t HPTaskAwoken = pdFALSE;
-    //ESP_LOGI(TAG,"EOF"); // ABORT ??
     typeof(GDMA.channel[dma_num].in.int_st) status = GDMA.channel[dma_num].in.int_st;
     if (status.val == 0) {
         return;
     }
     GDMA.channel[dma_num].in.int_clr.val = status.val;
-
     if (status.in_suc_eof)
     {
 
@@ -75,11 +73,10 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
 }
 static int logic_analyzer_ll_convert_sample_rate(int sample_rate)
 {
-    return 160000000/sample_rate;
+    return LA_CLK_SAMPLE_RATE/sample_rate;
 }
 static void logic_analyzer_ll_set_clock(int sample_rate)
 {
-    #define PCLK_PIN_TMP 40
     // route clk(pclk) pin ??????
     // clk out xclk
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[PCLK_PIN_TMP], PIN_FUNC_GPIO);
@@ -131,8 +128,6 @@ static void logic_analyzer_ll_set_mode(int sample_rate)
     LCD_CAM.cam_ctrl1.cam_reset = 0;
     LCD_CAM.cam_ctrl1.cam_afifo_reset = 1;
     LCD_CAM.cam_ctrl1.cam_afifo_reset = 0;
-
-
 }
 
 static void logic_analyzer_ll_set_pin(int *data_pins)
@@ -142,7 +137,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
 
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
 
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < LA_MAX_PIN; i++)
     {
         if (data_pins[i] < 0) // pin disable - already 0
         {
@@ -156,7 +151,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
     }
 #else
     // external not tested ??
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < LA_MAX_PIN; i++)
     {
         if (data_pins[i] < 0) // pin disable - already 0
         {
@@ -187,7 +182,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
 6. Wait for GDMA_IN_SUC_EOF_CHn_INT interrupt, which indicates that a data frame or packet has been
 received.
 */
-static esp_err_t logic_analyzer_ll_cam_dma_init(void)
+static esp_err_t logic_analyzer_ll_dma_init(void)
 {
     for (int x = (SOC_GDMA_PAIRS_PER_GROUP - 1); x >= 0; x--) {
         if (GDMA.channel[x].in.link.addr == 0x0) {
@@ -221,7 +216,6 @@ static esp_err_t logic_analyzer_ll_cam_dma_init(void)
     GDMA.channel[dma_num].in.conf0.in_data_burst_en = 1;
     GDMA.channel[dma_num].in.conf1.in_check_owner = 0;
     GDMA.channel[dma_num].in.peri_sel.sel = 5;
-    //GDMA.channel[dma_num].in.link.stop = 1;
 
     return ESP_OK;
 }
@@ -252,15 +246,15 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
     }
     logic_analyzer_ll_set_pin(data_pins);
     logic_analyzer_ll_set_mode(sample_rate);
-    logic_analyzer_ll_cam_dma_init();
+    logic_analyzer_ll_dma_init();
 
 
     // set dma descriptor
     GDMA.channel[dma_num].in.link.addr = ((uint32_t) & (frame->dma[0]))&0xfffff;
     LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = frame->fb.len-1; // count in byte
     LCD_CAM.cam_ctrl.cam_update = 1;
-    ESP_LOGI(TAG,"link s=%d l=%d eof=%d ptr%p next=%lx ",frame->dma[0].size,frame->dma[0].length,frame->dma[0].eof,frame->dma[0].buf,frame->dma[0].empty);
-    ESP_LOGI(TAG,"regcnt=%d framecnt=%d link dma=%x ptr=%p ",LCD_CAM.cam_ctrl1.cam_rec_data_bytelen,frame->fb.len,GDMA.channel[dma_num].in.link.addr,frame->dma);
+    //ESP_LOGI(TAG,"link s=%d l=%d eof=%d ptr%p next=%lx ",frame->dma[0].size,frame->dma[0].length,frame->dma[0].eof,frame->dma[0].buf,frame->dma[0].empty);
+    //ESP_LOGI(TAG,"regcnt=%d framecnt=%d link dma=%x ptr=%p ",LCD_CAM.cam_ctrl1.cam_rec_data_bytelen,frame->fb.len,GDMA.channel[dma_num].in.link.addr,frame->dma);
     // pre start
     GDMA.channel[dma_num].in.int_ena.in_suc_eof = 1;
     GDMA.channel[dma_num].in.int_clr.in_suc_eof = 1;
@@ -268,7 +262,7 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
     GDMA.channel[dma_num].in.link.start = 1;
     LCD_CAM.cam_ctrl1.cam_start = 1;                       // enable  transfer
 
-    ESP_LOGI("TAG","cam start=%d dma start=%d dma stop=%d dma park %d int ena=%d eof=%lx",LCD_CAM.cam_ctrl1.cam_start,GDMA.channel[dma_num].in.link.start,GDMA.channel[dma_num].in.link.stop,GDMA.channel[dma_num].in.link.park,GDMA.channel[dma_num].in.int_ena.in_suc_eof,GDMA.channel[dma_num].in.int_st.val);
+    //ESP_LOGI("TAG","cam start=%d dma start=%d dma stop=%d dma park %d int ena=%d eof=%lx",LCD_CAM.cam_ctrl1.cam_start,GDMA.channel[dma_num].in.link.start,GDMA.channel[dma_num].in.link.stop,GDMA.channel[dma_num].in.link.park,GDMA.channel[dma_num].in.int_ena.in_suc_eof,GDMA.channel[dma_num].in.int_st.val);
 
 }
 void logic_analyzer_ll_start()
@@ -299,25 +293,25 @@ void logic_analyzer_ll_stop()
 int logic_analyzer_ll_get_sample_rate(int sample_rate)
 {
     int  ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
-    return 160000000 / ldiv;
+    return LA_CLK_SAMPLE_RATE / ldiv;
 }
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
 {
 	esp_err_t ret = ESP_OK;
-/*    ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
+    ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
                                      ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
                                      (uint32_t)&GDMA.channel[dma_num].in.int_st, GDMA_IN_SUC_EOF_CH0_INT_ST_M,
                                      la_ll_dma_isr, (void *)task, &isr_handle);
-*/
-    ret = esp_intr_alloc(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
+
+/*    ret = esp_intr_alloc(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
                                      ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
                                      la_ll_dma_isr, (void *)task, &isr_handle);
-
+*/
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "DMA interrupt allocation of camera failed");
 		return ret;
 	}
-    ESP_LOGI(TAG,"INTERRUPT");
+    //ESP_LOGI(TAG,"INTERRUPT");
     return ret;
 }
 void logic_analyzer_ll_deinit_dma_eof_isr()

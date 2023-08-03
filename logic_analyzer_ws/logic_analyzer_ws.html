@@ -151,7 +151,6 @@
     const y_bord = 50;
     const zoom_inc = 0.025;
     const min_cnt = 32;
-    const max_channels = 16;
 
     const color_black = "black";
     const color_time = "blue";
@@ -169,6 +168,7 @@
     let y_canvas = canvas.height;
     let max_cnt = 10000;
     let curr_cnt = max_cnt;
+    let max_channels = 16;
     let clock_cnt = 1000000; // clock count HZ
     let clock_time_sek = 1 / clock_cnt;// clock time
     let curr_canvas_x_point = 0;
@@ -384,8 +384,21 @@
         {
             //if (typeof data != "string") {
             if (data instanceof ArrayBuffer) {
+                // check max_channel
+                let tmpl = document.querySelector('#config').querySelectorAll('input');
+                console.log(tmpl.length);
+                if(tmpl.length>16)
+                    {
+                        max_channels = 16;
+                        analyzerData = new Uint16Array(data);
+                    }
+                else
+                    {
+                        max_channels = 8;
+                        analyzerData = new Uint8Array(data);
+                    }
                 //analyzerData = data; //byte data
-                analyzerData = new Uint16Array(data);
+                //analyzerData = new Uint16Array(data);
                 //console.log("bin " + analyzerData.length);
                 statusstr.innerHTML = "Received " + analyzerData.length + " samples";
                 curr_canvas_x_point = 0;

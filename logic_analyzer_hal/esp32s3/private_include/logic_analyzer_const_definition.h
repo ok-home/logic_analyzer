@@ -20,7 +20,9 @@
 
 #define LA_MAX_PIN 16
 #define LA_MIN_GPIO -1
-#define LA_MAX_GPIO 49
+#define LA_MAX_GPIO 48
 #define LA_MAX_SAMPLE_CNT 60000
 #define LA_MIN_SAMPLE_CNT 100
+
+#define PCLK_PIN_TMP 40
 
