@@ -53,7 +53,7 @@
    - Gets samples into ESP32 buffer
    - logic_analyzer_config_t - capture configuration
    - start_logic_analyzer(logic_analyzer_config_t *config) - capture start
-   - void (*logic_analyzer_cb_t)(uint16_t *samle_buf, int samples, int sample_rate) - callback after data capture
+   - void (*logic_analyzer_cb_t)(uint8_t *samle_buf, int samples, int sample_rate) - callback after data capture
    ### include/logic_analyzer_sump.h
    - work with PulseView
    - logic_analyzer_sump();

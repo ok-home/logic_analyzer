@@ -22,13 +22,13 @@ menu "Logic Analyzer Configuration"
             range -1 48
             default 40
             help
-                esp32s3 requires 1 free gpio to form a pclk
+                RSP32S3 requires 1 free gpio to form a PCLK
 
         config ANALYZER_USE_LEDC_TIMER_FOR_PCLK
             bool "Use ledc timer for PCLK < 1 mHz"
             default n
             help
-                for frequencies from 1 mHz to 80 mHz, an internal divider  is used, if frequencies are needed less, we use a separate channel LEDC_PWM
+                for PCLK from 1 mHz to 80 mHz, an internal divider  is used, if PCLK are needed less, we use a separate channel LEDC_PWM
 
         if ANALYZER_USE_LEDC_TIMER_FOR_PCLK
 
@@ -222,12 +222,12 @@ menu "Logic Analyzer Configuration"
 
         config ANALYZER_SAMPLE_RATE
             int "Sample rate HZ"
-            range 5000 40000000
+            range 5000 80000000
             default 10000000
 
         config ANALYZER_TIMEOUT
             int "Meashured timeout Sek"
-            range 2 50
+            range -1 60
             default 20
     
     endif

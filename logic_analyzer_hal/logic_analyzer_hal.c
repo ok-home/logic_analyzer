@@ -25,6 +25,7 @@ static la_frame_t la_frame = {
 static TaskHandle_t logic_analyzer_task_handle = 0; // main task handle
 static int logic_analyzer_started = 0;              // flag start dma
 //
+// esp32 only
 // sample sequence in 32 word - adr0=sample1, adr1=sample0
 // swap sample sequence
 //
@@ -123,9 +124,9 @@ static void logic_analyzer_task(void *arg)
             // esp32 -> sample sequence in 32 word - adr0=sample1, adr1=sample0
             // swap sample sequence on esp32. 
 #ifdef CONFIG_IDF_TARGET_ESP32
-            swap_buf((uint16_t *)la_frame.fb.buf, la_frame.fb.len / 2);
+            swap_buf((uint16_t *)la_frame.fb.buf, la_frame.fb.len / LA_BYTE_IN_SAMPLE);
 #endif            
-            cfg->logic_analyzer_cb((uint16_t *)la_frame.fb.buf, la_frame.fb.len / 2, logic_analyzer_ll_get_sample_rate(cfg->sample_rate));
+            cfg->logic_analyzer_cb((uint8_t *)la_frame.fb.buf, la_frame.fb.len / LA_BYTE_IN_SAMPLE, logic_analyzer_ll_get_sample_rate(cfg->sample_rate));
             logic_analyzer_stop(); // todo stop & clear on task or external ??
             vTaskDelete(logic_analyzer_task_handle);
         }
@@ -207,21 +208,22 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     {
         goto _ret;
     }
-    // check number of samples // remove - auto max sample block
-    // if (config->number_of_samples >= 70000)// 32768)
-    //{
-    //    goto _ret;
-    //}
+    // check number of samples 
+    if (config->number_of_samples > LA_MAX_SAMPLE_CNT)
+    {
+        goto _ret;
+    }
     // allocate frame buffer
     // test  - check maximum available buffer size
+    uint32_t number_of_samples = config->number_of_samples & ~0x3; // burst transfer word align
     uint32_t largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_DMA);
-    if (largest_free_block < config->number_of_samples * 2)
+    if (largest_free_block < number_of_samples * LA_BYTE_IN_SAMPLE)
     {
-        config->number_of_samples = (largest_free_block / 4) * 2;
+        number_of_samples = (largest_free_block / LA_BYTE_IN_SAMPLE) & ~0x3 ; // burst transfer word align
     }
     ESP_LOGD("DMA HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
-    la_frame.fb.len = config->number_of_samples * 2;
-    la_frame.fb.buf = heap_caps_calloc(la_frame.fb.len, 1, MALLOC_CAP_DMA);
+    la_frame.fb.len = number_of_samples * LA_BYTE_IN_SAMPLE;
+    la_frame.fb.buf = heap_caps_calloc(la_frame.fb.len, 1, MALLOC_CAP_DMA); // malloc ??
     if (la_frame.fb.buf == NULL)
     {
         ret = ESP_ERR_NO_MEM;

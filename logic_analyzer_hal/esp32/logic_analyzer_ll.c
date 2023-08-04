@@ -179,7 +179,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
     vTaskDelay(5);
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
 
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < LA_MAX_PIN; i++)
     {
         if (data_pins[i] < 0) // pin disable - already 0
         {
@@ -193,7 +193,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
     }
 #else
     // external not tested ??
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < LA_MAX_PIN; i++)
     {
         if (data_pins[i] < 0) // pin disable - already 0
         {

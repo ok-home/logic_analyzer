@@ -111,6 +111,7 @@ typedef struct {
     char*       datalist;
 } options_list_t;
 
+#ifdef CONFIG_IDF_TARGET_ESP32
 const options_list_t options[]={
     {-1,"Disable","lst00"},
     {0,"GPIO0","lst00"},
@@ -147,8 +148,10 @@ const options_list_t options[]={
     {37,"GPIO37","lst00"},
     {38,"GPIO38","lst00"},
     {39,"GPIO39","lst00"},
+
     {1,"POS_EDGE","lst01"},
     {2,"NEG_EDGE","lst01"},
+
     {100,"","lst02"},
     {200,"","lst02"},
     {500,"","lst02"},
@@ -161,6 +164,7 @@ const options_list_t options[]={
     {40000,"","lst02"},
     {50000,"","lst02"},
     {60000,"","lst02"},
+
     {5000,"5 kHz","lst03"},
     {10000,"10 kHz","lst03"},
     {20000,"20 kHz","lst03"},
@@ -174,14 +178,110 @@ const options_list_t options[]={
     {10000000,"10 MHz","lst03"},
     {20000000,"20 MHz","lst03"},
     {40000000,"40 MHz","lst03"},
-//    {53000000,"53 MHz","lst03"},
-//    {80000000,"80 MHz","lst03"},
+
    // {0,"Restart LA","lst04"},
     {1,"1 Sek","lst04"},
     {2,"2 Sek","lst04"},
     {5,"5 Sek","lst04"},
     {10,"10 Sek","lst04"},
     {20,"20 Sek","lst04"},
-    {50,"50 Sek","lst04"},
+    {60,"60 Sek","lst04"},
     {-1,"No Timeout","lst04"}
 };
+#endif
+
+#ifdef CONFIG_IDF_TARGET_ESP32S3
+const options_list_t options[]={
+    {-1,"Disable","lst00"},
+    {0,"GPIO0","lst00"},
+    {1,"GPIO1","lst00"},
+    {2,"GPIO2","lst00"},
+    {3,"GPIO3","lst00"},
+    {4,"GPIO4","lst00"},
+    {5,"GPIO5","lst00"},
+    {6,"GPIO6","lst00"},
+    {7,"GPIO7","lst00"},
+    {8,"GPIO8","lst00"},
+    {9,"GPIO9","lst00"},
+    {10,"GPIO10","lst00"},
+    {11,"GPIO11","lst00"},
+    {12,"GPIO12","lst00"},
+    {13,"GPIO13","lst00"},
+    {14,"GPIO14","lst00"},
+    {15,"GPIO15","lst00"},
+    {16,"GPIO16","lst00"},
+    {17,"GPIO17","lst00"},
+    {18,"GPIO18","lst00"},
+    {19,"GPIO19","lst00"},
+    {20,"GPIO20","lst00"},
+    {21,"GPIO21","lst00"},
+    {26,"GPIO26","lst00"},
+    {27,"GPIO27","lst00"},
+    {28,"GPIO28","lst00"},
+    {29,"GPIO29","lst00"},
+    {30,"GPIO30","lst00"},
+    {31,"GPIO31","lst00"},
+    {32,"GPIO32","lst00"},
+    {33,"GPIO33","lst00"},
+    {34,"GPIO34","lst00"},
+    {35,"GPIO35","lst00"},
+    {36,"GPIO36","lst00"},
+    {37,"GPIO37","lst00"},
+    {38,"GPIO38","lst00"},
+    {39,"GPIO39","lst00"},
+    {40,"GPIO40","lst00"},
+    {41,"GPIO41","lst00"},
+    {42,"GPIO42","lst00"},
+    {43,"GPIO43","lst00"},
+    {44,"GPIO44","lst00"},
+    {45,"GPIO45","lst00"},
+    {46,"GPIO46","lst00"},
+    {47,"GPIO47","lst00"},
+    {48,"GPIO48","lst00"},
+
+    {1,"POS_EDGE","lst01"},
+    {2,"NEG_EDGE","lst01"},
+
+    {100,"","lst02"},
+    {200,"","lst02"},
+    {500,"","lst02"},
+    {1000,"","lst02"},
+    {2000,"","lst02"},
+    {5000,"","lst02"},
+    {10000,"","lst02"},
+    {20000,"","lst02"},
+    {30000,"","lst02"},
+    {40000,"","lst02"},
+    {50000,"","lst02"},
+    {60000,"","lst02"},
+
+#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
+    {5000,"5 kHz","lst03"},
+    {10000,"10 kHz","lst03"},
+    {20000,"20 kHz","lst03"},
+    {50000,"50 kHz","lst03"},
+    {100000,"100 kHz","lst03"},
+    {200000,"200 kHz","lst03"},
+    {500000,"500 kHz","lst03"},
+#endif
+    {1000000,"1 MHz","lst03"},
+    {2000000,"2 MHz","lst03"},
+    {5000000,"5 MHz","lst03"},
+    {10000000,"10 MHz","lst03"},
+    {20000000,"20 MHz","lst03"},
+    {40000000,"40 MHz","lst03"},
+#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8    
+    {53000000,"53 MHz","lst03"},
+    {80000000,"80 MHz","lst03"},
+#endif
+
+   // {0,"Restart LA","lst04"},
+    {1,"1 Sek","lst04"},
+    {2,"2 Sek","lst04"},
+    {5,"5 Sek","lst04"},
+    {10,"10 Sek","lst04"},
+    {20,"20 Sek","lst04"},
+    {60,"60 Sek","lst04"},
+    {-1,"No Timeout","lst04"}
+};
+#endif

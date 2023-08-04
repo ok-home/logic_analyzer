@@ -29,7 +29,7 @@ static void sump_writeByte(uint8_t byte);
 static void sump_cmd_parser(uint8_t cmdByte);
 static void sump_get_metadata();
 static void sump_capture_and_send_samples();
-static void sump_la_cb(uint16_t *buf, int cnt, int clk);
+static void sump_la_cb(uint8_t *buf, int cnt, int clk);
 
 logic_analyzer_config_t la_cfg = {
         .pin = {LA_PIN_0,LA_PIN_1,LA_PIN_2,LA_PIN_3,LA_PIN_4,LA_PIN_5,LA_PIN_6,LA_PIN_7,LA_PIN_8,LA_PIN_9,LA_PIN_10,LA_PIN_11,LA_PIN_12,LA_PIN_13,LA_PIN_14,LA_PIN_15},
@@ -60,20 +60,28 @@ static void sump_capture_and_send_samples()
       return;  
     }
 }
-static void sump_la_cb(uint16_t *buf, int cnt, int clk)
+static void sump_la_cb(uint8_t *buf, int cnt, int clk)
 {
     if (buf == NULL)
     {
         return;
     }
     // sigrok - data send on reverse order ????
-   uint16_t *bufff = buf + readCount - 1;
+#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8
+    uint8_t *bufff = (uint8_t*)buf + readCount - 1;
+    for (int i = 0; i < readCount; i++)
+    {
+        sump_write_data((uint8_t *)(bufff), 1);
+        bufff--;
+    }
+#elseif    
+   uint16_t *bufff = (uint16_t*)buf + readCount - 1;
     for (int i = 0; i < readCount; i++)
     {
         sump_write_data((uint8_t *)(bufff), 2);
         bufff--;
     }
-
+#endif
 }
 
 static void sump_config_uart()
@@ -235,7 +243,11 @@ static void sump_get_metadata()
     sump_writeByte((uint8_t)(capture_speed >> 0) & 0xFF);
     /* number of probes */
     sump_writeByte((uint8_t)0x40);
+#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8
+    sump_writeByte((uint8_t)0x8); // 8
+#elseif
     sump_writeByte((uint8_t)0x10); // 16
+#endif
     /* protocol version (2) */
     sump_writeByte((uint8_t)0x41);
     sump_writeByte((uint8_t)0x02);

@@ -11,15 +11,15 @@ extern "C" {
  * @brief logic analyzer callback
  *
  * @param- uint16_t *samle_buf   - return pointer of samples
- * @param- int samples           - count of samples in 16 bit word
+ * @param- int samples           - count of samples in 8/16 bit word depending of sample width
  * @param- int sample_rate       - real sample rate in HZ
  *
  * @return
 */
-typedef void (*logic_analyzer_cb_t)(uint16_t *samle_buf, int samples, int sample_rate); 
+typedef void (*logic_analyzer_cb_t)(uint8_t *samle_buf, int samples, int sample_rate); 
 
 typedef struct {
-    int pin[16];                // GPIO pin (0-39), -1 - disable
+    int pin[16];                // GPIO pin ESP32=>(0-39) ESP32S3=>(0-48) , -1 - disable
     int pin_trigger;            // trigger GPIO pin, -1 - disable
     int trigger_edge;           // POS_EDGE/NEG_EDGE/ANY_EDGE
     int number_of_samples;      // Number of samples in 16 bit word

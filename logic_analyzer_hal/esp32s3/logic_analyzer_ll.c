@@ -107,10 +107,19 @@ static int logic_analyzer_ll_convert_sample_rate(int sample_rate)
 {
     return LA_CLK_SAMPLE_RATE/sample_rate;
 }
+int logic_analyzer_ll_get_sample_rate(int sample_rate)
+{
+    int  ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
+    if(ldiv>160) {ldiv=160;}
+    return LA_CLK_SAMPLE_RATE / ldiv;
+}
 static void logic_analyzer_ll_set_clock(int sample_rate)
 {
-    /* todo - use ledpwm to pclk<1 mHz*/
-
+    int ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
+    if(ldiv>160) // > 1mHz
+    {
+        ldiv=160;
+    }
     // clk out xclk
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN], PIN_FUNC_GPIO);
     gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_OUTPUT);
@@ -119,13 +128,13 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     //clk in - pclk
     PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN]);
     gpio_matrix_in(CONFIG_ANALYZER_PCLK_PIN, CAM_PCLK_IDX, false);
-
-    int ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
     // Configure clock divider
     LCD_CAM.cam_ctrl.cam_clkm_div_b = 0;
     LCD_CAM.cam_ctrl.cam_clkm_div_a = 0;
     LCD_CAM.cam_ctrl.cam_clkm_div_num = ldiv;
     LCD_CAM.cam_ctrl.cam_clk_sel = 3;//Select Camera module source clock. 0: no clock. 2: APLL. 3: CLK160. 
+
+
     ESP_LOGI(TAG,"ldiv = %d",ldiv);
 }
 
@@ -150,7 +159,11 @@ static void logic_analyzer_ll_set_mode(int sample_rate)
     LCD_CAM.cam_ctrl1.cam_line_int_num = 0; // Configure line number. When the number of received lines reaches this value + 1, LCD_CAM_CAM_HS_INT is triggered. (R/W)
     LCD_CAM.cam_ctrl1.cam_clk_inv = 0; //1: Invert the input signal CAM_PCLK. 0: Do not invert. (R/W)
     LCD_CAM.cam_ctrl1.cam_vsync_filter_en = 0; //1: Enable CAM_VSYNC filter function. 0: Bypass. (R/W)
+#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8
+    LCD_CAM.cam_ctrl1.cam_2byte_en = 0; // 1: The width of input data is 16 bits. 0: The width of input data is 8 bits. (R/W)
+#else
     LCD_CAM.cam_ctrl1.cam_2byte_en = 1; // 1: The width of input data is 16 bits. 0: The width of input data is 8 bits. (R/W)
+#endif
     LCD_CAM.cam_ctrl1.cam_de_inv = 0; //CAM_DE invert enable signal, valid in high level. (R/W)
     LCD_CAM.cam_ctrl1.cam_hsync_inv = 0; //CAM_HSYNC invert enable signal, valid in high level. (R/W)
     LCD_CAM.cam_ctrl1.cam_vsync_inv = 0; //CAM_VSYNC invert enable signal, valid in high level. (R/W)
@@ -166,7 +179,7 @@ static void logic_analyzer_ll_set_mode(int sample_rate)
 
 static void logic_analyzer_ll_set_pin(int *data_pins)
 {
-    /*todo use CAM_H_ENABLE_IDX for control nransfer ?*/
+    /*todo use CAM_H_ENABLE_IDX for control transfer ?*/
     vTaskDelay(5); //??
 
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
@@ -300,7 +313,7 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
     GDMA.channel[dma_num].in.int_clr.in_dscr_empty = 1;
 //DBG
 
-    //GDMA.channel[dma_num].in.link.stop = 0;
+    GDMA.channel[dma_num].in.link.stop = 0;
     GDMA.channel[dma_num].in.link.start = 1;
     LCD_CAM.cam_ctrl1.cam_start = 1;                       // enable  transfer
 
@@ -309,7 +322,7 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
 }
 void logic_analyzer_ll_start()
 {
-     /*todo use CAM_H_ENABLE_IDX for control nransfer ?*/
+     /*todo use CAM_H_ENABLE_IDX for control transfer ?*/
     gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); //0
 }
 
@@ -328,16 +341,15 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 void logic_analyzer_ll_stop()
 {
     LCD_CAM.cam_ctrl1.cam_start = 0;
+    GDMA.channel[dma_num].in.link.stop = 1; // ??
     GDMA.channel[dma_num].in.link.start = 0;
     GDMA.channel[dma_num].in.link.addr = 0x0;
     GDMA.channel[dma_num].in.int_ena.in_suc_eof = 0;
     GDMA.channel[dma_num].in.int_clr.in_suc_eof = 1;
+
+    gpio_reset_pin(CONFIG_ANALYZER_PCLK_PIN);
 }
-int logic_analyzer_ll_get_sample_rate(int sample_rate)
-{
-    int  ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
-    return LA_CLK_SAMPLE_RATE / ldiv;
-}
+
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
 {
 	esp_err_t ret = ESP_OK;
@@ -354,10 +366,9 @@ esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
                                      la_ll_dma_isr, (void *)task, &isr_handle);
 
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "DMA interrupt allocation of camera failed");
+        ESP_LOGE(TAG, "DMA interrupt allocation of analyzer failed");
 		return ret;
 	}
-    //ESP_LOGI(TAG,"INTERRUPT");
     return ret;
 }
 void logic_analyzer_ll_deinit_dma_eof_isr()

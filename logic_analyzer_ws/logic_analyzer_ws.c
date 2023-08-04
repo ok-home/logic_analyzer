@@ -35,7 +35,7 @@ static TaskHandle_t read_json_handle = 0;
 static QueueHandle_t read_json_queue = 0;
 static esp_err_t send_ws_string(const char *json_string);
 
-static void logic_analyzer_cb(uint16_t *sample_buf, int samples, int sample_rate)
+static void logic_analyzer_cb(uint8_t *sample_buf, int samples, int sample_rate)
 {
     char jsonstr[64];
     esp_err_t ret = 0;
@@ -51,7 +51,7 @@ static void logic_analyzer_cb(uint16_t *sample_buf, int samples, int sample_rate
         memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
         ws_pkt.type = HTTPD_WS_TYPE_BINARY;
         ws_pkt.payload = (uint8_t *)sample_buf; // la cb buff
-        ws_pkt.len = samples * 2;
+        ws_pkt.len = samples * LA_BYTE_IN_SAMPLE;
         ESP_LOGI(TAG, "Start samples transfer %d", ws_pkt.len);
         send_ws_string("Start samples transfer");
         ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt);
@@ -163,7 +163,6 @@ static esp_err_t draw_html_config(void)
             la_cfg.meashure_timeout >0 ? la_cfg.meashure_timeout/100:la_cfg.meashure_timeout,// TICK = 10 MSek
             1, 0, rowID[ROW_LST], DATALIST_TIMEOUT, CHECK_CFG_DATA_EVENT);
     ret = send_ws_string(jsonstr);
-
 
     return ret;
 }

@@ -53,7 +53,7 @@
   - Получает сэмплы в буфер ESP32
   - logic_analyzer_config_t - конфигурация захвата
   - start_logic_analyzer(logic_analyzer_config_t *config) - старт захвата
-  - void (*logic_analyzer_cb_t)(uint16_t *samle_buf, int samples, int sample_rate) - каллбэк после захвата данных
+  - void (*logic_analyzer_cb_t)(uint8_t *samle_buf, int samples, int sample_rate) - каллбэк после захвата данных
   ### include/logic_analyzer_sump.h
   - работа с PulseView 
   - logic_analyzer_sump(); 
