@@ -1,3 +1,5 @@
+// definition esp32s3
+//43-tx 44-rx
 // sigrok default sample rate
 #define PULSEVIEW_MAX_SAMPLE_RATE 100000000
 // logic analyzer max data buff size

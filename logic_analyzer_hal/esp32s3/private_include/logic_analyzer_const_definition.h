@@ -25,7 +25,7 @@
 #define LA_MAX_SAMPLE_RATE 80000000
 #define LA_MAX_PIN 8
 #define LA_BYTE_IN_SAMPLE 1
-#elseif
+#else
 #define LA_MAX_SAMPLE_CNT 32000
 #define LA_MAX_SAMPLE_RATE 40000000
 #define LA_MAX_PIN 16

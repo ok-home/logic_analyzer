@@ -74,7 +74,7 @@ static void sump_la_cb(uint8_t *buf, int cnt, int clk)
         sump_write_data((uint8_t *)(bufff), 1);
         bufff--;
     }
-#elseif    
+#else    
    uint16_t *bufff = (uint16_t*)buf + readCount - 1;
     for (int i = 0; i < readCount; i++)
     {
@@ -245,7 +245,7 @@ static void sump_get_metadata()
     sump_writeByte((uint8_t)0x40);
 #ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8
     sump_writeByte((uint8_t)0x8); // 8
-#elseif
+#else
     sump_writeByte((uint8_t)0x10); // 16
 #endif
     /* protocol version (2) */

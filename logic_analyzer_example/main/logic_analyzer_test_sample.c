@@ -16,6 +16,7 @@
 
 
 // definition test sample
+//43-tx 44-rx
 // output pin ledc example
 #define LEDC_OUTPUT_IO (12)
 // output pin gpio blink example 

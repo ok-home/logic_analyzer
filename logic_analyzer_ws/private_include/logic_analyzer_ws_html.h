@@ -251,9 +251,11 @@ const options_list_t options[]={
     {10000,"","lst02"},
     {20000,"","lst02"},
     {30000,"","lst02"},
+#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8  
     {40000,"","lst02"},
     {50000,"","lst02"},
     {60000,"","lst02"},
+#endif
 
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
     {5000,"5 kHz","lst03"},
