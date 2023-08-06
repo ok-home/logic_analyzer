@@ -17,6 +17,10 @@ menu "Logic Analyzer Configuration"
 
     if IDF_TARGET_ESP32S3
 
+        config ANALYZER_USE_PSRAM
+            bool "Allocate sample buffer in PSRAM"
+            default n
+
         config ANALYZER_PCLK_PIN
             int "GPIO NUM for PCLK"
             range -1 48

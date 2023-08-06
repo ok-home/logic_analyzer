@@ -35,6 +35,8 @@
 #include "driver/ledc.h"
 #endif
 
+//#define EOF_CTRL 1
+
 #define TAG "esp32s3_ll"
 
 #include "logic_analyzer_ll.h"
@@ -51,19 +53,6 @@
 #define IN_DONE_DBG 6
 #define IN_DSCR_EMPTY_DBG 7
 #define IN_EOF_DBG 8 
-
-static void dbg_gpio(void)
-{
-    gpio_reset_pin(IN_DONE_DBG);
-    gpio_set_direction(IN_DONE_DBG,GPIO_MODE_OUTPUT);
-    gpio_reset_pin(IN_DSCR_EMPTY_DBG);
-    gpio_set_direction(IN_DSCR_EMPTY_DBG,GPIO_MODE_OUTPUT);
-    gpio_reset_pin(IN_EOF_DBG);
-    gpio_set_direction(IN_EOF_DBG,GPIO_MODE_OUTPUT);
-    gpio_set_level(IN_DONE_DBG,0);
-    gpio_set_level(IN_DSCR_EMPTY_DBG,0);
-    gpio_set_level(IN_EOF_DBG,0);
-}
 
 static intr_handle_t isr_handle;
 static int dma_num = 0;
@@ -90,17 +79,20 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
     }
         if(status.in_dscr_empty)
     {
-        gpio_set_level(IN_DSCR_EMPTY_DBG,1);
-        gpio_set_level(IN_DSCR_EMPTY_DBG,0);
-        //vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
+        //gpio_set_level(IN_DSCR_EMPTY_DBG,1);
+        //gpio_set_level(IN_DSCR_EMPTY_DBG,0);
+#ifndef EOF_CTRL
+        vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
+#endif
     }
 
     if (status.in_suc_eof)
     {
-        gpio_set_level(IN_EOF_DBG,1);
-        gpio_set_level(IN_EOF_DBG,0);
-
+        //gpio_set_level(IN_EOF_DBG,1);
+        //gpio_set_level(IN_EOF_DBG,0);
+#ifdef EOF_CTRL
         vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
+#endif
     }
     if (HPTaskAwoken == pdTRUE)
     {
@@ -201,8 +193,11 @@ static void logic_analyzer_ll_set_mode(int sample_rate)
     LCD_CAM.cam_ctrl.cam_byte_order = 0;  //1: Invert data byte order, only valid in 16-bit mode. 0: Do not change. (R/W)
     LCD_CAM.cam_ctrl.cam_bit_order = 0; //1: Change data bit order, change CAM_DATA_in[7:0] to CAM_DATA_in[0:7] in 8-bit mode, and bits[15:0] to bits[0:15] in 16-bit mode. 0: Do not change. (R/W)
     LCD_CAM.cam_ctrl.cam_line_int_en = 0; //1: Enable to generate LCD_CAM_CAM_HS_INT. 0: Disable. (R/W)
+#ifdef EOF_CTRL
     LCD_CAM.cam_ctrl.cam_vs_eof_en = 0; // 1: Enable CAM_VSYNC to generate in_suc_eof. 0: in_suc_eof is controlled by LCD_CAM_CAM_REC_DATA_BYTELEN. (R/W)
-
+#else
+    LCD_CAM.cam_ctrl.cam_vs_eof_en = 1; // 1: Enable CAM_VSYNC to generate in_suc_eof. 0: in_suc_eof is controlled by LCD_CAM_CAM_REC_DATA_BYTELEN. (R/W)
+#endif
     LCD_CAM.cam_ctrl1.cam_line_int_num = 0; // Configure line number. When the number of received lines reaches this value + 1, LCD_CAM_CAM_HS_INT is triggered. (R/W)
     LCD_CAM.cam_ctrl1.cam_clk_inv = 0; //1: Invert the input signal CAM_PCLK. 0: Do not invert. (R/W)
     LCD_CAM.cam_ctrl1.cam_vsync_filter_en = 0; //1: Enable CAM_VSYNC filter function. 0: Bypass. (R/W)
@@ -345,7 +340,11 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
 
     // set dma descriptor
     GDMA.channel[dma_num].in.link.addr = ((uint32_t) & (frame->dma[0]))&0xfffff;
+#ifdef EOF_CTRL    
     LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = frame->fb.len-1; // count in byte
+#else
+    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = 64;// frame->fb.len-1-200; // count in byte
+#endif
     LCD_CAM.cam_ctrl.cam_update = 1;
     //ESP_LOGI(TAG,"link s=%d l=%d eof=%d ptr%p next=%lx ",frame->dma[0].size,frame->dma[0].length,frame->dma[0].eof,frame->dma[0].buf,frame->dma[0].empty);
     //ESP_LOGI(TAG,"regcnt=%d framecnt=%d link dma=%x ptr=%p ",LCD_CAM.cam_ctrl1.cam_rec_data_bytelen,frame->fb.len,GDMA.channel[dma_num].in.link.addr,frame->dma);
@@ -400,8 +399,6 @@ void logic_analyzer_ll_stop()
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
 {
 	esp_err_t ret = ESP_OK;
-
-    dbg_gpio();
 
 /*    ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
                                      ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
