@@ -18,14 +18,12 @@
 #include "esp_rom_gpio.h"
 #include "esp_log.h"
 
-
 #include "soc/gpio_sig_map.h"
 #include "soc/gpio_periph.h"
 #include "soc/io_mux_reg.h"
-#define gpio_matrix_in(a,b,c) esp_rom_gpio_connect_in_signal(a,b,c)
-#define gpio_matrix_out(a,b,c,d) esp_rom_gpio_connect_out_signal(a,b,c,d)
+#define gpio_matrix_in(a, b, c) esp_rom_gpio_connect_in_signal(a, b, c)
+#define gpio_matrix_out(a, b, c, d) esp_rom_gpio_connect_out_signal(a, b, c, d)
 #define ets_delay_us(a) esp_rom_delay_us(a)
-
 
 #if !defined(SOC_GDMA_PAIRS_PER_GROUP) && defined(SOC_GDMA_PAIRS_PER_GROUP_MAX)
 #define SOC_GDMA_PAIRS_PER_GROUP SOC_GDMA_PAIRS_PER_GROUP_MAX
@@ -35,7 +33,7 @@
 #include "driver/ledc.h"
 #endif
 
-//#define EOF_CTRL 1
+// #define EOF_CTRL 1
 
 #define TAG "esp32s3_ll"
 
@@ -50,10 +48,6 @@
 #undef SEPARATE_MODE_LOGIC_ANALIZER
 #endif
 
-#define IN_DONE_DBG 6
-#define IN_DSCR_EMPTY_DBG 7
-#define IN_EOF_DBG 8 
-
 static intr_handle_t isr_handle;
 static int dma_num = 0;
 //  trigger isr handle
@@ -64,32 +58,21 @@ void IRAM_ATTR la_ll_trigger_isr(void *pin)
 }
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
 {
-    /* todo  - GDMA_IN_DSCR_EMPTY_CHn_INT: GDMA_IN_DONE_CHn_INT: -> non stop transfer */
     BaseType_t HPTaskAwoken = pdFALSE;
     typeof(GDMA.channel[dma_num].in.int_st) status = GDMA.channel[dma_num].in.int_st;
-    if (status.val == 0) {
+    if (status.val == 0)
+    {
         return;
     }
     GDMA.channel[dma_num].in.int_clr.val = status.val;
-    if(status.in_done)
+    if (status.in_dscr_empty)
     {
-        gpio_set_level(IN_DONE_DBG,1);
-        gpio_set_level(IN_DONE_DBG,0);
-        //vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
-    }
-        if(status.in_dscr_empty)
-    {
-        //gpio_set_level(IN_DSCR_EMPTY_DBG,1);
-        //gpio_set_level(IN_DSCR_EMPTY_DBG,0);
 #ifndef EOF_CTRL
         vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
 #endif
     }
-
     if (status.in_suc_eof)
     {
-        //gpio_set_level(IN_EOF_DBG,1);
-        //gpio_set_level(IN_EOF_DBG,0);
 #ifdef EOF_CTRL
         vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
 #endif
@@ -126,29 +109,30 @@ static void logic_analyzer_ll_set_ledc_pclk(int sample_rate)
 #endif
 static int logic_analyzer_ll_convert_sample_rate(int sample_rate)
 {
-    return LA_CLK_SAMPLE_RATE/sample_rate;
+    return LA_CLK_SAMPLE_RATE / sample_rate;
 }
 int logic_analyzer_ll_get_sample_rate(int sample_rate)
 {
-    int  ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
+    int ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
 
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-    if(ldiv>160)
+    if (ldiv > 160)
     {
-        return((int)ledc_get_freq(LEDC_LOW_SPEED_MODE,CONFIG_ANALYZER_LEDC_TIMER_NUMBER));
+        return ((int)ledc_get_freq(LEDC_LOW_SPEED_MODE, CONFIG_ANALYZER_LEDC_TIMER_NUMBER));
     }
 #endif
-    if(ldiv>160) {ldiv=160;}
+    if (ldiv > 160)
+    {
+        ldiv = 160;
+    }
     return LA_CLK_SAMPLE_RATE / ldiv;
-
-
 }
 static void logic_analyzer_ll_set_clock(int sample_rate)
 {
     int ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
-    if(ldiv>160) // > 1mHz
+    if (ldiv > 160) // > 1mHz
     {
-        ldiv=160;
+        ldiv = 160;
     }
     // clk out xclk
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN], PIN_FUNC_GPIO);
@@ -157,30 +141,27 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     gpio_matrix_out(CONFIG_ANALYZER_PCLK_PIN, CAM_CLK_IDX, false, false);
 
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-    if(logic_analyzer_ll_convert_sample_rate(sample_rate)>160)
+    if (logic_analyzer_ll_convert_sample_rate(sample_rate) > 160)
     {
-        ldiv=8;
+        ldiv = 8;
         logic_analyzer_ll_set_ledc_pclk(sample_rate);
     }
 #endif
 
-    //clk in - pclk
+    // clk in - pclk
     PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN]);
     gpio_matrix_in(CONFIG_ANALYZER_PCLK_PIN, CAM_PCLK_IDX, false);
     // Configure clock divider
     LCD_CAM.cam_ctrl.cam_clkm_div_b = 0;
     LCD_CAM.cam_ctrl.cam_clkm_div_a = 0;
     LCD_CAM.cam_ctrl.cam_clkm_div_num = ldiv;
-    LCD_CAM.cam_ctrl.cam_clk_sel = 3;//Select Camera module source clock. 0: no clock. 2: APLL. 3: CLK160. 
-
-
-    ESP_LOGI(TAG,"ldiv = %d",ldiv);
+    LCD_CAM.cam_ctrl.cam_clk_sel = 3; // Select Camera module source clock. 0: no clock. 2: APLL. 3: CLK160.
 }
 
 static void logic_analyzer_ll_set_mode(int sample_rate)
 {
     /* todo - non stop transfer vh_de_mode, vs_eof_en */
-    // attension !! 
+    // attension !!
     // LCD_CAM.cam_ctrl1.cam_rec_data_bytelen -> logic_analyzer_ll_set_mode  clear len data
     LCD_CAM.cam_ctrl.val = 0;
     LCD_CAM.cam_ctrl1.val = 0;
@@ -188,31 +169,31 @@ static void logic_analyzer_ll_set_mode(int sample_rate)
 
     logic_analyzer_ll_set_clock(sample_rate); // set clock divider
 
-    LCD_CAM.cam_ctrl.cam_stop_en = 0;   //Camera stop enable signal, 1: camera stops when GDMA Rx FIFO is full. 0: Do not stop. (R/W)
+    LCD_CAM.cam_ctrl.cam_stop_en = 0;            // Camera stop enable signal, 1: camera stops when GDMA Rx FIFO is full. 0: Do not stop. (R/W)
     LCD_CAM.cam_ctrl.cam_vsync_filter_thres = 0; // Filter by LCD_CAM clock
-    LCD_CAM.cam_ctrl.cam_byte_order = 0;  //1: Invert data byte order, only valid in 16-bit mode. 0: Do not change. (R/W)
-    LCD_CAM.cam_ctrl.cam_bit_order = 0; //1: Change data bit order, change CAM_DATA_in[7:0] to CAM_DATA_in[0:7] in 8-bit mode, and bits[15:0] to bits[0:15] in 16-bit mode. 0: Do not change. (R/W)
-    LCD_CAM.cam_ctrl.cam_line_int_en = 0; //1: Enable to generate LCD_CAM_CAM_HS_INT. 0: Disable. (R/W)
+    LCD_CAM.cam_ctrl.cam_byte_order = 0;         // 1: Invert data byte order, only valid in 16-bit mode. 0: Do not change. (R/W)
+    LCD_CAM.cam_ctrl.cam_bit_order = 0;          // 1: Change data bit order, change CAM_DATA_in[7:0] to CAM_DATA_in[0:7] in 8-bit mode, and bits[15:0] to bits[0:15] in 16-bit mode. 0: Do not change. (R/W)
+    LCD_CAM.cam_ctrl.cam_line_int_en = 0;        // 1: Enable to generate LCD_CAM_CAM_HS_INT. 0: Disable. (R/W)
 #ifdef EOF_CTRL
     LCD_CAM.cam_ctrl.cam_vs_eof_en = 0; // 1: Enable CAM_VSYNC to generate in_suc_eof. 0: in_suc_eof is controlled by LCD_CAM_CAM_REC_DATA_BYTELEN. (R/W)
 #else
     LCD_CAM.cam_ctrl.cam_vs_eof_en = 1; // 1: Enable CAM_VSYNC to generate in_suc_eof. 0: in_suc_eof is controlled by LCD_CAM_CAM_REC_DATA_BYTELEN. (R/W)
 #endif
-    LCD_CAM.cam_ctrl1.cam_line_int_num = 0; // Configure line number. When the number of received lines reaches this value + 1, LCD_CAM_CAM_HS_INT is triggered. (R/W)
-    LCD_CAM.cam_ctrl1.cam_clk_inv = 0; //1: Invert the input signal CAM_PCLK. 0: Do not invert. (R/W)
-    LCD_CAM.cam_ctrl1.cam_vsync_filter_en = 0; //1: Enable CAM_VSYNC filter function. 0: Bypass. (R/W)
+    LCD_CAM.cam_ctrl1.cam_line_int_num = 0;    // Configure line number. When the number of received lines reaches this value + 1, LCD_CAM_CAM_HS_INT is triggered. (R/W)
+    LCD_CAM.cam_ctrl1.cam_clk_inv = 0;         // 1: Invert the input signal CAM_PCLK. 0: Do not invert. (R/W)
+    LCD_CAM.cam_ctrl1.cam_vsync_filter_en = 0; // 1: Enable CAM_VSYNC filter function. 0: Bypass. (R/W)
 #ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8
     LCD_CAM.cam_ctrl1.cam_2byte_en = 0; // 1: The width of input data is 16 bits. 0: The width of input data is 8 bits. (R/W)
 #else
     LCD_CAM.cam_ctrl1.cam_2byte_en = 1; // 1: The width of input data is 16 bits. 0: The width of input data is 8 bits. (R/W)
 #endif
-    LCD_CAM.cam_ctrl1.cam_de_inv = 0; //CAM_DE invert enable signal, valid in high level. (R/W)
-    LCD_CAM.cam_ctrl1.cam_hsync_inv = 0; //CAM_HSYNC invert enable signal, valid in high level. (R/W)
-    LCD_CAM.cam_ctrl1.cam_vsync_inv = 0; //CAM_VSYNC invert enable signal, valid in high level. (R/W)
+    LCD_CAM.cam_ctrl1.cam_de_inv = 0;        // CAM_DE invert enable signal, valid in high level. (R/W)
+    LCD_CAM.cam_ctrl1.cam_hsync_inv = 0;     // CAM_HSYNC invert enable signal, valid in high level. (R/W)
+    LCD_CAM.cam_ctrl1.cam_vsync_inv = 0;     // CAM_VSYNC invert enable signal, valid in high level. (R/W)
     LCD_CAM.cam_ctrl1.cam_vh_de_mode_en = 0; // 1: Input control signals are CAM_DE and CAM_HSYNC. CAM_VSYNC is 1. 0: Input control signals are CAM_DE and CAM_VSYNC. CAM_HSYNC and CAM_DE are all 1 at the the same time. (R/W)
 
-    LCD_CAM.cam_ctrl.cam_update = 1; //1: Update camera registers. This bit is cleared by hardware. 0: Do not care. (R/W)
-    // cam reset, cam fifo reset 
+    LCD_CAM.cam_ctrl.cam_update = 1; // 1: Update camera registers. This bit is cleared by hardware. 0: Do not care. (R/W)
+    // cam reset, cam fifo reset
     LCD_CAM.cam_ctrl1.cam_reset = 1;
     LCD_CAM.cam_ctrl1.cam_reset = 0;
     LCD_CAM.cam_ctrl1.cam_afifo_reset = 1;
@@ -258,9 +239,9 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
 #endif
 
     // CAM_V_SYNC_IDX - stop transfer - set to 0 - set to 1 on start function - other set to 1 enable transfer
-    gpio_matrix_in(0x3C, CAM_V_SYNC_IDX, false); //0
-    gpio_matrix_in(0x38, CAM_H_SYNC_IDX, false); //1
-    gpio_matrix_in(0x38, CAM_H_ENABLE_IDX, false); //1
+    gpio_matrix_in(0x3C, CAM_V_SYNC_IDX, false);   // 0
+    gpio_matrix_in(0x38, CAM_H_SYNC_IDX, false);   // 1
+    gpio_matrix_in(0x38, CAM_H_ENABLE_IDX, false); // 1
 }
 /*
 1. Set GDMA_IN_RST_CHn first to 1 and then to 0, to reset the state machine of GDMA’s receive channel and FIFO pointer;
@@ -273,20 +254,23 @@ received.
 */
 static esp_err_t logic_analyzer_ll_dma_init(void)
 {
-    for (int x = (SOC_GDMA_PAIRS_PER_GROUP - 1); x >= 0; x--) {
-        if (GDMA.channel[x].in.link.addr == 0x0) {
+    for (int x = (SOC_GDMA_PAIRS_PER_GROUP - 1); x >= 0; x--)
+    {
+        if (GDMA.channel[x].in.link.addr == 0x0)
+        {
             dma_num = x;
-            ESP_LOGI(TAG, "DMA Channel=%d", dma_num);
             break;
         }
-        if (x == 0) {
-            //cam_deinit();
+        if (x == 0)
+        {
+            // cam_deinit();
             ESP_LOGE(TAG, "Can't found available GDMA channel");
-			return ESP_FAIL;
+            return ESP_FAIL;
         }
     }
 
-    if (REG_GET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN) == 0) {
+    if (REG_GET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN) == 0)
+    {
         REG_CLR_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN);
         REG_SET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN);
         REG_SET_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST);
@@ -301,8 +285,10 @@ static esp_err_t logic_analyzer_ll_dma_init(void)
 
     GDMA.channel[dma_num].in.conf0.in_rst = 1;
     GDMA.channel[dma_num].in.conf0.in_rst = 0;
+    // #ifndef CONFIG_ANALYZER_USE_PSRAM
     GDMA.channel[dma_num].in.conf0.indscr_burst_en = 1;
     GDMA.channel[dma_num].in.conf0.in_data_burst_en = 1;
+    // #endif
     GDMA.channel[dma_num].in.conf1.in_check_owner = 0;
     GDMA.channel[dma_num].in.peri_sel.sel = 5;
 
@@ -327,7 +313,8 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
 {
     // Enable and configure cam
     // enable CLK
-    if (REG_GET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_LCD_CAM_CLK_EN) == 0) {
+    if (REG_GET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_LCD_CAM_CLK_EN) == 0)
+    {
         REG_CLR_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_LCD_CAM_CLK_EN);
         REG_SET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_LCD_CAM_CLK_EN);
         REG_SET_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_LCD_CAM_RST);
@@ -337,39 +324,29 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
     logic_analyzer_ll_set_mode(sample_rate);
     logic_analyzer_ll_dma_init();
 
-
     // set dma descriptor
-    GDMA.channel[dma_num].in.link.addr = ((uint32_t) & (frame->dma[0]))&0xfffff;
-#ifdef EOF_CTRL    
-    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = frame->fb.len-1; // count in byte
+    GDMA.channel[dma_num].in.link.addr = ((uint32_t) & (frame->dma[0])) & 0xfffff;
+#ifdef EOF_CTRL
+    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = frame->fb.len - 1; // count in byte
 #else
-    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = 64;// frame->fb.len-1-200; // count in byte
+    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = 64; // frame->fb.len-1-200; // count in byte
 #endif
     LCD_CAM.cam_ctrl.cam_update = 1;
-    //ESP_LOGI(TAG,"link s=%d l=%d eof=%d ptr%p next=%lx ",frame->dma[0].size,frame->dma[0].length,frame->dma[0].eof,frame->dma[0].buf,frame->dma[0].empty);
-    //ESP_LOGI(TAG,"regcnt=%d framecnt=%d link dma=%x ptr=%p ",LCD_CAM.cam_ctrl1.cam_rec_data_bytelen,frame->fb.len,GDMA.channel[dma_num].in.link.addr,frame->dma);
-    // pre start
+    //  pre start
     GDMA.channel[dma_num].in.int_ena.in_suc_eof = 1;
     GDMA.channel[dma_num].in.int_clr.in_suc_eof = 1;
 
-// DBG
-    GDMA.channel[dma_num].in.int_ena.in_done = 1;
-    GDMA.channel[dma_num].in.int_clr.in_done = 1;
     GDMA.channel[dma_num].in.int_ena.in_dscr_empty = 1;
     GDMA.channel[dma_num].in.int_clr.in_dscr_empty = 1;
-//DBG
 
     GDMA.channel[dma_num].in.link.stop = 0;
     GDMA.channel[dma_num].in.link.start = 1;
-    LCD_CAM.cam_ctrl1.cam_start = 1;                       // enable  transfer
-
-    //ESP_LOGI("TAG","cam start=%d dma start=%d dma stop=%d dma park %d int ena=%d eof=%lx",LCD_CAM.cam_ctrl1.cam_start,GDMA.channel[dma_num].in.link.start,GDMA.channel[dma_num].in.link.stop,GDMA.channel[dma_num].in.link.park,GDMA.channel[dma_num].in.int_ena.in_suc_eof,GDMA.channel[dma_num].in.int_st.val);
-
+    LCD_CAM.cam_ctrl1.cam_start = 1; // enable  transfer
 }
 void logic_analyzer_ll_start()
 {
-     /*todo use CAM_H_ENABLE_IDX for control transfer ?*/
-    gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); //0
+    /*todo use CAM_H_ENABLE_IDX for control transfer ?*/
+    gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); // 0
 }
 
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
@@ -377,7 +354,7 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 #ifdef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
     ll_hi_level_triggered_isr_start(pin_trigger, trigger_edge);
 #else
-    gpio_install_isr_service(0); // default
+    gpio_install_isr_service(0);                 // default
     gpio_set_intr_type(pin_trigger, trigger_edge);
     gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
     gpio_intr_disable(pin_trigger);
@@ -392,27 +369,32 @@ void logic_analyzer_ll_stop()
     GDMA.channel[dma_num].in.link.addr = 0x0;
     GDMA.channel[dma_num].in.int_ena.in_suc_eof = 0;
     GDMA.channel[dma_num].in.int_clr.in_suc_eof = 1;
-
+    GDMA.channel[dma_num].in.int_ena.in_dscr_empty = 0;
+    GDMA.channel[dma_num].in.int_clr.in_dscr_empty = 1;
+#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
+    ledc_stop(LEDC_LOW_SPEED_MODE, CONFIG_ANALYZER_LEDC_CHANNEL_NUMBER, 0);
+#endif
     gpio_reset_pin(CONFIG_ANALYZER_PCLK_PIN);
 }
 
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
 {
-	esp_err_t ret = ESP_OK;
+    esp_err_t ret = ESP_OK;
 
-/*    ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
-                                     ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
-                                     (uint32_t)&GDMA.channel[dma_num].in.int_st, GDMA_IN_SUC_EOF_CH0_INT_ST_M,
-                                     la_ll_dma_isr, (void *)task, &isr_handle);
-*/
+    /*    ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
+                                         ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
+                                         (uint32_t)&GDMA.channel[dma_num].in.int_st, GDMA_IN_SUC_EOF_CH0_INT_ST_M,
+                                         la_ll_dma_isr, (void *)task, &isr_handle);
+    */
     ret = esp_intr_alloc(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
-                                     ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
-                                     la_ll_dma_isr, (void *)task, &isr_handle);
+                         ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
+                         la_ll_dma_isr, (void *)task, &isr_handle);
 
-    if (ret != ESP_OK) {
+    if (ret != ESP_OK)
+    {
         ESP_LOGE(TAG, "DMA interrupt allocation of analyzer failed");
-		return ret;
-	}
+        return ret;
+    }
     return ret;
 }
 void logic_analyzer_ll_deinit_dma_eof_isr()

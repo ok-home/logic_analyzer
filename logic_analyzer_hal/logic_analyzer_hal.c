@@ -12,6 +12,7 @@
 #include "soc/soc.h"
 #include "soc/dport_access.h"
 #include "esp_log.h"
+#include "string.h"
 
 #define LA_TASK_STACK 2048
 #define DMA_FRAME 4092
@@ -122,10 +123,10 @@ static void logic_analyzer_task(void *arg)
         {
             // dma data ready
             // esp32 -> sample sequence in 32 word - adr0=sample1, adr1=sample0
-            // swap sample sequence on esp32. 
+            // swap sample sequence on esp32.
 #ifdef CONFIG_IDF_TARGET_ESP32
             swap_buf((uint16_t *)la_frame.fb.buf, la_frame.fb.len / LA_BYTE_IN_SAMPLE);
-#endif            
+#endif
             cfg->logic_analyzer_cb((uint8_t *)la_frame.fb.buf, la_frame.fb.len / LA_BYTE_IN_SAMPLE, logic_analyzer_ll_get_sample_rate(cfg->sample_rate));
             logic_analyzer_stop(); // todo stop & clear on task or external ??
             vTaskDelete(logic_analyzer_task_handle);
@@ -208,28 +209,44 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     {
         goto _ret;
     }
-    // check number of samples 
+    // check number of samples
     if (config->number_of_samples > LA_MAX_SAMPLE_CNT)
     {
         goto _ret;
     }
     // allocate frame buffer
-    // test  - check maximum available buffer size
+#ifndef CONFIG_ANALYZER_USE_PSRAM
+    // alloc on RAM
     uint32_t number_of_samples = config->number_of_samples & ~0x3; // burst transfer word align
     uint32_t largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_DMA);
     if (largest_free_block < number_of_samples * LA_BYTE_IN_SAMPLE)
     {
-        number_of_samples = (largest_free_block / LA_BYTE_IN_SAMPLE) & ~0x3 ; // burst transfer word align
+        number_of_samples = (largest_free_block / LA_BYTE_IN_SAMPLE) & ~0x3; // burst transfer word align
     }
     ESP_LOGD("DMA HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
     la_frame.fb.len = number_of_samples * LA_BYTE_IN_SAMPLE;
     la_frame.fb.buf = heap_caps_calloc(la_frame.fb.len, 1, MALLOC_CAP_DMA); // malloc ??
+    ESP_LOGD("DMA HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
+#endif
+#ifdef CONFIG_ANALYZER_USE_PSRAM
+    // test  - alloc on PSRAM -> on debug
+    uint32_t number_of_samples = config->number_of_samples & ~0xf; // burst transfer 16 byte align
+    uint32_t largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
+    if (largest_free_block < number_of_samples * LA_BYTE_IN_SAMPLE)
+    {
+        number_of_samples = (largest_free_block / LA_BYTE_IN_SAMPLE) & ~0xf; // burst transfer word align
+    }
+    ESP_LOGI("DMA PSRAM HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
+    la_frame.fb.len = number_of_samples * LA_BYTE_IN_SAMPLE;
+    la_frame.fb.buf = heap_caps_aligned_alloc(16, la_frame.fb.len, MALLOC_CAP_SPIRAM); // malloc ??
+    memset(la_frame.fb.buf, 0, number_of_samples * LA_BYTE_IN_SAMPLE);
+    ESP_LOGI("DMA PSRAM HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
+#endif
     if (la_frame.fb.buf == NULL)
     {
         ret = ESP_ERR_NO_MEM;
         goto _retcode;
     }
-    ESP_LOGD("DMA HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
     //  allocate dma descriptor buffer
     la_frame.dma = allocate_dma_descriptors(la_frame.fb.len, la_frame.fb.buf);
     if (la_frame.dma == NULL)
@@ -237,8 +254,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         ret = ESP_ERR_NO_MEM;
         goto _freebuf_ret;
     }
-    ESP_LOGD("DMA HEAP After Descr", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
-    // configure I2S  - pin definition, pin trigger, sample frame & dma frame, clock divider
+    // configure   - pin definition, pin trigger, sample frame & dma frame, clock divider
     logic_analyzer_ll_config(config->pin, config->sample_rate, &la_frame);
     // start main task - check logic analyzer get data & call cb
     if (pdPASS != xTaskCreate(logic_analyzer_task, "la_task", LA_TASK_STACK * 4, config, configMAX_PRIORITIES - 2, &logic_analyzer_task_handle))

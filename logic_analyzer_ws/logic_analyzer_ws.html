@@ -289,7 +289,7 @@
             drawLine(l_arr, cfgCntCh[idx], idx, l_channels, l_start, l_cnt);
         }
         drawLine(l_arr, -1, -1, l_channels, l_start, l_cnt);//draw top border
-        imgMarker = ctx.getImageData(x_bord + marker_canvas_x_point - 50, 30, 100, 20, { willReadFrequently: true });
+        imgMarker = ctx.getImageData(x_bord + marker_canvas_x_point - 100, 30, 200, 20, { willReadFrequently: true });
         drawTimeMarker();
     }
     function drawXMarker() {
@@ -495,9 +495,9 @@
     canvas.addEventListener('mousemove', function (evt) {
         curr_canvas_x_point = evt.offsetX < x_bord ? 0 : evt.offsetX - x_bord;
         click_array_point = Math.round(curr_array_start_point + curr_cnt * (curr_canvas_x_point / (x_canvas - x_bord)));
-        ctx.putImageData(imgMarker, x_bord + marker_canvas_x_point - 50, 30)
+        ctx.putImageData(imgMarker, x_bord + marker_canvas_x_point - 100, 30); //-50
         marker_canvas_x_point = evt.offsetX < x_bord ? 0 : evt.offsetX - x_bord;
-        imgMarker = ctx.getImageData(x_bord + marker_canvas_x_point - 50, 30, 100, 20, { willReadFrequently: true });
+        imgMarker = ctx.getImageData(x_bord + marker_canvas_x_point - 100, 30, 200, 20, { willReadFrequently: true });//-50 100
         drawTimeMarker();
     }, false);
     canvas.addEventListener('wheel', function (evt) {
