@@ -35,7 +35,12 @@ menu "Logic Analyzer Configuration"
             config ANALYZER_LEDC_TIMER_NUMBER
                 int "LEDC_TIMER_NUMBER for PCLK"
                 range 0 3
-                default 0
+                default 3
+
+            config ANALYZER_LEDC_CHANNEL_NUMBER
+                int "LEDC_CHANNEL_NUMBER for PCLK"
+                range 0 7
+                default 7
 
         endif
 

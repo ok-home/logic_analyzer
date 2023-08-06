@@ -31,7 +31,11 @@
 #define SOC_GDMA_PAIRS_PER_GROUP SOC_GDMA_PAIRS_PER_GROUP_MAX
 #endif
 
-#define TAG "esp32s3 ll"
+#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
+#include "driver/ledc.h"
+#endif
+
+#define TAG "esp32s3_ll"
 
 #include "logic_analyzer_ll.h"
 
@@ -103,6 +107,31 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
         portYIELD_FROM_ISR();
     }
 }
+
+#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
+static void logic_analyzer_ll_set_ledc_pclk(int sample_rate)
+{
+    // Prepare and then apply the LEDC PWM timer configuration
+    ledc_timer_config_t ledc_timer = {
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .timer_num = CONFIG_ANALYZER_LEDC_TIMER_NUMBER,
+        .duty_resolution = LEDC_TIMER_4_BIT,
+        .freq_hz = sample_rate, // Set output frequency at 5 kHz
+        .clk_cfg = LEDC_USE_APB_CLK};
+    ledc_timer_config(&ledc_timer);
+
+    // Prepare and then apply the LEDC PWM channel configuration
+    ledc_channel_config_t ledc_channel = {
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .channel = CONFIG_ANALYZER_LEDC_CHANNEL_NUMBER,
+        .timer_sel = CONFIG_ANALYZER_LEDC_TIMER_NUMBER,
+        .intr_type = LEDC_INTR_DISABLE,
+        .gpio_num = CONFIG_ANALYZER_PCLK_PIN,
+        .duty = 8, // Set duty to 50%
+        .hpoint = 0};
+    ledc_channel_config(&ledc_channel);
+}
+#endif
 static int logic_analyzer_ll_convert_sample_rate(int sample_rate)
 {
     return LA_CLK_SAMPLE_RATE/sample_rate;
@@ -110,8 +139,17 @@ static int logic_analyzer_ll_convert_sample_rate(int sample_rate)
 int logic_analyzer_ll_get_sample_rate(int sample_rate)
 {
     int  ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
+
+#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
+    if(ldiv>160)
+    {
+        return((int)ledc_get_freq(LEDC_LOW_SPEED_MODE,CONFIG_ANALYZER_LEDC_TIMER_NUMBER));
+    }
+#endif
     if(ldiv>160) {ldiv=160;}
     return LA_CLK_SAMPLE_RATE / ldiv;
+
+
 }
 static void logic_analyzer_ll_set_clock(int sample_rate)
 {
@@ -125,6 +163,15 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_OUTPUT);
     gpio_set_pull_mode(CONFIG_ANALYZER_PCLK_PIN, GPIO_FLOATING);
     gpio_matrix_out(CONFIG_ANALYZER_PCLK_PIN, CAM_CLK_IDX, false, false);
+
+#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
+    if(logic_analyzer_ll_convert_sample_rate(sample_rate)>160)
+    {
+        ldiv=8;
+        logic_analyzer_ll_set_ledc_pclk(sample_rate);
+    }
+#endif
+
     //clk in - pclk
     PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN]);
     gpio_matrix_in(CONFIG_ANALYZER_PCLK_PIN, CAM_PCLK_IDX, false);

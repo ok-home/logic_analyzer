@@ -465,13 +465,14 @@
         let tick_mul = 0;
         let tick_pre = "";
 
+        //if (clock_time_sek >= 1e-11) { tick_mul = 1e9; tick_pre = " nS"; }
         if (clock_time_sek >= 1e-8) { tick_mul = 1e6; tick_pre = " mkS"; }
         if (clock_time_sek >= 1e-5) { tick_mul = 1e3; tick_pre = " mS"; }
         if (clock_time_sek >= 1e-2) { tick_mul = 1e0; tick_pre = " S"; }
 
         ctx.textAlign = "right";
         ctx.fillStyle = color_time;
-        ctx.fillText((tick * clock_time_sek * tick_mul).toFixed(3), x, y);
+        ctx.fillText((tick * clock_time_sek * tick_mul).toFixed(4), x, y);
         ctx.textAlign = "left";
         ctx.fillText(tick_pre, x, y);
         ctx.fillStyle = color_black;
