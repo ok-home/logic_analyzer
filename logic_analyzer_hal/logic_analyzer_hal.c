@@ -13,9 +13,10 @@
 #include "soc/dport_access.h"
 #include "esp_log.h"
 #include "string.h"
+#include "rom/cache.h"
 
 #define LA_TASK_STACK 2048
-#define DMA_FRAME 4092
+#define DMA_FRAME 4032
 
 // frame buff & dma descripter
 static la_frame_t la_frame = {
