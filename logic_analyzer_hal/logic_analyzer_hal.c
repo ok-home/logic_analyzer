@@ -259,8 +259,8 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         number_of_samples = (largest_free_block / LA_BYTE_IN_SAMPLE); // burst transfer word align
     }
     ESP_LOGI("DMA PSRAM HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
-    la_frame.fb.len = (number_of_samples * LA_BYTE_IN_SAMPLE)&~0x1f; // 16 bytes align
-    la_frame.fb.buf = heap_caps_aligned_alloc(32, la_frame.fb.len, MALLOC_CAP_SPIRAM); 
+    la_frame.fb.len = (number_of_samples * LA_BYTE_IN_SAMPLE)&~0xf; // 16 bytes align
+    la_frame.fb.buf = heap_caps_aligned_alloc(16, la_frame.fb.len, MALLOC_CAP_SPIRAM); 
     //memset(la_frame.fb.buf, 0, la_frame.fb.len);
     ESP_LOGI("DMA PSRAM HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
 #endif
