@@ -1,7 +1,0 @@
-{
-  "C_Cpp.intelliSenseEngine": "Tag Parser",
-  "idf.adapterTargetName": "esp32",
-  "idf.openOcdConfigs": [
-    "board/esp32-wrover-kit-3.3v.cfg"
-  ]
-}

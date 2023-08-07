@@ -14,6 +14,7 @@
 #include "esp_log.h"
 #include "string.h"
 #include "rom/cache.h"
+#include "esp_cache.h" //esp_mm
 
 #define LA_TASK_STACK 2048
 #define DMA_FRAME 4032
@@ -145,7 +146,9 @@ static void logic_analyzer_task(void *arg)
         if(cbuf[i]=='7'){cbuf[i+64000]='8';printf("%d",cbuf[i+64000]);}
     }
 */
-            vTaskDelay(5);
+            int rrr=esp_cache_msync(la_frame.fb.buf, la_frame.fb.len / LA_BYTE_IN_SAMPLE, ESP_CACHE_MSYNC_FLAG_INVALIDATE);
+            if (rrr) ESP_LOGI("CACHE","ERR %x",rrr);
+
             cfg->logic_analyzer_cb((uint8_t *)la_frame.fb.buf, la_frame.fb.len / LA_BYTE_IN_SAMPLE, logic_analyzer_ll_get_sample_rate(cfg->sample_rate));
             logic_analyzer_stop(); // todo stop & clear on task or external ??
             vTaskDelete(logic_analyzer_task_handle);

@@ -14,7 +14,9 @@ set( priv_require
     esp_http_server 
     esp_wifi 
     nvs_flash 
-    esp_eth    
+    esp_eth 
+    esp_mm
+    esp_psram 
     )
 
   if(IDF_TARGET STREQUAL "esp32")
