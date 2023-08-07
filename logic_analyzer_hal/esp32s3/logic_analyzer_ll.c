@@ -282,11 +282,15 @@ static esp_err_t logic_analyzer_ll_dma_init(void)
 
     GDMA.channel[dma_num].in.conf0.in_rst = 1;
     GDMA.channel[dma_num].in.conf0.in_rst = 0;
-     //#ifndef CONFIG_ANALYZER_USE_PSRAM
+     #ifndef CONFIG_ANALYZER_USE_PSRAM
     GDMA.channel[dma_num].in.conf0.indscr_burst_en = 1;
     GDMA.channel[dma_num].in.conf0.in_data_burst_en = 1;
-     //#endif
-    GDMA.channel[dma_num].in.conf0.in_ext_mem_bk_size = 0; // 0-> 16 byte burst transfer, 1->32 byte burst transfer
+     #endif
+    GDMA.channel[dma_num].in.conf1.in_ext_mem_bk_size = 0; // 0-> 16 byte burst transfer, 1->32 byte burst transfer
+
+    GDMA.channel[dma_num].in.pri.rx_pri = 15;//rx prio 0-15
+    //GDMA.channel[dma_num].in.sram_size.in_size = 6;//This register is used to configure the size of L2 Tx FIFO for Rx channel. 0:16 bytes, 1:24 bytes, 2:32 bytes, 3: 40 bytes, 4: 48 bytes, 5:56 bytes, 6: 64 bytes, 7: 72 bytes, 8: 80 bytes.
+    GDMA.channel[dma_num].in.wight.rx_weight = 15;//The weight of Rx channel 0-15
 
     GDMA.channel[dma_num].in.conf1.in_check_owner = 0;
     GDMA.channel[dma_num].in.peri_sel.sel = 5;
@@ -342,7 +346,7 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
     GDMA.channel[dma_num].in.link.start = 1;
     LCD_CAM.cam_ctrl1.cam_start = 1; // enable  transfer
 
-    ESP_LOGI(TAG,"lladr=%lx, ffadr=%p",GDMA.channel[dma_num].in.link.addr,frame->dma[0].buf);
+    ESP_LOGI(TAG,"lladr=%x, ffadr=%p",GDMA.channel[dma_num].in.link.addr,frame->dma[0].buf);
 
 }
 void logic_analyzer_ll_start()
