@@ -40,7 +40,7 @@
 #include "logic_analyzer_ll.h"
 
 // if define external logic analyzer - define pin as gpio input
-// else - self diagnostic analyzer - define pin as defined on firmware + input to i2s
+// else - self diagnostic analyzer - define pin as defined on firmware + input to cam
 
 #ifdef CONFIG_ANALYZER_SEPARATE_MODE
 #define SEPARATE_MODE_LOGIC_ANALIZER
@@ -160,7 +160,6 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
 
 static void logic_analyzer_ll_set_mode(int sample_rate)
 {
-    /* todo - non stop transfer vh_de_mode, vs_eof_en */
     // attension !!
     // LCD_CAM.cam_ctrl1.cam_rec_data_bytelen -> logic_analyzer_ll_set_mode  clear len data
     LCD_CAM.cam_ctrl.val = 0;
@@ -202,7 +201,6 @@ static void logic_analyzer_ll_set_mode(int sample_rate)
 
 static void logic_analyzer_ll_set_pin(int *data_pins)
 {
-    /*todo use CAM_H_ENABLE_IDX for control transfer ?*/
     vTaskDelay(5); //??
 
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
@@ -235,7 +233,6 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
             gpio_matrix_in(data_pins[i], CAM_DATA_IN0_IDX + i, false); // connect pin to signal
         }
     }
-
 #endif
 
     // CAM_V_SYNC_IDX - stop transfer - set to 0 - set to 1 on start function - other set to 1 enable transfer
@@ -285,10 +282,12 @@ static esp_err_t logic_analyzer_ll_dma_init(void)
 
     GDMA.channel[dma_num].in.conf0.in_rst = 1;
     GDMA.channel[dma_num].in.conf0.in_rst = 0;
-    // #ifndef CONFIG_ANALYZER_USE_PSRAM
+     //#ifndef CONFIG_ANALYZER_USE_PSRAM
     GDMA.channel[dma_num].in.conf0.indscr_burst_en = 1;
     GDMA.channel[dma_num].in.conf0.in_data_burst_en = 1;
-    // #endif
+     //#endif
+    GDMA.channel[dma_num].in.conf0.in_ext_mem_bk_size = 0; // 0-> 16 byte burst transfer, 1->32 byte burst transfer
+
     GDMA.channel[dma_num].in.conf1.in_check_owner = 0;
     GDMA.channel[dma_num].in.peri_sel.sel = 5;
 
@@ -329,7 +328,7 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
 #ifdef EOF_CTRL
     LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = frame->fb.len - 1; // count in byte
 #else
-    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = 64; // frame->fb.len-1-200; // count in byte
+    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = 64; // eof controlled to DMA linked list cam -> non stop, ( bytelen = any digit )
 #endif
     LCD_CAM.cam_ctrl.cam_update = 1;
     //  pre start
@@ -342,6 +341,9 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
     GDMA.channel[dma_num].in.link.stop = 0;
     GDMA.channel[dma_num].in.link.start = 1;
     LCD_CAM.cam_ctrl1.cam_start = 1; // enable  transfer
+
+    ESP_LOGI(TAG,"lladr=%lx, ffadr=%p",GDMA.channel[dma_num].in.link.addr,frame->dma[0].buf);
+
 }
 void logic_analyzer_ll_start()
 {

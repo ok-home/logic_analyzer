@@ -83,6 +83,13 @@ static lldesc_t *allocate_dma_descriptors(uint32_t size, uint8_t *buffer)
     dma[x].buf = buffer + DMA_FRAME * x;
     dma[x].empty = 0;
 
+// DBG
+     ESP_LOGI("DMA DESCR","dscr=%p",(void*)dma);
+    for(int i=0;i<=x;i++)
+    {
+        ESP_LOGI("DMA DESCR","size=%d eof=%x buf=%p next=%p",dma[i].size,dma[i].eof,dma[i].buf,dma[i].empty);
+    }
+
     return dma;
 }
 /**
@@ -128,6 +135,7 @@ static void logic_analyzer_task(void *arg)
 #ifdef CONFIG_IDF_TARGET_ESP32
             swap_buf((uint16_t *)la_frame.fb.buf, la_frame.fb.len / LA_BYTE_IN_SAMPLE);
 #endif
+            // todo -> move ram->psram and back ??? - dbg -> alloc & memset & rw ops
             cfg->logic_analyzer_cb((uint8_t *)la_frame.fb.buf, la_frame.fb.len / LA_BYTE_IN_SAMPLE, logic_analyzer_ll_get_sample_rate(cfg->sample_rate));
             logic_analyzer_stop(); // todo stop & clear on task or external ??
             vTaskDelete(logic_analyzer_task_handle);
@@ -217,30 +225,30 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     }
     // allocate frame buffer
 #ifndef CONFIG_ANALYZER_USE_PSRAM
-    // alloc on RAM
-    uint32_t number_of_samples = config->number_of_samples & ~0x3; // burst transfer word align
+    // alloc on RAM // todo -> reserve ram to lldescr
+    uint32_t number_of_samples = config->number_of_samples; 
     uint32_t largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_DMA);
     if (largest_free_block < number_of_samples * LA_BYTE_IN_SAMPLE)
     {
-        number_of_samples = (largest_free_block / LA_BYTE_IN_SAMPLE) & ~0x3; // burst transfer word align
+        number_of_samples = (largest_free_block / LA_BYTE_IN_SAMPLE); // burst transfer word align
     }
     ESP_LOGD("DMA HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
-    la_frame.fb.len = number_of_samples * LA_BYTE_IN_SAMPLE;
-    la_frame.fb.buf = heap_caps_calloc(la_frame.fb.len, 1, MALLOC_CAP_DMA); // malloc ??
+    la_frame.fb.len = (number_of_samples * LA_BYTE_IN_SAMPLE) & ~0x3; // burst transfer word align
+    la_frame.fb.buf = heap_caps_calloc(la_frame.fb.len, 1, MALLOC_CAP_DMA); 
     ESP_LOGD("DMA HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
 #endif
 #ifdef CONFIG_ANALYZER_USE_PSRAM
     // test  - alloc on PSRAM -> on debug
-    uint32_t number_of_samples = config->number_of_samples & ~0xf; // burst transfer 16 byte align
+    uint32_t number_of_samples = config->number_of_samples; // burst transfer 16 byte align
     uint32_t largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
     if (largest_free_block < number_of_samples * LA_BYTE_IN_SAMPLE)
     {
-        number_of_samples = (largest_free_block / LA_BYTE_IN_SAMPLE) & ~0xf; // burst transfer word align
+        number_of_samples = (largest_free_block / LA_BYTE_IN_SAMPLE); // burst transfer word align
     }
     ESP_LOGI("DMA PSRAM HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
-    la_frame.fb.len = number_of_samples * LA_BYTE_IN_SAMPLE;
-    la_frame.fb.buf = heap_caps_aligned_alloc(16, la_frame.fb.len, MALLOC_CAP_SPIRAM); // malloc ??
-    memset(la_frame.fb.buf, 0, number_of_samples * LA_BYTE_IN_SAMPLE);
+    la_frame.fb.len = (number_of_samples * LA_BYTE_IN_SAMPLE)&~0xf; // 16 bytes align
+    la_frame.fb.buf = heap_caps_aligned_alloc(16, la_frame.fb.len, MALLOC_CAP_SPIRAM); 
+    memset(la_frame.fb.buf, 0, la_frame.fb.len);
     ESP_LOGI("DMA PSRAM HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
 #endif
     if (la_frame.fb.buf == NULL)
