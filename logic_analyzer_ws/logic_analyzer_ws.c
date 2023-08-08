@@ -49,7 +49,7 @@ static void logic_analyzer_cb(uint8_t *sample_buf, int samples, int sample_rate)
         ret = send_ws_string(jsonstr);
         ESP_LOGI(TAG, "Start samples transfer %d", samples * LA_BYTE_IN_SAMPLE);
         send_ws_string("Start samples transfer");
-
+/*
         memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
         ws_pkt.type = HTTPD_WS_TYPE_BINARY;
         ws_pkt.payload = (uint8_t *)sample_buf; // la cb buff
@@ -60,8 +60,8 @@ static void logic_analyzer_cb(uint8_t *sample_buf, int samples, int sample_rate)
             ESP_LOGE(TAG, "Samples transfer err %d", ret);
             send_ws_string("Samples transfer err");
         }
+*/
 
-/*
 // test fragmented send - for extra long samples
         int bytes_to_send = samples * LA_BYTE_IN_SAMPLE;
         int bytes_in_frame = 1024;
@@ -81,7 +81,7 @@ static void logic_analyzer_cb(uint8_t *sample_buf, int samples, int sample_rate)
                 if(ret) break;             
                 buf +=  bytes_in_frame;
                 bytes_to_send -= bytes_in_frame;
-                //ws_pkt.type = HTTPD_WS_TYPE_CONTINUE // ??????????
+                ws_pkt.type = HTTPD_WS_TYPE_CONTINUE ;// ??????????
             }
             else 
             {
@@ -98,7 +98,7 @@ static void logic_analyzer_cb(uint8_t *sample_buf, int samples, int sample_rate)
             send_ws_string("Samples transfer err");
         }
 // test fragmented send
-*/
+
 
         ESP_LOGI(TAG, "Samples transfer done");
         send_ws_string("Samples transfer done");
