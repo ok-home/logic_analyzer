@@ -291,7 +291,7 @@ const options_list_t options[]={
     {2000000,"2 MHz","lst03"},
     {5000000,"5 MHz","lst03"},
     {10000000,"10 MHz","lst03"},
-#indef CONFIG_ANALYZER_USE_PSRAM
+#ifndef CONFIG_ANALYZER_USE_PSRAM
     {20000000,"20 MHz","lst03"},
     {40000000,"40 MHz","lst03"},
 #ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8

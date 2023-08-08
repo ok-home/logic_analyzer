@@ -29,7 +29,7 @@ void app_main(void)
 #define IN_DONE_DBG 6
 #define IN_DSCR_EMPTY_DBG 7
 #define IN_EOF_DBG 8 
-
+/*
     gpio_reset_pin(IN_DONE_DBG);
     gpio_set_direction(IN_DONE_DBG,GPIO_MODE_OUTPUT);
     gpio_reset_pin(IN_DSCR_EMPTY_DBG);
@@ -39,7 +39,7 @@ void app_main(void)
     gpio_set_level(IN_DONE_DBG,0);
     gpio_set_level(IN_DSCR_EMPTY_DBG,0);
     gpio_set_level(IN_EOF_DBG,0);
-
+*/
     while(1)
     {
         vTaskDelay(100);
