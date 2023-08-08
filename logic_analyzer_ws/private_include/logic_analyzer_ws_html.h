@@ -188,7 +188,7 @@ const options_list_t options[]={
     {60,"60 Sek","lst04"},
     {-1,"No Timeout","lst04"}
 };
-#endif
+#endif //CONFIG_IDF_TARGET_ESP32
 
 #ifdef CONFIG_IDF_TARGET_ESP32S3
 const options_list_t options[]={
@@ -258,13 +258,26 @@ const options_list_t options[]={
     {80000,"","lst02"},
     {90000,"","lst02"},
     {100000,"","lst02"},
-#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8  
+#if defined (CONFIG_ANALYZER_CHANNEL_NUMBERS_8) || defined (CONFIG_ANALYZER_USE_PSRAM)
     {120000,"","lst02"},
     {140000,"","lst02"},
     {160000,"","lst02"},
     {180000,"","lst02"},
     {200000,"","lst02"},
-#endif
+#endif //defined (CONFIG_ANALYZER_CHANNEL_NUMBERS_8) || defined (CONFIG_ANALYZER_USE_PSRAM)
+#ifdef CONFIG_ANALYZER_USE_PSRAM
+    {500000,"","lst02"},
+    {1000000,"","lst02"},
+    {2000000,"","lst02"},
+    {3000000,"","lst02"},
+    {4000000,"","lst02"},
+#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8  
+    {5000000,"","lst02"},
+    {6000000,"","lst02"},
+    {7000000,"","lst02"},
+    {8000000,"","lst02"},
+#endif  //CONFIG_ANALYZER_CHANNEL_NUMBERS_8  
+#endif  //CONFIG_ANALYZER_USE_PSRAM
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
     {5000,"5 kHz","lst03"},
     {10000,"10 kHz","lst03"},
@@ -278,12 +291,18 @@ const options_list_t options[]={
     {2000000,"2 MHz","lst03"},
     {5000000,"5 MHz","lst03"},
     {10000000,"10 MHz","lst03"},
+#indef CONFIG_ANALYZER_USE_PSRAM
     {20000000,"20 MHz","lst03"},
     {40000000,"40 MHz","lst03"},
-#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8    
+#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8
     {53000000,"53 MHz","lst03"},
     {80000000,"80 MHz","lst03"},
-#endif
+#endif //CONFIG_ANALYZER_CHANNEL_NUMBERS_8
+#else //CONFIG_ANALYZER_USE_PSRAM
+#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8
+    {20000000,"20 MHz","lst03"},
+#endif //CONFIG_ANALYZER_CHANNEL_NUMBERS_8
+#endif //CONFIG_ANALYZER_CHANNEL_NUMBERS_8
 
    // {0,"Restart LA","lst04"},
     {1,"1 Sek","lst04"},
@@ -294,4 +313,4 @@ const options_list_t options[]={
     {60,"60 Sek","lst04"},
     {-1,"No Timeout","lst04"}
 };
-#endif
+#endif //CONFIG_IDF_TARGET_ESP32S3

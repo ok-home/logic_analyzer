@@ -47,19 +47,58 @@ static void logic_analyzer_cb(uint8_t *sample_buf, int samples, int sample_rate)
         ret = send_ws_string(jsonstr);
         sprintf(jsonstr, "{\"rowID\":\"%s%02d\",\"rowVal\":\"%d\"}", rowID[ROW_MCLK], 0, sample_rate);
         ret = send_ws_string(jsonstr);
-
+        ESP_LOGI(TAG, "Start samples transfer %d", ws_pkt.len);
+        send_ws_string("Start samples transfer");
+/*
         memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
         ws_pkt.type = HTTPD_WS_TYPE_BINARY;
         ws_pkt.payload = (uint8_t *)sample_buf; // la cb buff
         ws_pkt.len = samples * LA_BYTE_IN_SAMPLE;
-        ESP_LOGI(TAG, "Start samples transfer %d", ws_pkt.len);
-        send_ws_string("Start samples transfer");
         ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt);
         if (ret)
         {
             ESP_LOGE(TAG, "Samples transfer err %d", ret);
             send_ws_string("Samples transfer err");
         }
+*/
+// test fragmented send - for extra long samples
+        int bytes_to_send = samples * LA_BYTE_IN_SAMPLE;
+        int bytes_in_frame = 1024;
+        uint8_t *buf = (uint8_t *)sample_buf;
+        memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+        ws_pkt.type = HTTPD_WS_TYPE_BINARY;
+        ws_pkt.fragmented = true;
+
+        while(1)
+        {
+            if(bytes_to_send>bytes_in_frame) // send fragment
+            {
+                ws_pkt.len = bytes_in_frame;
+                ws_pkt.payload = buf;
+                ws_pkt.final = false; // fragmented
+                ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt); 
+                if(ret) break;             
+                buf +=  bytes_in_frame;
+                bytes_to_send -= bytes_in_frame;
+                //ws_pkt.type = HTTPD_WS_TYPE_CONTINUE // ??????????
+            }
+            else 
+            {
+                ws_pkt.len = bytes_to_send;
+                ws_pkt.payload = buf;
+                ws_pkt.final = true; // last fragment
+                ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt);              
+                break;
+            }
+        }
+        if (ret)
+        {
+            ESP_LOGE(TAG, "Samples transfer err %d", ret);
+            send_ws_string("Samples transfer err");
+        }
+// test fragmented send
+
+
         ESP_LOGI(TAG, "Samples transfer done");
         send_ws_string("Samples transfer done");
     }
