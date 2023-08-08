@@ -19,7 +19,8 @@
 			"gpio_reg.h": "c",
 			"logic_analyzer_ll.h": "c",
 			"dport_reg.h": "c",
-			"cache.h": "c"
+			"cache.h": "c",
+			"esp_http_server.h": "c"
 		}
 	}
 }
