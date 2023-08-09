@@ -17,7 +17,7 @@
 ## Main parameters
 |                      | Channels | Max<br>Sample<br>Count(2) | Max<br>Sample<br>Rate | ESP<br>Module |        Free GPIO & Clock Source<br>Required        |
 |:--------------------:|:--------:|:-------------------------:|:---------------------:|:-------------:|:--------------------------------------------------:|
-|         ESP32        |    16    |          60 000           |         40 MHz        |   I2S0/I2S1   | NO                                                 |
+|         ESP32        |    16    |          50 000           |         40 MHz        |   I2S0/I2S1   | NO                                                 |
 |        ESP32S3       |  8<br>16 |     200 000<br>100 000    |    80 MHz<br>40 MHz   |    LCD_CAM    | One Free GPIO<br>One LEDC Channel for slow PCLK(3) |
 | ESP32S3<br>PSRAM8(1) |  8<br>16 |   8 000 000<br>4 000 000  |    10 MHz<br>5 MHZ    |    LCD_CAM    | One Free GPIO<br>One LEDC Channel for slow PCLK(3) |
 
