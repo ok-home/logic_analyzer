@@ -137,7 +137,7 @@ static void logic_analyzer_task(void *arg)
             // synchronize cpu cache and psram after dma transfer
             // !!Attention -> ESP_CACHE_MSYNC_FLAG_DIR_M2C defined on IDF version 5.2.X, current compile on master branch
             int err=esp_cache_msync(la_frame.fb.buf, la_frame.fb.len, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
-            if (err) ESP_LOGI("CACHE","ERR %x",rrr);
+            if (err) ESP_LOGI("CACHE","ERR %x",err);
 #endif
             cfg->logic_analyzer_cb((uint8_t *)la_frame.fb.buf, la_frame.fb.len / LA_BYTE_IN_SAMPLE, logic_analyzer_ll_get_sample_rate(cfg->sample_rate));
             logic_analyzer_stop(); 

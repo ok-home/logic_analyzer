@@ -115,7 +115,7 @@ static esp_err_t send_ws_bin(const uint8_t *data, int len)
 
     int bytes_to_send = len;
     int bytes_in_frame = 1024;
-    uint8_t *buf = data;
+    uint8_t *buf = (uint8_t*)data;
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
     ws_pkt.type = HTTPD_WS_TYPE_BINARY;
     ws_pkt.fragmented = true;
