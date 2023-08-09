@@ -15,8 +15,6 @@
 ![PulseView](/sigrok_esp.jpg)
 
 ## Основные параметры
- 
-
 |                      | Channels | Max<br>Sample<br>Count(2) | Max<br>Sample<br>Rate | ESP<br>Module |        Free GPIO & Clock Source<br>Required        |
 |:--------------------:|:--------:|:-------------------------:|:---------------------:|:-------------:|:--------------------------------------------------:|
 |         ESP32        |    16    |          60 000           |         40 MHz        |   I2S0/I2S1   | NO                                                 |
