@@ -27,12 +27,13 @@ static la_frame_t la_frame = {
 
 static TaskHandle_t logic_analyzer_task_handle = 0; // main task handle
 static int logic_analyzer_started = 0;              // flag start dma
+
+#ifdef CONFIG_IDF_TARGET_ESP32
 //
 // esp32 only
 // sample sequence in 32 word - adr0=sample1, adr1=sample0
 // swap sample sequence
 //
-#ifdef CONFIG_IDF_TARGET_ESP32
 static inline void swap_buf(uint16_t *buf, int cnt)
 {
     uint16_t tmp;
@@ -84,26 +85,18 @@ static lldesc_t *allocate_dma_descriptors(uint32_t size, uint8_t *buffer)
     dma[x].buf = buffer + DMA_FRAME * x;
     dma[x].empty = 0;
 
-// DBG
-/*
-     ESP_LOGI("DMA DESCR","dscr=%p size=%ld buffer=%p",(void*)dma, size, buffer);
-    for(int i=0;i<=x;i++)
-    {
-        ESP_LOGI("DMA DESCR","size=%d eof=%x buf=%p next=%lx",dma[i].size,dma[i].eof,dma[i].buf,dma[i].empty);
-    }
-*/
     return dma;
 }
 /**
  *  @brief  full stop & free all
  */
-//uint8_t *cbuf;
 static void logic_analyzer_stop(void)
 {
     // stop dma transfer
     logic_analyzer_ll_stop();
     // deinit dma isr
     logic_analyzer_ll_deinit_dma_eof_isr();
+    // free allocated mem
     if (la_frame.dma)
     {
         free(la_frame.dma);
@@ -115,12 +108,14 @@ static void logic_analyzer_stop(void)
         la_frame.fb.buf = NULL;
         la_frame.fb.len = 0;
     }
+    // la status - stopped -> ready to new start
     logic_analyzer_started = 0;
 }
 /**
  *  @brief main logic analyzer task
  *       call callback function after dma transfer
  *       callback param = 0 if timeout or reset
+ *  @param *arg - pointer to callback function from cfg
  */
 static void logic_analyzer_task(void *arg)
 {
@@ -130,7 +125,7 @@ static void logic_analyzer_task(void *arg)
     while (1)
     {
         noTimeout = ulTaskNotifyTake(pdFALSE, cfg->meashure_timeout); // portMAX_DELAY
-        if (noTimeout)
+        if (noTimeout)  // dma data ready
         {
             // dma data ready
 #ifdef CONFIG_IDF_TARGET_ESP32
@@ -139,21 +134,22 @@ static void logic_analyzer_task(void *arg)
             swap_buf((uint16_t *)la_frame.fb.buf, la_frame.fb.len / LA_BYTE_IN_SAMPLE);
 #endif
 #ifdef CONFIG_ANALYZER_USE_PSRAM
-            ESP_LOGI("CACHE","START");
-            int rrr=esp_cache_msync(la_frame.fb.buf, la_frame.fb.len, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
-            if (rrr) ESP_LOGI("CACHE","ERR %x",rrr);
+            // synchronize cpu cache and psram after dma transfer
+            // !!Attention -> ESP_CACHE_MSYNC_FLAG_DIR_M2C defined on IDF version 5.2.X, current compile on master branch
+            int err=esp_cache_msync(la_frame.fb.buf, la_frame.fb.len, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
+            if (err) ESP_LOGI("CACHE","ERR %x",rrr);
 #endif
             cfg->logic_analyzer_cb((uint8_t *)la_frame.fb.buf, la_frame.fb.len / LA_BYTE_IN_SAMPLE, logic_analyzer_ll_get_sample_rate(cfg->sample_rate));
-            logic_analyzer_stop(); // todo stop & clear on task or external ??
+            logic_analyzer_stop(); 
             vTaskDelete(logic_analyzer_task_handle);
         }
-        else
+        else  // timeout detected
         {
 #ifdef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
             ll_hi_level_triggered_isr_timeout_stop(); // restore gpio irq reg
 #endif
             cfg->logic_analyzer_cb(NULL, 0, 0); // timeout
-            logic_analyzer_stop();              // todo stop & clear on task or external ??
+            logic_analyzer_stop();              
             vTaskDelete(logic_analyzer_task_handle);
         }
     }
@@ -191,7 +187,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         ret = ESP_OK;
         goto _retcode;
     }
-
+    // check la status
     if (logic_analyzer_started)
     {
         return ESP_ERR_INVALID_STATE;
@@ -202,8 +198,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     {
         goto _ret;
     }
-
-    // check GPIO num - 0-MAX_GPIO or num < 0
+    // check GPIO num - 0-MAX_GPIO or num < 0 // todo use macros to legal pin definition // now it controlled from WS headers
     for (int i = 0; i < LA_MAX_PIN; i++)
     {
         if (config->pin[i] > LA_MAX_GPIO)
@@ -215,6 +210,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     {
         goto _ret;
     }
+    // check intr edge 
     else if ((config->trigger_edge >= 0 && config->trigger_edge < GPIO_INTR_MAX) == 0)
     {
         goto _ret;
@@ -238,25 +234,25 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     {
         bytes_to_alloc = largest_free_block - ((bytes_to_alloc/DMA_FRAME)+2)*sizeof(lldesc_t); // free space with dma lldesc size
     }
-    ESP_LOGI("DMA HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
+    ESP_LOGD("DMA HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
     la_frame.fb.len = bytes_to_alloc & ~0x3; // burst transfer word align
     la_frame.fb.buf = heap_caps_calloc(la_frame.fb.len, 1, MALLOC_CAP_DMA);
 //    la_frame.fb.buf = heap_caps_malloc(la_frame.fb.len, MALLOC_CAP_DMA);
-    ESP_LOGI("DMA HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
+    ESP_LOGD("DMA HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
 #endif
 #ifdef CONFIG_ANALYZER_USE_PSRAM
-    // alloc on PSRAM ->  todo check mem for lldescr ???
+    // alloc on PSRAM ->  todo check free ram for lldescr ???
     uint32_t bytes_to_alloc = config->number_of_samples * LA_BYTE_IN_SAMPLE;
     uint32_t largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
     if (largest_free_block < bytes_to_alloc)
     {
         bytes_to_alloc = largest_free_block ; // max free spiram
     }
-    ESP_LOGI("DMA PSRAM HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
+    ESP_LOGD("DMA PSRAM HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
     la_frame.fb.len = bytes_to_alloc & ~(CONFIG_ANALYZER_GDMA_PSRAM_BURST-1); // 16-32 bytes align
 //    la_frame.fb.buf = heap_caps_aligned_alloc(CONFIG_ANALYZER_GDMA_PSRAM_BURST, la_frame.fb.len, MALLOC_CAP_SPIRAM); 
     la_frame.fb.buf = heap_caps_aligned_calloc(CONFIG_ANALYZER_GDMA_PSRAM_BURST, la_frame.fb.len,1, MALLOC_CAP_SPIRAM); 
-    ESP_LOGI("DMA PSRAM HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
+    ESP_LOGD("DMA PSRAM HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
 #endif
     if (la_frame.fb.buf == NULL)
     {
@@ -272,7 +268,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     }
     // configure   - pin definition, pin trigger, sample frame & dma frame, clock divider
     logic_analyzer_ll_config(config->pin, config->sample_rate, &la_frame);
-    // start main task - check logic analyzer get data & call cb
+    // start main task - check logic analyzer get data & call cb // todo -> test priority change
     if (pdPASS != xTaskCreate(logic_analyzer_task, "la_task", LA_TASK_STACK * 4, config, configMAX_PRIORITIES - 2, &logic_analyzer_task_handle))
     {
         ret = ESP_ERR_NO_MEM;
@@ -284,14 +280,12 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     {
         goto _freetask_ret;
     }
-    /*
-     * triggered  start
-     */
+    //start meashure
     if (config->pin_trigger < 0)
     {
         logic_analyzer_ll_start();
     }
-    else
+    else // triggered start
     {
         logic_analyzer_ll_triggered_start(config->pin_trigger, config->trigger_edge);
     }

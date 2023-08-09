@@ -24,9 +24,6 @@
 // input wired example pins
 #define IN_PORT_1 (14)
 #define IN_PORT_2 (15)
-// i2c sample example pins
-#define I2C_PIN_SDA (2)
-#define I2C_PIN_SCL (5)
 
 #define GPIO_IRQ_PIN_26 (2)
 #define GPIO_IRQ_PIN_27 (5)
@@ -228,7 +225,6 @@ void gpio_blink(void *p)
 }
 void test_sample_init(void)
 {
-
     // Set the LEDC peripheral configuration
     example_ledc_init();
     // Set duty to 50%

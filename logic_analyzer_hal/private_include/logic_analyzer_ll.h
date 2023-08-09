@@ -74,7 +74,6 @@ void ll_hi_level_triggered_isr_start(int pin_trigger,int trigger_edge);
 void ll_hi_level_triggered_isr_timeout_stop(void);
 
 
-
 #ifdef __cplusplus
 }
 #endif

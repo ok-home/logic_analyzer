@@ -1,7 +1,4 @@
 #pragma once
-
-
-
 // define logic analyzer channel pin
 // -1 - pin disabled
 #ifdef CONFIG_ANALYZER_USE_PORT_ASSIGN

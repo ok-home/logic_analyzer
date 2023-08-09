@@ -23,7 +23,6 @@
 #include "soc/io_mux_reg.h"
 #define gpio_matrix_in(a, b, c) esp_rom_gpio_connect_in_signal(a, b, c)
 #define gpio_matrix_out(a, b, c, d) esp_rom_gpio_connect_out_signal(a, b, c, d)
-#define ets_delay_us(a) esp_rom_delay_us(a)
 
 #if !defined(SOC_GDMA_PAIRS_PER_GROUP) && defined(SOC_GDMA_PAIRS_PER_GROUP_MAX)
 #define SOC_GDMA_PAIRS_PER_GROUP SOC_GDMA_PAIRS_PER_GROUP_MAX
@@ -32,7 +31,7 @@
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
 #include "driver/ledc.h"
 #endif
-
+// eof controls from dma -> EOF_CTRL undefined
 // #define EOF_CTRL 1
 
 #define TAG "esp32s3_ll"
@@ -50,12 +49,13 @@
 
 static intr_handle_t isr_handle;
 static int dma_num = 0;
-//  trigger isr handle
+//  trigger isr handle -> start transfer
 void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
     gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); // enable cam
     gpio_intr_disable((int)pin);
 }
+// transfer done -> eof isr from dma descr_empty
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
 {
     BaseType_t HPTaskAwoken = pdFALSE;
@@ -65,18 +65,18 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
         return;
     }
     GDMA.channel[dma_num].in.int_clr.val = status.val;
+#ifndef EOF_CTRL
     if (status.in_dscr_empty)
     {
-#ifndef EOF_CTRL
         vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
-#endif
     }
+#endif
+#ifdef EOF_CTRL
     if (status.in_suc_eof)
     {
-#ifdef EOF_CTRL
         vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
-#endif
     }
+#endif
     if (HPTaskAwoken == pdTRUE)
     {
         portYIELD_FROM_ISR();
@@ -84,6 +84,7 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
 }
 
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
+// for sample rate less then 1 MHz -> use ledc
 static void logic_analyzer_ll_set_ledc_pclk(int sample_rate)
 {
     // Prepare and then apply the LEDC PWM timer configuration
@@ -107,13 +108,10 @@ static void logic_analyzer_ll_set_ledc_pclk(int sample_rate)
     ledc_channel_config(&ledc_channel);
 }
 #endif
-static int logic_analyzer_ll_convert_sample_rate(int sample_rate)
-{
-    return LA_CLK_SAMPLE_RATE / sample_rate;
-}
+// sample rate may be not equal to config sample rate -> return real sample rate
 int logic_analyzer_ll_get_sample_rate(int sample_rate)
 {
-    int ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
+    int ldiv = (LA_CLK_SAMPLE_RATE / sample_rate);
 
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
     if (ldiv > 160)
@@ -127,28 +125,28 @@ int logic_analyzer_ll_get_sample_rate(int sample_rate)
     }
     return LA_CLK_SAMPLE_RATE / ldiv;
 }
+// set cam pclk, clock & pin.  clock from cam clk or ledclk if clock < 1 MHz
 static void logic_analyzer_ll_set_clock(int sample_rate)
 {
-    int ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
+    int ldiv = (LA_CLK_SAMPLE_RATE / sample_rate);
     if (ldiv > 160) // > 1mHz
     {
         ldiv = 160;
     }
-    // clk out xclk
+    // clk out xclk -> pclk=clk
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN], PIN_FUNC_GPIO);
     gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_OUTPUT);
     gpio_set_pull_mode(CONFIG_ANALYZER_PCLK_PIN, GPIO_FLOATING);
     gpio_matrix_out(CONFIG_ANALYZER_PCLK_PIN, CAM_CLK_IDX, false, false);
 
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-    if (logic_analyzer_ll_convert_sample_rate(sample_rate) > 160)
+    if ((LA_CLK_SAMPLE_RATE / sample_rate) > 160)
     {
-        ldiv = 8;
+        ldiv = 8;  // cam clk to 2 MHz
         logic_analyzer_ll_set_ledc_pclk(sample_rate);
     }
 #endif
-
-    // clk in - pclk
+    // input clk pin  -> pclk
     PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN]);
     gpio_matrix_in(CONFIG_ANALYZER_PCLK_PIN, CAM_PCLK_IDX, false);
     // Configure clock divider
@@ -157,7 +155,7 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     LCD_CAM.cam_ctrl.cam_clkm_div_num = ldiv;
     LCD_CAM.cam_ctrl.cam_clk_sel = 3; // Select Camera module source clock. 0: no clock. 2: APLL. 3: CLK160.
 }
-
+// set cam mode register -> 8/16 bit, eof control from dma,
 static void logic_analyzer_ll_set_mode(int sample_rate)
 {
     // attension !!
@@ -198,7 +196,7 @@ static void logic_analyzer_ll_set_mode(int sample_rate)
     LCD_CAM.cam_ctrl1.cam_afifo_reset = 1;
     LCD_CAM.cam_ctrl1.cam_afifo_reset = 0;
 }
-
+// set cam input pin & vsync, hsynk, henable to const to stop transfer
 static void logic_analyzer_ll_set_pin(int *data_pins)
 {
     vTaskDelay(5); //??
@@ -249,6 +247,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
 6. Wait for GDMA_IN_SUC_EOF_CHn_INT interrupt, which indicates that a data frame or packet has been
 received.
 */
+// find free gdma channel, enable dma clock, set dma mode, connect to cam module
 static esp_err_t logic_analyzer_ll_dma_init(void)
 {
     for (int x = (SOC_GDMA_PAIRS_PER_GROUP - 1); x >= 0; x--)
@@ -313,6 +312,7 @@ signal and control signal.
 9. Receive data and store the data to the specified address of ESP32-S3 memory. Then corresponding
 interrupts set in Step 6 will be generated.
 */
+// enable cam module, set cam mode, pin mode, dma mode, dma descr, dma irq
 void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame)
 {
     // Enable and configure cam
@@ -347,12 +347,12 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
     GDMA.channel[dma_num].in.link.start = 1;
     LCD_CAM.cam_ctrl1.cam_start = 1; // enable  transfer
 }
+// start transfer without trigger -> v_sync to enable
 void logic_analyzer_ll_start()
 {
-    /*todo use CAM_H_ENABLE_IDX for control transfer ?*/
     gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); // 0
 }
-
+// start transfer with trigger -> set irq -> v_sync set to enable on irq handler
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
 #ifdef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
@@ -365,6 +365,7 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
     gpio_intr_enable(pin_trigger); // start transfer on irq
 #endif
 }
+// full stop cam, dma, int, pclk, reset pclk pin to default
 void logic_analyzer_ll_stop()
 {
     LCD_CAM.cam_ctrl1.cam_start = 0;

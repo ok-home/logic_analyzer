@@ -34,14 +34,15 @@ static TaskHandle_t draw_html_handle = 0;
 static TaskHandle_t read_json_handle = 0;
 static QueueHandle_t read_json_queue = 0;
 static esp_err_t send_ws_string(const char *json_string);
+static esp_err_t send_ws_bin(const uint8_t *data, int len);
 
+// dma transfer end. bin data ready to ws send
 static void logic_analyzer_cb(uint8_t *sample_buf, int samples, int sample_rate)
 {
     char jsonstr[64];
     esp_err_t ret = 0;
-    httpd_ws_frame_t ws_pkt;
 
-    if (samples)
+    if (samples) // data ready
     {
         sprintf(jsonstr, "{\"rowID\":\"%s%02d\",\"rowVal\":\"%d\"}", rowID[ROW_MSMP], 0, samples);
         ret = send_ws_string(jsonstr);
@@ -49,66 +50,24 @@ static void logic_analyzer_cb(uint8_t *sample_buf, int samples, int sample_rate)
         ret = send_ws_string(jsonstr);
         ESP_LOGI(TAG, "Start samples transfer %d", samples * LA_BYTE_IN_SAMPLE);
         send_ws_string("Start samples transfer");
-/*
-        memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
-        ws_pkt.type = HTTPD_WS_TYPE_BINARY;
-        ws_pkt.payload = (uint8_t *)sample_buf; // la cb buff
-        ws_pkt.len = samples * LA_BYTE_IN_SAMPLE;
-        ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt);
+
+        ret = send_ws_bin((const uint8_t *)sample_buf, samples * LA_BYTE_IN_SAMPLE);
         if (ret)
         {
             ESP_LOGE(TAG, "Samples transfer err %d", ret);
             send_ws_string("Samples transfer err");
+            return;
         }
-*/
-
-// test fragmented send - for extra long samples
-        int bytes_to_send = samples * LA_BYTE_IN_SAMPLE;
-        int bytes_in_frame = 1024;
-        uint8_t *buf = (uint8_t *)sample_buf;
-        memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
-        ws_pkt.type = HTTPD_WS_TYPE_BINARY;
-        ws_pkt.fragmented = true;
-
-        while(1)
-        {
-            if(bytes_to_send>bytes_in_frame) // send fragment
-            {
-                ws_pkt.len = bytes_in_frame;
-                ws_pkt.payload = buf;
-                ws_pkt.final = false; // fragmented
-                ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt); 
-                if(ret) break;             
-                buf +=  bytes_in_frame;
-                bytes_to_send -= bytes_in_frame;
-                ws_pkt.type = HTTPD_WS_TYPE_CONTINUE ;// ??????????
-            }
-            else 
-            {
-                ws_pkt.len = bytes_to_send;
-                ws_pkt.payload = buf;
-                ws_pkt.final = true; // last fragment
-                ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt);              
-                break;
-            }
-        }
-        if (ret)
-        {
-            ESP_LOGE(TAG, "Samples transfer err %d", ret);
-            send_ws_string("Samples transfer err");
-        }
-// test fragmented send
-
-
         ESP_LOGI(TAG, "Samples transfer done");
         send_ws_string("Samples transfer done");
     }
-    else
+    else // timeout detected
     {
         ESP_LOGE(TAG, "Error - callback imeout deteсted");
         send_ws_string("Error - callback imeout deteсted");
     }
 }
+// simple json parse -> only one parametr name/val
 static esp_err_t json_to_str_parm(char *jsonstr, char *nameStr, char *valStr) // распаковать строку json в пару  name/val
 {
     int r; // количество токенов
@@ -149,6 +108,37 @@ static esp_err_t send_ws_string(const char *string)
     }
     return ret;
 }
+static esp_err_t send_ws_bin(const uint8_t *data, int len)
+{
+    esp_err_t ret = 0;
+    httpd_ws_frame_t ws_pkt;
+
+    int bytes_to_send = len;
+    int bytes_in_frame = 1024;
+    uint8_t *buf = data;
+    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+    ws_pkt.type = HTTPD_WS_TYPE_BINARY;
+    ws_pkt.fragmented = true;
+    while(bytes_to_send>bytes_in_frame)
+    {
+        ws_pkt.len = bytes_in_frame;
+        ws_pkt.payload = buf;
+        ws_pkt.final = false; // fragmented
+        ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt); 
+        if(ret) {return ret;}             
+        buf +=  bytes_in_frame;
+        bytes_to_send -= bytes_in_frame;
+        ws_pkt.type = HTTPD_WS_TYPE_CONTINUE ;
+    }
+    ws_pkt.len = bytes_to_send;
+    ws_pkt.payload = buf;
+    ws_pkt.final = true; // last fragment
+    ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt);              
+
+    return ret;
+}
+
+
 static esp_err_t draw_html_datalist(void)
 {
     char jsonstr[128];
@@ -233,14 +223,16 @@ static esp_err_t draw_html_start(void)
 
     return ret;
 }
+// build html page
 static void logic_analyzer_draw_html(void *arg)
 {
-    draw_html_datalist();
-    draw_html_options();
-    draw_html_config();
-    draw_html_start();
+    draw_html_datalist();   // build datalist div
+    draw_html_options();    // build options div
+    draw_html_config();     // build config div
+    draw_html_start();      // build start div
     vTaskDelete(NULL);
 }
+// main command loop from HTML page, data from ws
 static void logic_analyzer_read_json(void *arg)
 {
     char json_string[JSON_QUEUE_LEN];
@@ -257,44 +249,45 @@ static void logic_analyzer_read_json(void *arg)
     while (1)
     {
         xQueueReceive(read_json_queue, json_string, portMAX_DELAY);
+        // parse json from ws
         if (json_to_str_parm(json_string, name, val) == ESP_OK)
         {
-            if (strncmp(rowID[ROW_PIN], name, 3) == 0)
+            if (strncmp(rowID[ROW_PIN], name, 3) == 0) // gpio pins
             {
                 int pin_numb = atoi(name + 3);
                 int gpio = atoi(val);
                 la_cfg.pin[pin_numb] = gpio;
             }
-            else if (strncmp(rowID[ROW_TRG], name, 3) == 0)
+            else if (strncmp(rowID[ROW_TRG], name, 3) == 0) // trigg pin
             {
                 la_cfg.pin_trigger = atoi(val);
             }
-            else if (strncmp(rowID[ROW_EDG], name, 3) == 0)
+            else if (strncmp(rowID[ROW_EDG], name, 3) == 0) // trigg edge
             {
                 la_cfg.trigger_edge = atoi(val);
             }
-            else if (strncmp(rowID[ROW_SMP], name, 3) == 0)
+            else if (strncmp(rowID[ROW_SMP], name, 3) == 0) // sample count
             {
                 la_cfg.number_of_samples = atoi(val);
             }
-            else if (strncmp(rowID[ROW_CLK], name, 3) == 0)
+            else if (strncmp(rowID[ROW_CLK], name, 3) == 0) // sample rate
             {
                 la_cfg.sample_rate = atoi(val);
             }
-            else if (strncmp(rowID[ROW_TIMEOUT], name, 3) == 0)
+            else if (strncmp(rowID[ROW_TIMEOUT], name, 3) == 0) // timeout
             {
                 la_cfg.meashure_timeout = atoi(val)>0 ? atoi(val)*100 : atoi(val);
             }
         }
         else
         {
-            if (strncmp(END_CFG_MSG, json_string, 6) == 0)
+            if (strncmp(END_CFG_MSG, json_string, 6) == 0) // endcfg - start LA
             {
                 la_cfg.logic_analyzer_cb = logic_analyzer_cb;
                 ret = start_logic_analyzer(&la_cfg);
                 if (ret)
                 {
-                    ESP_LOGE(TAG, "Start logic analyzer error %X", ret);
+                    ESP_LOGE(TAG, "Start logic analyzer error %x", ret);
                     send_ws_string("Start logic analyzer error");
                 }
                 else
@@ -320,11 +313,11 @@ static esp_err_t logic_analyzer_get_handler(httpd_req_t *req)
     httpd_resp_sendstr_chunk(req, NULL);
     return ESP_OK;
 }
-// main ws handle read ws messaje & send to queue
+// main ws handle read ws message & send to queue
 static esp_err_t logic_analyzer_ws_handler(httpd_req_t *req)
 {
     esp_err_t ret = 0;
-    if (req->method == HTTP_GET)
+    if (req->method == HTTP_GET)  // handshake
     {
         ESP_LOGI(TAG, "Handshake done, the new connection was opened %d", httpd_req_to_sockfd(req));
         // delete task & queue ? reopen ws

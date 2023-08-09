@@ -1,5 +1,4 @@
 set( srcs 
-
     logic_analyzer_hal/logic_analyzer_hal.c
 )
 set( includedir 
@@ -46,7 +45,6 @@ set( priv_require
             )
     endif()
   endif()
-
 
 if(CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT)
     list( APPEND srcs 

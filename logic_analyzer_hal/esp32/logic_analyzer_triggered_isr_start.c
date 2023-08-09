@@ -6,7 +6,10 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
-
+/*
+* standart irq handlers too slow >2.5 mks
+* hi level 5 irq about 0.3 mks то start transfer
+*/
 #include "soc/dport_reg.h"
 #include "soc/gpio_reg.h"
 #include "soc/soc.h"
@@ -16,7 +19,7 @@
 #include "esp_log.h"
 
 hi_interrupt_state_t la_hi_interrupt_state;
-
+// reset hi level int to default mode
 void ll_hi_level_triggered_isr_timeout_stop(void)
 {
 #ifdef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
@@ -26,7 +29,7 @@ void ll_hi_level_triggered_isr_timeout_stop(void)
     REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, la_hi_interrupt_state.gpio_pin_cfg_backup_data);
 #endif
 }
-
+// allocate hi level int level5, save GPIO & IRQ regs, start irq
 void ll_triggered_isr_alloc(void *arg)
 {
     ESP_LOGD("AISR", "start");
@@ -57,7 +60,7 @@ void ll_triggered_isr_alloc(void *arg)
 
     vTaskDelete(NULL);
 }
-
+// start hi level int, determine low level/hi level, number of free core IRQ, fill state struct for asm irq handler
 void ll_hi_level_triggered_isr_start(int pin_trigger, int trigger_edge)
 {
     int int_free_pro = 0;
@@ -96,7 +99,7 @@ void ll_hi_level_triggered_isr_start(int pin_trigger, int trigger_edge)
         break;
     }
 
-    ESP_LOGI("TISR", "pro=%ld app=%ld cpu=%ld", _DPORT_REG_READ(DPORT_PRO_GPIO_INTERRUPT_MAP_REG), _DPORT_REG_READ(DPORT_APP_GPIO_INTERRUPT_MAP_REG), la_hi_interrupt_state.cpu);
+    ESP_LOGD("TISR", "pro=%ld app=%ld cpu=%ld", _DPORT_REG_READ(DPORT_PRO_GPIO_INTERRUPT_MAP_REG), _DPORT_REG_READ(DPORT_APP_GPIO_INTERRUPT_MAP_REG), la_hi_interrupt_state.cpu);
 
     if ((int_free_app | int_free_pro) == 0) // all gpio int ( app&pro ) predefined - slow gpio int
     {
@@ -110,7 +113,7 @@ void ll_hi_level_triggered_isr_start(int pin_trigger, int trigger_edge)
     }
     else
     {
-        ESP_LOGI("TISR", "fast gpio interrupt");
+        ESP_LOGD("TISR", "fast gpio interrupt");
         la_hi_interrupt_state.dport_int_map_data_disable = 6;                                                                                             // soft interrupt - disable gpio interrupt
         la_hi_interrupt_state.dport_int_map_reg = (la_hi_interrupt_state.cpu == 0) ? DPORT_PRO_GPIO_INTERRUPT_MAP_REG : DPORT_APP_GPIO_INTERRUPT_MAP_REG; // app/pro map register
         la_hi_interrupt_state.dport_int_stat_reg = (la_hi_interrupt_state.cpu == 0) ? DPORT_PRO_INTR_STATUS_0_REG : DPORT_APP_INTR_STATUS_0_REG;          // not used now // app/pro int status dport register
