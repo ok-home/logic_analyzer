@@ -17,7 +17,7 @@
 
 // cache err -> define only > 5.2.0
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
-#undefine CONFIG_ANALYZER_USE_PSRAM
+#undef CONFIG_ANALYZER_USE_PSRAM
 #endif
 
 
