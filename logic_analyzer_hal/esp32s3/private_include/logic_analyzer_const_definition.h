@@ -16,7 +16,7 @@
 #include "esp_idf_version.h"
 
 // cache err -> define only > 5.2.0
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 2, 0)
 #undef CONFIG_ANALYZER_USE_PSRAM
 #endif
 
