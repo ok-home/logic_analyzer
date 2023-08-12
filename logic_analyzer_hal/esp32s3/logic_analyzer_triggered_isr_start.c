@@ -21,14 +21,19 @@
 #include "esp_log.h"
 
 hi_interrupt_state_t la_hi_interrupt_state;
+static int hi_interrupt_started = 0;
 // reset hi level int to default mode
 void ll_hi_level_triggered_isr_timeout_stop(void)
 {
 #ifdef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
+    if(hi_interrupt_started)
+    {
     // disable interrupt on core
     _DPORT_REG_WRITE(la_hi_interrupt_state.dport_int_map_reg, la_hi_interrupt_state.dport_int_map_data_disable);
     // clear GPIO interrupt enable on core // restore cfg register
     REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, la_hi_interrupt_state.gpio_pin_cfg_backup_data);
+    hi_interrupt_started = 0;
+    }
 #endif
 }
 // allocate hi level int level5, save GPIO & IRQ regs, start irq
@@ -116,6 +121,7 @@ void ll_hi_level_triggered_isr_start(int pin_trigger, int trigger_edge)
     else
     {
         ESP_LOGD("TISR", "fast gpio interrupt");
+        hi_interrupt_started = 1;
         la_hi_interrupt_state.dport_int_map_data_disable = 6;                                                                                             // soft interrupt - disable gpio interrupt
         la_hi_interrupt_state.dport_int_map_reg = (la_hi_interrupt_state.cpu == 0) ? INTERRUPT_CORE0_GPIO_INTERRUPT_PRO_MAP_REG : INTERRUPT_CORE1_GPIO_INTERRUPT_PRO_MAP_REG; // app/pro map register
         la_hi_interrupt_state.dport_int_stat_reg = (la_hi_interrupt_state.cpu == 0) ? INTERRUPT_CORE0_INTR_STATUS_0_REG : INTERRUPT_CORE1_INTR_STATUS_0_REG;          // not used now // app/pro int status dport register
