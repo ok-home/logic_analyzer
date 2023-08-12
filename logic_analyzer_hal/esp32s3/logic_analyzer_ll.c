@@ -379,7 +379,7 @@ void logic_analyzer_ll_stop()
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
     ledc_stop(LEDC_LOW_SPEED_MODE, CONFIG_ANALYZER_LEDC_CHANNEL_NUMBER, 0);
 #endif
-    gpio_reset_pin(CONFIG_ANALYZER_PCLK_PIN);
+    gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN,GPIO_MODE_DISABLE);
 }
 
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
