@@ -279,8 +279,8 @@ const options_list_t options[]={
 #endif  //CONFIG_ANALYZER_CHANNEL_NUMBERS_8  
 #endif  //CONFIG_ANALYZER_USE_PSRAM
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-    {5000,"5 kHz","lst03"},
-    {10000,"10 kHz","lst03"},
+    //{5000,"5 kHz","lst03"},
+    //{10000,"10 kHz","lst03"},
     {20000,"20 kHz","lst03"},
     {50000,"50 kHz","lst03"},
     {100000,"100 kHz","lst03"},
