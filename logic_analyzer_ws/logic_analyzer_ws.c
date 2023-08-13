@@ -112,20 +112,21 @@ static esp_err_t send_ws_bin(const uint8_t *data, int len)
 {
     esp_err_t ret = 0;
     httpd_ws_frame_t ws_pkt;
-
     int bytes_to_send = len;
-    int bytes_in_frame = 1024;
+    int bytes_in_frame = 2048;// 1024;
     uint8_t *buf = (uint8_t*)data;
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
     ws_pkt.type = HTTPD_WS_TYPE_BINARY;
-    ws_pkt.fragmented = true;
     while(bytes_to_send>bytes_in_frame)
     {
+        ws_pkt.fragmented = true;
         ws_pkt.len = bytes_in_frame;
         ws_pkt.payload = buf;
         ws_pkt.final = false; // fragmented
         ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt); 
-        if(ret) {return ret;}             
+        if(ret) {
+            return ret;
+            }             
         buf +=  bytes_in_frame;
         bytes_to_send -= bytes_in_frame;
         ws_pkt.type = HTTPD_WS_TYPE_CONTINUE ;
@@ -133,8 +134,7 @@ static esp_err_t send_ws_bin(const uint8_t *data, int len)
     ws_pkt.len = bytes_to_send;
     ws_pkt.payload = buf;
     ws_pkt.final = true; // last fragment
-    ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt);              
-
+    ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt); 
     return ret;
 }
 

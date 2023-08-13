@@ -386,7 +386,6 @@
             if (data instanceof ArrayBuffer) {
                 // check max_channel
                 let tmpl = document.querySelector('#config').querySelectorAll('input');
-                console.log(tmpl.length);
                 if(tmpl.length>16)
                     {
                         max_channels = 16;
@@ -397,9 +396,6 @@
                         max_channels = 8;
                         analyzerData = new Uint8Array(data);
                     }
-                //analyzerData = data; //byte data
-                //analyzerData = new Uint16Array(data);
-                //console.log("bin " + analyzerData.length);
                 statusstr.innerHTML = "Received " + analyzerData.length + " samples";
                 curr_canvas_x_point = 0;
                 curr_array_start_point = 0;
@@ -413,7 +409,6 @@
 
             } else {
                 // text frame
-                //console.log("text " + data);
                 statusstr.innerHTML = data;
             }
         }
