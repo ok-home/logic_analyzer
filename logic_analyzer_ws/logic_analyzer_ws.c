@@ -123,7 +123,7 @@ static esp_err_t send_ws_bin(const uint8_t *data, int len)
         ws_pkt.len = bytes_in_frame;
         ws_pkt.payload = buf;
         ws_pkt.final = false; // fragmented
-        ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt); 
+        ret = httpd_ws_send_data(ra.hd, ra.fd, &ws_pkt);
         if(ret) {
             return ret;
             }             
@@ -151,7 +151,7 @@ static esp_err_t draw_html_datalist(void)
     return ret;
 }
 
-static esp_err_t options_to_html(const options_list_t* list,int min, int max)
+static esp_err_t option_to_html(const options_list_t* list,int min, int max)
 {
     char jsonstr[128];
     esp_err_t ret = 0;
@@ -171,7 +171,7 @@ static esp_err_t draw_html_options(void)
     esp_err_t ret = 0;
     ret = option_to_html(pin_options,MIN_GPIO,MAX_GPIO);
     ret = option_to_html(edge_options,-1,5);
-    ret = option_to_html(sample_options,MIN_SAMPLE,MAX_SAMPLE);
+    ret = option_to_html(sample_options,MIN_SAMPLE_CNT,MAX_SAMPLE_CNT);
     ret = option_to_html(clk_options,MIN_CLK,MAX_CLK);
     ret = option_to_html(timeout_options,-1,120);
     ret = option_to_html(channel_options,MIN_PIN,MAX_PIN);

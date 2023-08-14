@@ -552,7 +552,7 @@ const options_list_t  timeout_options[]=
     };
 const options_list_t  channel_options[]=    
     {   //DATALIST_CHANNELS lst05
-    {8,"16 ch on ESP32S3","lst05"},
+    {8,"8 ch on ESP32S3","lst05"},
     {16,"16 ch on ESP32S3","lst05"},
     {-2,"",""}
     };

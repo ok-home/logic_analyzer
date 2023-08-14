@@ -19,6 +19,7 @@
 #define LA_MIN_SAMPLE_RATE 5000
 
 #define LA_MAX_PIN 16
+#define LA_MIN_PIN 16
 #define LA_MIN_GPIO -1
 #define LA_MAX_GPIO 39
 #define LA_MAX_SAMPLE_CNT 60000
