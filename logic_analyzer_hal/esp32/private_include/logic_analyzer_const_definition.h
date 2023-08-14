@@ -24,7 +24,8 @@
 #define LA_MAX_SAMPLE_CNT 60000
 #define LA_MIN_SAMPLE_CNT 100
 #define LA_BYTE_IN_SAMPLE 2
-
+#define LA_MIN_PSRAM 0
+#define LA_MAX_PSRAM 0
 /*
 * I2S0/I2S1 menuconfig select - only esp32 target
 */

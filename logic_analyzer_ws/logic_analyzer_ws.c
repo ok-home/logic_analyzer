@@ -138,7 +138,6 @@ static esp_err_t send_ws_bin(const uint8_t *data, int len)
     return ret;
 }
 
-
 static esp_err_t draw_html_datalist(void)
 {
     char jsonstr[128];
@@ -151,16 +150,32 @@ static esp_err_t draw_html_datalist(void)
     }
     return ret;
 }
-static esp_err_t draw_html_options(void)
+
+static esp_err_t options_to_html(const options_list_t* list,int min, int max)
 {
     char jsonstr[128];
     esp_err_t ret = 0;
-    for (int i = 0; i < sizeof(options) / sizeof(options[0]); i++)
-    {
-        sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s\",\"rowVal\":\"%ld\",\"rowLbl\":\"%s\"}",
-                hdrID[HDR_OPTIONS], options[i].datalist, options[i].value, options[i].label);
-        ret = send_ws_string(jsonstr);
-    }
+    while(list->datalist[0])
+        {
+            if(list->value>=min && list->value<=max){
+            sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s\",\"rowVal\":\"%ld\",\"rowLbl\":\"%s\"}",
+                                hdrID[HDR_OPTIONS], list->datalist,list->value,list->label);
+            ret = send_ws_string(jsonstr);
+            }
+        list++;
+        }
+        return ret;
+}
+static esp_err_t draw_html_options(void)
+{
+    esp_err_t ret = 0;
+    ret = option_to_html(pin_options,MIN_GPIO,MAX_GPIO);
+    ret = option_to_html(edge_options,-1,5);
+    ret = option_to_html(sample_options,MIN_SAMPLE,MAX_SAMPLE);
+    ret = option_to_html(clk_options,MIN_CLK,MAX_CLK);
+    ret = option_to_html(timeout_options,-1,120);
+    ret = option_to_html(channel_options,MIN_PIN,MAX_PIN);
+    ret = option_to_html(psram_options,MIN_PSRAM,MAX_PSRAM);
     return ret;
 }
 static esp_err_t draw_html_config(void)
@@ -192,6 +207,13 @@ static esp_err_t draw_html_config(void)
             hdrID[HDR_CONFIG], rowID[ROW_TIMEOUT], 0, rowLbl[ROW_LBL_TIMEOUT], rowType[ROW_NUMBER], 50, -1, 
             la_cfg.meashure_timeout >0 ? la_cfg.meashure_timeout/100:la_cfg.meashure_timeout,// TICK = 10 MSek
             1, 0, rowID[ROW_LST], DATALIST_TIMEOUT, CHECK_CFG_DATA_EVENT);
+    ret = send_ws_string(jsonstr);
+
+    sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowMax\":\"%d\",\"rowMin\":\"%d\",\"rowVal\":\"%d\",\"rowStep\":\"%d\",\"rowDis\":\"%d\",\"rowList\":\"%s%02d\",\"rowEvent\":\"%d\"}",
+            hdrID[HDR_CONFIG], rowID[ROW_CHANNELS], 0, rowLbl[ROW_LBL_CHANNELS], rowType[ROW_NUMBER], MAX_PIN, MIN_PIN, MAX_PIN, 1, 0, rowID[ROW_LST], DATALIST_CHANNELS, CHECK_CFG_DATA_EVENT);
+    ret = send_ws_string(jsonstr);
+    sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowMax\":\"%d\",\"rowMin\":\"%d\",\"rowVal\":\"%d\",\"rowStep\":\"%d\",\"rowDis\":\"%d\",\"rowList\":\"%s%02d\",\"rowEvent\":\"%d\"}",
+            hdrID[HDR_CONFIG], rowID[ROW_PSRAM], 0, rowLbl[ROW_LBL_PSRAM], rowType[ROW_NUMBER], MAX_PSRAM, MIN_PSRAM, MIN_PSRAM, 1, 0, rowID[ROW_LST], DATALIST_PSRAM, CHECK_CFG_DATA_EVENT);
     ret = send_ws_string(jsonstr);
 
     return ret;

@@ -42,6 +42,7 @@
   #define LA_MAX_SAMPLE_RATE 80000000
  #endif
 #define LA_MAX_PIN 8
+#define LA_MIN_PIN 8
 #define LA_BYTE_IN_SAMPLE 1
 #else
  #ifdef CONFIG_ANALYZER_USE_PSRAM
@@ -52,9 +53,15 @@
   #define LA_MAX_SAMPLE_RATE 40000000
  #endif
 #define LA_MAX_PIN 16
+#define LA_MIN_PIN 16
 #define LA_BYTE_IN_SAMPLE 2
 #endif
-//16-32
+
+#define LA_MIN_PSRAM 0
 #ifdef CONFIG_ANALYZER_USE_PSRAM
+//16-32
 #define CONFIG_ANALYZER_GDMA_PSRAM_BURST 32
+#define LA_MAX_PSRAM 1
+#else
+#define LA_MAX_PSRAM 0
 #endif
