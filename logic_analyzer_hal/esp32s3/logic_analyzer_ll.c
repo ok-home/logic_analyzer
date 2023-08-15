@@ -156,7 +156,7 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     LCD_CAM.cam_ctrl.cam_clk_sel = 3; // Select Camera module source clock. 0: no clock. 2: APLL. 3: CLK160.
 }
 // set cam mode register -> 8/16 bit, eof control from dma,
-static void logic_analyzer_ll_set_mode(int sample_rate)
+static void logic_analyzer_ll_set_mode(int sample_rate,int channels)
 {
     // attension !!
     // LCD_CAM.cam_ctrl1.cam_rec_data_bytelen -> logic_analyzer_ll_set_mode  clear len data
@@ -179,11 +179,12 @@ static void logic_analyzer_ll_set_mode(int sample_rate)
     LCD_CAM.cam_ctrl1.cam_line_int_num = 0;    // Configure line number. When the number of received lines reaches this value + 1, LCD_CAM_CAM_HS_INT is triggered. (R/W)
     LCD_CAM.cam_ctrl1.cam_clk_inv = 0;         // 1: Invert the input signal CAM_PCLK. 0: Do not invert. (R/W)
     LCD_CAM.cam_ctrl1.cam_vsync_filter_en = 0; // 1: Enable CAM_VSYNC filter function. 0: Bypass. (R/W)
-#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8
-    LCD_CAM.cam_ctrl1.cam_2byte_en = 0; // 1: The width of input data is 16 bits. 0: The width of input data is 8 bits. (R/W)
-#else
-    LCD_CAM.cam_ctrl1.cam_2byte_en = 1; // 1: The width of input data is 16 bits. 0: The width of input data is 8 bits. (R/W)
-#endif
+
+    if(channels == 8 )
+    {LCD_CAM.cam_ctrl1.cam_2byte_en = 0;} // 1: The width of input data is 16 bits. 0: The width of input data is 8 bits. (R/W)
+    else
+    {LCD_CAM.cam_ctrl1.cam_2byte_en = 1;} // 1: The width of input data is 16 bits. 0: The width of input data is 8 bits. (R/W)
+
     LCD_CAM.cam_ctrl1.cam_de_inv = 0;        // CAM_DE invert enable signal, valid in high level. (R/W)
     LCD_CAM.cam_ctrl1.cam_hsync_inv = 0;     // CAM_HSYNC invert enable signal, valid in high level. (R/W)
     LCD_CAM.cam_ctrl1.cam_vsync_inv = 0;     // CAM_VSYNC invert enable signal, valid in high level. (R/W)
@@ -197,13 +198,13 @@ static void logic_analyzer_ll_set_mode(int sample_rate)
     LCD_CAM.cam_ctrl1.cam_afifo_reset = 0;
 }
 // set cam input pin & vsync, hsynk, henable to const to stop transfer
-static void logic_analyzer_ll_set_pin(int *data_pins)
+static void logic_analyzer_ll_set_pin(int *data_pins,int channels)
 {
     vTaskDelay(5); //??
 
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
 
-    for (int i = 0; i < LA_MAX_PIN; i++)
+    for (int i = 0; i < channels; i++)
     {
         if (data_pins[i] < 0) // pin disable - already 0
         {
@@ -217,7 +218,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
     }
 #else
     // external not tested ??
-    for (int i = 0; i < LA_MAX_PIN; i++)
+    for (int i = 0; i < channels; i++)
     {
         if (data_pins[i] < 0) // pin disable - already 0
         {
@@ -313,7 +314,7 @@ signal and control signal.
 interrupts set in Step 6 will be generated.
 */
 // enable cam module, set cam mode, pin mode, dma mode, dma descr, dma irq
-void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame)
+void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_frame_t *frame)
 {
     // Enable and configure cam
     // enable CLK
@@ -324,8 +325,8 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
         REG_SET_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_LCD_CAM_RST);
         REG_CLR_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_LCD_CAM_RST);
     }
-    logic_analyzer_ll_set_pin(data_pins);
-    logic_analyzer_ll_set_mode(sample_rate);
+    logic_analyzer_ll_set_pin(data_pins,channels);
+    logic_analyzer_ll_set_mode(sample_rate,channels);
     logic_analyzer_ll_dma_init();
 
     // set dma descriptor

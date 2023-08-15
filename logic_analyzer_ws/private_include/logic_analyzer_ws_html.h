@@ -12,6 +12,8 @@
 #define MIN_CLK LA_MIN_SAMPLE_RATE
 
 #define END_CFG_MSG "endcfg"
+#define END_HW_REQ_MSG "endhwr"
+#define REDRAW_MSG "redraw"
 
 enum hdrID_name {
     HDR_CONFIG,
@@ -105,7 +107,8 @@ enum HTML_EVENT_IDX {
     CHECK_CFG_DATA_EVENT    = 1,
     START_EVENT             = 2,
     ZOOM_EVENT              = 3,
-    SAVE_EVENT              = 4
+    SAVE_EVENT              = 4,
+    GET_HW_PARAM            = 5
 };
 
 enum DATALIST_ROW{

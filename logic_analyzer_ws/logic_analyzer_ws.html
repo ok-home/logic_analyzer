@@ -118,7 +118,8 @@
             checkCfgData,
             startMeashure,
             zoomToFit,
-            saveByteArray
+            saveByteArray,
+            getHWParam
         ];
 
         let ins = document.querySelector('#' + row.hdrID) // куда вставлять шаблон
@@ -180,7 +181,7 @@
     let mark_click_array_point = curr_array_start_point;
     var analyzerData = new Uint16Array(max_cnt);
 </script>
-<script> //analyser drawing
+<script> //analyzer drawing
     function drawLine(l_arr, l_channelName, l_channel, l_channels, l_start, l_cnt) {
         let round_floor = l_start - Math.floor(l_start);  // round err
         l_start = Math.floor(l_start);                  // to int
@@ -306,6 +307,19 @@
     }
 </script>
 <script> // event & validate html config data
+    function getHWParam(e) {
+        if(checkData(this))
+        {
+            let tmp = document.getElementById("chn00");
+            let str = JSON.stringify({ rowID: tmp.id, rowVal: tmp.value });
+            socket.send(str);
+            tmp = document.getElementById("ram00");
+            str = JSON.stringify({ rowID: tmp.id, rowVal: tmp.value });
+            socket.send(str);
+            str = "endhwr"
+            socket.send(str);
+        }
+    }
     function checkCfgData(e) {
         checkData(this);
     }
@@ -432,12 +446,17 @@
     function data_input(obj) {
         if (obj.rowID) {
             if (obj.rowID == "endcfg") {
-                //console.log("end cfg recieve");
                 statusstr.innerHTML = "recieved logic analyzer config";
                 return;
             }
-            document.querySelector('#' + obj.rowID).val = obj.rowVal;
+            if (obj.rowID == "redraw") {
+                statusstr.innerHTML = "redraw logic analyzer config,restart";
+                console.log("redraw logic analyzer config,restart");
+                //socket.close();
+                return;
+            }
 
+            document.querySelector('#' + obj.rowID).val = obj.rowVal;
             if (obj.rowID.indexOf('smp00') == 0) {
                 if (Number(obj.rowVal) > 0) {
                     max_cnt = curr_cnt = Number(obj.rowVal);
@@ -522,9 +541,12 @@
     socket.onclose = function (event) {
         statusstr.innerHTML = "Соединение закрыто";
         statusstr.innerHTML += ' код: ' + event.code + ' причина: ' + event.reason;
+        // reatart html page ?????
+        // document.location.reload();
     };
-    socket.onerror = function () {
+    socket.onerror = function (event) {
         statusstr.innerHTML = "Ошибка сокета";
+        console.log(' код: ' + event.code + ' причина: ' + event.reason);
     };
 
     socket.onmessage = function (event) {

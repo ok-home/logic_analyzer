@@ -53,7 +53,7 @@
   #define LA_MAX_SAMPLE_RATE 40000000
  #endif
 #define LA_MAX_PIN 16
-#define LA_MIN_PIN 16
+#define LA_MIN_PIN 8
 #define LA_BYTE_IN_SAMPLE 2
 #endif
 

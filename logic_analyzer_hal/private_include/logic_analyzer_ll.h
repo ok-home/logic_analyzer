@@ -31,7 +31,7 @@ typedef struct {
  *
  *  @return
 */
-void logic_analyzer_ll_config(int *data_pins,int sample_rate,la_frame_t *frame);
+void logic_analyzer_ll_config(int *data_pins,int sample_rate,int channels, la_frame_t *frame);
 /**
  *  @brief logic analyzer start meashure
  *
