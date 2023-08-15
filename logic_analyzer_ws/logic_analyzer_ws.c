@@ -26,10 +26,8 @@ static logic_analyzer_config_t la_cfg = {
     .meashure_timeout = LA_DEFAULT_TiMEOUT,
     .logic_analyzer_cb = NULL};
 
-static logic_analyzer_hw_param_t la_hw = {
-    .current_channels = -1,  // -1 first start
-    .current_psram = -1 // // -1 first start
-};
+static logic_analyzer_hw_param_t la_hw;
+
 typedef struct async_resp_arg
 {
     httpd_handle_t hd;
@@ -55,10 +53,10 @@ static void logic_analyzer_cb(uint8_t *sample_buf, int samples, int sample_rate,
         ret = send_ws_string(jsonstr);
         sprintf(jsonstr, "{\"rowID\":\"%s%02d\",\"rowVal\":\"%d\"}", rowID[ROW_MCLK], 0, sample_rate);
         ret = send_ws_string(jsonstr);
-        ESP_LOGI(TAG, "Start samples transfer %d", samples *(channels/2));
+        ESP_LOGI(TAG, "Start samples transfer %d", samples *(channels/8));
         send_ws_string("Start samples transfer");
 
-        ret = send_ws_bin((const uint8_t *)sample_buf, samples *(channels/2));
+        ret = send_ws_bin((const uint8_t *)sample_buf, samples *(channels/8));
         if (ret)
         {
             ESP_LOGE(TAG, "Samples transfer err %d", ret);
@@ -179,17 +177,17 @@ static esp_err_t draw_html_options(void)
     ret = option_to_html(pin_options,MIN_GPIO,MAX_GPIO);
     ret = option_to_html(edge_options,-1,5);
     ret = option_to_html(sample_options,la_hw.min_sample_cnt,la_hw.max_sample_cnt);
-    ret = option_to_html(clk_options,la_hw.min_sample_clk,la_hw.max_sample_clk);
+    ret = option_to_html(clk_options,la_hw.min_sample_rate,la_hw.max_sample_rate);
     ret = option_to_html(timeout_options,-1,120);
     ret = option_to_html(channel_options,la_hw.min_channels,la_hw.max_channels);
-    ret = option_to_html(psram_options,0,la_hw.current_psram);
+    ret = option_to_html(psram_options,0,la_hw.available_psram);
     return ret;
 }
 static esp_err_t draw_html_config(void)
 {
     char jsonstr[256];
     esp_err_t ret = 0;
-    for (int i = 0; i < MAX_PIN; i++)
+    for (int i = 0; i < la_cfg.number_channels; i++)
     {
         sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s%02d\",\"rowType\":\"%s\",\"rowMax\":\"%d\",\"rowMin\":\"%d\",\"rowVal\":\"%d\",\"rowStep\":\"%d\",\"rowDis\":\"%d\",\"rowList\":\"%s%02d\",\"rowEvent\":\"%d\"}",
                 hdrID[HDR_CONFIG], rowID[ROW_PIN], i, rowLbl[ROW_LBL_PIN], i, rowType[ROW_NUMBER], MAX_GPIO, MIN_GPIO, la_cfg.pin[i], 1, 0, rowID[ROW_LST], DATALIST_PIN, CHECK_CFG_DATA_EVENT);
@@ -208,7 +206,7 @@ static esp_err_t draw_html_config(void)
     ret = send_ws_string(jsonstr);
 
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowMax\":\"%d\",\"rowMin\":\"%d\",\"rowVal\":\"%d\",\"rowStep\":\"%d\",\"rowDis\":\"%d\",\"rowList\":\"%s%02d\",\"rowEvent\":\"%d\"}",
-            hdrID[HDR_CONFIG], rowID[ROW_CLK], 0, rowLbl[ROW_LBL_CLOCK], rowType[ROW_NUMBER], la_hw.max_sample_clk, la_hw.min_sample_clk, la_cfg.sample_rate, 1000, 0, rowID[ROW_LST], DATALIST_CLK, CHECK_CFG_DATA_EVENT);
+            hdrID[HDR_CONFIG], rowID[ROW_CLK], 0, rowLbl[ROW_LBL_CLOCK], rowType[ROW_NUMBER], la_hw.max_sample_rate, la_hw.min_sample_rate, la_cfg.sample_rate, 1000, 0, rowID[ROW_LST], DATALIST_CLK, CHECK_CFG_DATA_EVENT);
     ret = send_ws_string(jsonstr);
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowMax\":\"%d\",\"rowMin\":\"%d\",\"rowVal\":\"%d\",\"rowStep\":\"%d\",\"rowDis\":\"%d\",\"rowList\":\"%s%02d\",\"rowEvent\":\"%d\"}",
             hdrID[HDR_CONFIG], rowID[ROW_TIMEOUT], 0, rowLbl[ROW_LBL_TIMEOUT], rowType[ROW_NUMBER], 50, -1, 
@@ -220,7 +218,7 @@ static esp_err_t draw_html_config(void)
             hdrID[HDR_CONFIG], rowID[ROW_CHANNELS], 0, rowLbl[ROW_LBL_CHANNELS], rowType[ROW_NUMBER], la_hw.max_channels, la_hw.min_channels, la_cfg.number_channels, 1, 0, rowID[ROW_LST], DATALIST_CHANNELS, GET_HW_PARAM);
     ret = send_ws_string(jsonstr);
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowMax\":\"%d\",\"rowMin\":\"%d\",\"rowVal\":\"%d\",\"rowStep\":\"%d\",\"rowDis\":\"%d\",\"rowList\":\"%s%02d\",\"rowEvent\":\"%d\"}",
-            hdrID[HDR_CONFIG], rowID[ROW_PSRAM], 0, rowLbl[ROW_LBL_PSRAM], rowType[ROW_NUMBER], la_hw.current_psram, 0, la_cfg.samples_to_psram, 1, 0, rowID[ROW_LST], DATALIST_PSRAM, GET_HW_PARAM);
+            hdrID[HDR_CONFIG], rowID[ROW_PSRAM], 0, rowLbl[ROW_LBL_PSRAM], rowType[ROW_NUMBER], la_hw.available_psram, 0, la_cfg.samples_to_psram, 1, 0, rowID[ROW_LST], DATALIST_PSRAM, GET_HW_PARAM);
     ret = send_ws_string(jsonstr);
 
     return ret;
@@ -257,7 +255,6 @@ static void logic_analyzer_draw_html(void *arg)
 {
     la_hw.current_channels =  la_cfg.number_channels;
     la_hw.current_psram = la_cfg.samples_to_psram;
-
     logic_analyzer_get_hw_param( &la_hw ); // get HW params 
 
     draw_html_datalist();   // build datalist div
@@ -340,7 +337,6 @@ static void logic_analyzer_read_json(void *arg)
             }
             else if(strncmp(END_HW_REQ_MSG , json_string, 6) == 0)
             {
-                ESP_LOGI(TAG,"hw command ch=%d ram=%d",la_cfg.number_channels,la_cfg.samples_to_psram);
                 send_ws_string(REDRAW_MSG);
             }
             else

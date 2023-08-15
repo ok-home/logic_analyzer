@@ -540,6 +540,7 @@ const options_list_t  clk_options[]=
     {10000000,"10 MHz","lst03"},
     {20000000,"20 MHz","lst03"},
     {40000000,"40 MHz","lst03"},
+    {80000000,"80 MHz","lst03"},
     {-2,"",""}    
     };
 const options_list_t  timeout_options[]=

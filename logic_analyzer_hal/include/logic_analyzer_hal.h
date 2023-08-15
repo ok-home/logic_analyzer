@@ -25,8 +25,8 @@ typedef struct {
     int trigger_edge;           // POS_EDGE/NEG_EDGE/ANY_EDGE
     int number_of_samples;      // Number of samples in 8/16 bit word depending of sample width
     int sample_rate;            // Sample rate in HZ ( 5000-80000000 ) depending of target, sample width, use psram
-    int number_channels         // Meashured Channels  8-16 ( 16-esp32, 8/16 esp32s3, 1/2/4 esp32c3)
-    int samples_to_psram        // Save sample to psram if it`s possible -> 0-ram, 1-psram (esp32s3)
+    int number_channels;         // Meashured Channels  8-16 ( 16-esp32, 8/16 esp32s3, 1/2/4 esp32c3)
+    int samples_to_psram;        // Save sample to psram if it`s possible -> 0-ram, 1-psram (esp32s3)
     int meashure_timeout;       // MAX meashured time in FreeRtos Tick - if timeout = 0 - stop&reset logic analyser
     logic_analyzer_cb_t logic_analyzer_cb ; // logic analyzer callback
 } logic_analyzer_config_t;
@@ -41,6 +41,7 @@ typedef struct {
     int min_sample_rate;        // out - min sample rate for target & current channels & current psram
     int max_sample_cnt;         // out - max sample cnt for target & psram & free ram/psram
     int min_sample_cnt;         // out - min sample cnt for target & psram 
+    int available_psram;        // out - 1 psram, 0 ram
     int current_psram;          // in/out hw support psram ( 0/1 ) - return min psram ( ram ) if psram out of range
     int current_channels;       // in/out return min channels if channels out of range
 } logic_analyzer_hw_param_t;

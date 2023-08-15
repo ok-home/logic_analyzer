@@ -424,6 +424,12 @@
             } else {
                 // text frame
                 statusstr.innerHTML = data;
+                if (data == "redraw") {
+                statusstr.innerHTML = "redraw logic analyzer config,restart";
+                socket.close();
+                return;
+            }
+
             }
         }
     }
@@ -445,17 +451,6 @@
     }
     function data_input(obj) {
         if (obj.rowID) {
-            if (obj.rowID == "endcfg") {
-                statusstr.innerHTML = "recieved logic analyzer config";
-                return;
-            }
-            if (obj.rowID == "redraw") {
-                statusstr.innerHTML = "redraw logic analyzer config,restart";
-                console.log("redraw logic analyzer config,restart");
-                //socket.close();
-                return;
-            }
-
             document.querySelector('#' + obj.rowID).val = obj.rowVal;
             if (obj.rowID.indexOf('smp00') == 0) {
                 if (Number(obj.rowVal) > 0) {
@@ -541,12 +536,10 @@
     socket.onclose = function (event) {
         statusstr.innerHTML = "Соединение закрыто";
         statusstr.innerHTML += ' код: ' + event.code + ' причина: ' + event.reason;
-        // reatart html page ?????
-        // document.location.reload();
+        document.location.reload();
     };
     socket.onerror = function (event) {
         statusstr.innerHTML = "Ошибка сокета";
-        console.log(' код: ' + event.code + ' причина: ' + event.reason);
     };
 
     socket.onmessage = function (event) {
