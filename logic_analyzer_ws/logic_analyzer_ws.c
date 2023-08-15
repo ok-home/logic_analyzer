@@ -217,10 +217,10 @@ static esp_err_t draw_html_config(void)
     ret = send_ws_string(jsonstr);
 
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowMax\":\"%d\",\"rowMin\":\"%d\",\"rowVal\":\"%d\",\"rowStep\":\"%d\",\"rowDis\":\"%d\",\"rowList\":\"%s%02d\",\"rowEvent\":\"%d\"}",
-            hdrID[HDR_CONFIG], rowID[ROW_CHANNELS], 0, rowLbl[ROW_LBL_CHANNELS], rowType[ROW_NUMBER], la_hw.max_channels, la_hw.min_channels, la_hw.current_channels, 1, 0, rowID[ROW_LST], DATALIST_CHANNELS, GET_HW_PARAM);
+            hdrID[HDR_CONFIG], rowID[ROW_CHANNELS], 0, rowLbl[ROW_LBL_CHANNELS], rowType[ROW_NUMBER], la_hw.max_channels, la_hw.min_channels, la_cfg.number_channels, 1, 0, rowID[ROW_LST], DATALIST_CHANNELS, GET_HW_PARAM);
     ret = send_ws_string(jsonstr);
     sprintf(jsonstr, "{\"hdrID\":\"%s\",\"rowID\":\"%s%02d\",\"rowLbl\":\"%s\",\"rowType\":\"%s\",\"rowMax\":\"%d\",\"rowMin\":\"%d\",\"rowVal\":\"%d\",\"rowStep\":\"%d\",\"rowDis\":\"%d\",\"rowList\":\"%s%02d\",\"rowEvent\":\"%d\"}",
-            hdrID[HDR_CONFIG], rowID[ROW_PSRAM], 0, rowLbl[ROW_LBL_PSRAM], rowType[ROW_NUMBER], la_hw.current_psram, 0, la_hw.current_psram, 1, 0, rowID[ROW_LST], DATALIST_PSRAM, GET_HW_PARAM);
+            hdrID[HDR_CONFIG], rowID[ROW_PSRAM], 0, rowLbl[ROW_LBL_PSRAM], rowType[ROW_NUMBER], la_hw.current_psram, 0, la_cfg.samples_to_psram, 1, 0, rowID[ROW_LST], DATALIST_PSRAM, GET_HW_PARAM);
     ret = send_ws_string(jsonstr);
 
     return ret;
