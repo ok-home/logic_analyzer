@@ -4,6 +4,7 @@
 #define END_CFG_MSG "endcfg"
 #define END_HW_REQ_MSG "endhwr"
 #define REDRAW_MSG "redraw"
+#define CLEAR_DIV_MSG "clrdiv"
 
 enum hdrID_name {
     HDR_CONFIG,

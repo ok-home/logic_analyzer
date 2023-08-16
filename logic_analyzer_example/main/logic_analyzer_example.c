@@ -19,7 +19,7 @@ void app_main(void)
     //test_air();
     vTaskDelay(5);
     #ifdef CONFIG_ANALYZER_USE_SUMP
-    esp_log_level_set("*", ESP_LOG_NONE); // sump default run on port0 - disable log
+    //esp_log_level_set("*", ESP_LOG_NONE); // sump default run on port0 - disable log
     logic_analyzer_sump();
     #endif
     #ifdef CONFIG_ANALYZER_USE_WS

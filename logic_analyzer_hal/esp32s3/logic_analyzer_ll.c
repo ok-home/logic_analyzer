@@ -93,7 +93,7 @@ static void logic_analyzer_ll_set_ledc_pclk(int sample_rate)
         .timer_num = CONFIG_ANALYZER_LEDC_TIMER_NUMBER,
         .duty_resolution = LEDC_TIMER_4_BIT,
         .freq_hz = sample_rate, // Set output frequency at 5 kHz
-        .clk_cfg = LEDC_USE_APB_CLK};
+        .clk_cfg = LEDC_AUTO_CLK};
     ledc_timer_config(&ledc_timer);
 
     // Prepare and then apply the LEDC PWM channel configuration
@@ -142,7 +142,7 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
     if ((LA_HW_CLK_SAMPLE_RATE / sample_rate) > 160)
     {
-        ldiv = 8;  // cam clk to 2 MHz
+        ldiv = 8;  // cam clk to 20 MHz
         logic_analyzer_ll_set_ledc_pclk(sample_rate);
     }
 #endif

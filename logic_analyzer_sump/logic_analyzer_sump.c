@@ -10,6 +10,7 @@
 #include "freertos/task.h"
 #include "driver/uart.h"
 #include "driver/gpio.h"
+#include "esp_log.h"
 
 #include "logic_analyzer_pin_definition.h"
 #include "logic_analyzer_hal.h"
@@ -29,7 +30,7 @@ static void sump_writeByte(uint8_t byte);
 static void sump_cmd_parser(uint8_t cmdByte);
 static void sump_get_metadata();
 static void sump_capture_and_send_samples();
-static void sump_la_cb(uint8_t *buf, int cnt, int clk);
+static void sump_la_cb(uint8_t *buf, int cnt, int clk,int channel);
 
 // for SUMP pin & cfg definition from menuconfig
 static logic_analyzer_config_t la_cfg = {
@@ -59,7 +60,7 @@ static void sump_capture_and_send_samples()
     }
 
     la_cfg.trigger_edge = first_trigger_val ? GPIO_INTR_POSEDGE : GPIO_INTR_NEGEDGE;
-
+ESP_LOGI("CFG","cnt %d clk %d psr %d ch %d",la_cfg.number_of_samples,la_cfg.sample_rate,la_cfg.samples_to_psram,la_cfg.number_channels);
     int err = start_logic_analyzer(&la_cfg);
     if (err)
     {
@@ -218,6 +219,12 @@ static void sump_cmd_parser(uint8_t cmdByte)
         readCount = ((cmd.u_cmd16[0]&0xffff)+1)*4;
         delayCount = ((cmd.u_cmd16[1]&0xffff)+1)*4;
         break;
+    case SUMP_SET_BIG_READ_CNT: // samples or bytes ??????
+        sump_getCmd4(cmd.u_cmd8);
+        readCount = (cmd.u_cmd32+1)*4;
+        //delayCount = ((cmd.u_cmd16[1]&0xffff)+1)*4;
+        break;
+
     case SUMP_SET_FLAGS:
         sump_getCmd4(cmd.u_cmd8);
         break;
@@ -244,24 +251,22 @@ static void sump_get_metadata()
     sump_writeByte((uint8_t)0x02);
     sump_write_data((uint8_t *)"0.00", 5);
     /* sample memory */
-    uint32_t capture_size = la_hw.max_sample_cnt * (la_cfg.channels/8); // buff size bytes ??
+    uint32_t capture_size = la_hw.max_sample_cnt * (la_cfg.number_channels/8); // buff size bytes ??
     sump_writeByte((uint8_t)0x21);
-    sump_write_data((uint8_t *) &capture_size,4); // test
-//    sump_writeByte((uint8_t)(capture_size >> 24) & 0xFF);
-//    sump_writeByte((uint8_t)(capture_size >> 16) & 0xFF);
-//    sump_writeByte((uint8_t)(capture_size >> 8) & 0xFF);
- //   sump_writeByte((uint8_t)(capture_size >> 0) & 0xFF);
+    sump_writeByte((uint8_t)(capture_size >> 24) & 0xFF);
+    sump_writeByte((uint8_t)(capture_size >> 16) & 0xFF);
+    sump_writeByte((uint8_t)(capture_size >> 8) & 0xFF);
+    sump_writeByte((uint8_t)(capture_size >> 0) & 0xFF);
     /* sample rate defined on HW */
     uint32_t capture_speed = la_hw.max_sample_rate;
     sump_writeByte((uint8_t)0x23);
-//    sump_write_data((uint8_t *) &capture_speed,4); // test    
-//    sump_writeByte((uint8_t)(capture_speed >> 24) & 0xFF);
-//    sump_writeByte((uint8_t)(capture_speed >> 16) & 0xFF);
-//    sump_writeByte((uint8_t)(capture_speed >> 8) & 0xFF);
-//    sump_writeByte((uint8_t)(capture_speed >> 0) & 0xFF);
+    sump_writeByte((uint8_t)(capture_speed >> 24) & 0xFF);
+    sump_writeByte((uint8_t)(capture_speed >> 16) & 0xFF);
+    sump_writeByte((uint8_t)(capture_speed >> 8) & 0xFF);
+    sump_writeByte((uint8_t)(capture_speed >> 0) & 0xFF);
     /* number of probes */
     sump_writeByte((uint8_t)0x40);
-    sump_writeByte((uint8_t)la_cfg.number_channels); // 8/16
+    sump_writeByte((uint8_t)la_cfg.number_channels & 0xff); // 8/16
     /* protocol version (2) */
     sump_writeByte((uint8_t)0x41);
     sump_writeByte((uint8_t)0x02);

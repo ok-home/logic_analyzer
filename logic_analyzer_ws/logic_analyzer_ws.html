@@ -420,12 +420,11 @@
                     document.getElementById("beg00").value = "Start";
                     drawLineS(analyzerData, max_channels, 0, max_cnt);
                 }
-
             } else {
                 // text frame
                 statusstr.innerHTML = data;
                 if (data == "redraw") {
-                statusstr.innerHTML = "redraw logic analyzer config,restart";
+                statusstr.innerHTML = "redraw logic analyzer config";
                 //socket.close();
                 removeAll();
                 return;
@@ -549,19 +548,15 @@
 
     // test without reboot - remove cfg+datalist
     function removeAll(){
-        let tmpl = document.querySelector('#config').querySelectorAll('input');
+        let tmpl = document.querySelector('#config').querySelectorAll('.cl1');
         for (let tmp of tmpl) {
             tmp.remove();
             }
-//        tmpl =  document.querySelector('#options').querySelectorAll('options');   
-//        for (let tmp of tmpl) {
-//            tmp.remove();
-//            }    
         tmpl =  document.querySelector('#datalist').querySelectorAll('datalist');   
         for (let tmp of tmpl) {
             tmp.remove();
             }
-        socket.send("deldiv");    
+        socket.send("clrdiv");    
     }
 
 
