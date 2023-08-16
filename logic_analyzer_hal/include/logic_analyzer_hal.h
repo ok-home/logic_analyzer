@@ -43,7 +43,7 @@ typedef struct {
     int min_sample_cnt;         // out - min sample cnt for target & psram 
     int available_psram;        // out - 1 psram, 0 ram
     int current_psram;          // in/out hw support psram ( 0/1 ) - return min psram ( ram ) if psram out of range
-    int current_channels;       // in/out return min channels if channels out of range
+    int current_channels;       // in/out return min channels if channels out of range (8/16)
 } logic_analyzer_hw_param_t;
 
 /*
