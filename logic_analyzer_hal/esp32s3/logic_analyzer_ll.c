@@ -111,7 +111,7 @@ static void logic_analyzer_ll_set_ledc_pclk(int sample_rate)
 // sample rate may be not equal to config sample rate -> return real sample rate
 int logic_analyzer_ll_get_sample_rate(int sample_rate)
 {
-    int ldiv = (LA_CLK_SAMPLE_RATE / sample_rate);
+    int ldiv = (LA_HW_CLK_SAMPLE_RATE / sample_rate);
 
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
     if (ldiv > 160)
@@ -123,12 +123,12 @@ int logic_analyzer_ll_get_sample_rate(int sample_rate)
     {
         ldiv = 160;
     }
-    return LA_CLK_SAMPLE_RATE / ldiv;
+    return LA_HW_CLK_SAMPLE_RATE / ldiv;
 }
 // set cam pclk, clock & pin.  clock from cam clk or ledclk if clock < 1 MHz
 static void logic_analyzer_ll_set_clock(int sample_rate)
 {
-    int ldiv = (LA_CLK_SAMPLE_RATE / sample_rate);
+    int ldiv = (LA_HW_CLK_SAMPLE_RATE / sample_rate);
     if (ldiv > 160) // > 1mHz
     {
         ldiv = 160;
@@ -140,7 +140,7 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     gpio_matrix_out(CONFIG_ANALYZER_PCLK_PIN, CAM_CLK_IDX, false, false);
 
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-    if ((LA_CLK_SAMPLE_RATE / sample_rate) > 160)
+    if ((LA_HW_CLK_SAMPLE_RATE / sample_rate) > 160)
     {
         ldiv = 8;  // cam clk to 2 MHz
         logic_analyzer_ll_set_ledc_pclk(sample_rate);
@@ -282,8 +282,8 @@ static esp_err_t logic_analyzer_ll_dma_init(void)
 
     GDMA.channel[dma_num].in.conf0.in_rst = 1;
     GDMA.channel[dma_num].in.conf0.in_rst = 0;
-#ifdef CONFIG_ANALYZER_USE_PSRAM
-    GDMA.channel[dma_num].in.conf1.in_ext_mem_bk_size = CONFIG_ANALYZER_GDMA_PSRAM_BURST>>5; // 0-> 16 byte burst transfer, 1->32 byte burst transfer
+#ifdef LA_HW_PSRAM
+    GDMA.channel[dma_num].in.conf1.in_ext_mem_bk_size = GDMA_PSRAM_BURST>>5; // 0-> 16 byte burst transfer, 1->32 byte burst transfer
 #else
     GDMA.channel[dma_num].in.conf0.indscr_burst_en = 1;
     GDMA.channel[dma_num].in.conf0.in_data_burst_en = 1;

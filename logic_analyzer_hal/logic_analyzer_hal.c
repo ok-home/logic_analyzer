@@ -29,27 +29,9 @@ static la_frame_t la_frame = {
 static TaskHandle_t logic_analyzer_task_handle = 0; // main task handle
 static int logic_analyzer_started = 0;              // flag start dma
 
-static logic_analyzer_hw_param_t logic_analyzer_hw_param = 
-{
-    .max_channels = LA_MAX_PIN,           // max channels for target
-    .min_channels = LA_MIN_PIN,           // min channels for target
-    .max_sample_rate = LA_MAX_SAMPLE_RATE,        // max sample rate for target & current channels & current psram
-    .min_sample_rate = LA_MIN_SAMPLE_RATE,        // min sample rate for target & current channels & current psram
-    .max_sample_cnt = LA_MAX_SAMPLE_CNT,         // max sample cnt for target & psram & free ram/psram
-    .min_sample_cnt = LA_MIN_SAMPLE_RATE,         // min sample cnt for target & psram 
-#ifdef CONFIG_ANALYZER_USE_PSRAM
-    .available_psram = 1,
-    .current_psram = 1,          // hw support psram ( 0/1 ) - return min psram ( ram ) if psram out of range
-#else
-    .available_psram = 0,
-    .current_psram = 0,          // hw support psram ( 0/1 ) - return min psram ( ram ) if psram out of range
-#endif
-    .current_channels = LA_MAX_PIN       // return max channels if channels out of range
-};
-
 esp_err_t logic_analyzer_get_hw_param(logic_analyzer_hw_param_t *hw )
 {
-#ifdef CONFIG_ANALYZER_USE_PSRAM
+#ifdef LA_HW_PSRAM
     if(esp_psram_is_initialized())
     {
         hw->available_psram = 1;
@@ -62,13 +44,13 @@ esp_err_t logic_analyzer_get_hw_param(logic_analyzer_hw_param_t *hw )
     hw->available_psram = 0;
     hw->current_psram = 0;
 #endif
+    if(hw->current_psram > hw->available_psram) {hw->current_psram = hw->available_psram;}
+    if(hw->current_psram < 0 ) {hw->current_psram = 0;}
 
     hw->max_channels = LA_HW_MAX_CHANNELS;
     hw->min_channels = LA_HW_MIN_CHANNELS;
-    if(hw->current_channels > LA_HW_MAX_CHANNELS || hw->current_channels < LA_HW_MIN_CHANNELS)
-    {
-        hw->current_channels = LA_HW_MAX_CHANNELS;
-    }
+    if(hw->current_channels > LA_HW_MAX_CHANNELS ){hw->current_channels = LA_HW_MAX_CHANNELS;} 
+    if(hw->current_channels < LA_HW_MIN_CHANNELS ){hw->current_channels = LA_HW_MIN_CHANNELS;} 
 
     int max_ram = 0;
     if(hw->current_psram) // psram
@@ -78,8 +60,6 @@ esp_err_t logic_analyzer_get_hw_param(logic_analyzer_hw_param_t *hw )
 
         max_ram = (int)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
         hw->max_sample_cnt =  (hw->current_channels == 8 ? max_ram  : max_ram/2 ) ; 
-
-    //    hw->max_sample_cnt =  (hw->current_channels == 8 ? LA_HW_MAX_PSRAM_8_SAMPLE_CNT  :LA_HW_MAX_PSRAM_16_SAMPLE_CNT); // TODO ALLOC CHECK
         hw->min_sample_cnt =  (hw->current_channels == 8 ? LA_HW_MIN_8_SAMPLE_CNT  :LA_HW_MIN_16_SAMPLE_CNT);
     } else // ram
     {
@@ -88,11 +68,8 @@ esp_err_t logic_analyzer_get_hw_param(logic_analyzer_hw_param_t *hw )
 
         max_ram = (int)heap_caps_get_largest_free_block(MALLOC_CAP_DMA);
         hw->max_sample_cnt =  (hw->current_channels == 8 ? max_ram  : max_ram/2 ) ; 
-
-    //    hw->max_sample_cnt =  (hw->current_channels == 8 ? LA_HW_MAX_RAM_8_SAMPLE_CNT  :LA_HW_MAX_RAM_16_SAMPLE_CNT);   // TODO ALLOC CHECK
         hw->min_sample_cnt =  (hw->current_channels == 8 ? LA_HW_MIN_8_SAMPLE_CNT  :LA_HW_MIN_16_SAMPLE_CNT);
     }
-
     return ESP_OK;
 }
 
@@ -209,7 +186,7 @@ static void logic_analyzer_task(void *arg)
             if (err) ESP_LOGE("CACHE","ERR %x",err);
             }
 
-            cfg->logic_analyzer_cb((uint8_t *)la_frame.fb.buf, la_frame.fb.len /(cfg->number_channels/8), logic_analyzer_ll_get_sample_rate(cfg->sample_rate),logic_analyzer_hw_param.current_channels);
+            cfg->logic_analyzer_cb((uint8_t *)la_frame.fb.buf, la_frame.fb.len /(cfg->number_channels/8), logic_analyzer_ll_get_sample_rate(cfg->sample_rate),cfg->number_channels);
             logic_analyzer_stop(); 
             vTaskDelete(logic_analyzer_task_handle);
         }
@@ -239,10 +216,11 @@ static void logic_analyzer_task(void *arg)
 esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
 {
     esp_err_t ret = 0;
+    logic_analyzer_hw_param_t hw_param;
     // runtime check params
-    logic_analyzer_hw_param.current_channels = config->number_channels;
-    logic_analyzer_hw_param.current_psram = config->samples_to_psram;    
-    logic_analyzer_get_hw_param( &logic_analyzer_hw_param );
+    hw_param.current_channels = config->number_channels;
+    hw_param.current_psram = config->samples_to_psram;    
+    logic_analyzer_get_hw_param( &hw_param );
 
     if (config->meashure_timeout == 0) // restart
     {
@@ -273,19 +251,19 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     {
         goto _ret;
     }
-    if (config->number_channels > logic_analyzer_hw_param.max_channels || config->number_channels < logic_analyzer_hw_param.min_channels )
+    if (config->number_channels > hw_param.max_channels || config->number_channels < hw_param.min_channels )
     {
         goto _ret;
     }
     // check GPIO num - 0-MAX_GPIO or num < 0 // todo use macros to legal pin definition // now it controlled from WS headers
     for (int i = 0; i < config->number_channels; i++)
     {
-        if (config->pin[i] > LA_MAX_GPIO)
+        if (config->pin[i] > LA_HW_MAX_GPIO || config->pin[i] < LA_HW_MIN_GPIO )
         {
             goto _ret;
         }
     }
-    if (config->pin_trigger > LA_MAX_GPIO)
+    if (config->pin_trigger > LA_HW_MAX_GPIO || config->pin_trigger < LA_HW_MIN_GPIO)
     {
         goto _ret;
     }
@@ -295,16 +273,17 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         goto _ret;
     }
     // check sample rate
-    if (config->sample_rate > logic_analyzer_hw_param.max_sample_rate || config->sample_rate < logic_analyzer_hw_param.min_sample_rate )
+    if (config->sample_rate > hw_param.max_sample_rate || config->sample_rate < hw_param.min_sample_rate )
     {
         goto _ret;
     }
     // check number of samples
-    if (config->number_of_samples > logic_analyzer_hw_param.max_sample_cnt)
+    if (config->number_of_samples > hw_param.max_sample_cnt || config->number_of_samples < hw_param.min_sample_cnt  )
     {
         goto _ret;
     }
-    if (config->samples_to_psram > logic_analyzer_hw_param.available_psram)
+    // check psram mode
+    if (config->samples_to_psram > hw_param.available_psram || config->samples_to_psram < 0 )
     {
         goto _ret;
     }
@@ -336,9 +315,9 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         bytes_to_alloc = largest_free_block ; // max free spiram
     }
     ESP_LOGI("DMA PSRAM HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
-    la_frame.fb.len = bytes_to_alloc & ~(CONFIG_ANALYZER_GDMA_PSRAM_BURST-1); // 16-32 bytes align
-//    la_frame.fb.buf = heap_caps_aligned_alloc(CONFIG_ANALYZER_GDMA_PSRAM_BURST, la_frame.fb.len, MALLOC_CAP_SPIRAM); 
-    la_frame.fb.buf = heap_caps_aligned_calloc(CONFIG_ANALYZER_GDMA_PSRAM_BURST, la_frame.fb.len,1, MALLOC_CAP_SPIRAM); 
+    la_frame.fb.len = bytes_to_alloc & ~(GDMA_PSRAM_BURST-1); // 16-32 bytes align
+//    la_frame.fb.buf = heap_caps_aligned_alloc(GDMA_PSRAM_BURST, la_frame.fb.len, MALLOC_CAP_SPIRAM); 
+    la_frame.fb.buf = heap_caps_aligned_calloc(GDMA_PSRAM_BURST, la_frame.fb.len,1, MALLOC_CAP_SPIRAM); 
     ESP_LOGI("DMA PSRAM HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
     }
 
@@ -357,7 +336,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     // configure   - pin definition, pin trigger, sample frame & dma frame, clock divider
     logic_analyzer_ll_config(config->pin, config->sample_rate, config->number_channels, &la_frame);
     // start main task - check logic analyzer get data & call cb // todo -> test priority change
-    if (pdPASS != xTaskCreate(logic_analyzer_task, "la_task", LA_TASK_STACK * 4, config, configMAX_PRIORITIES - 2, &logic_analyzer_task_handle))
+    if (pdPASS != xTaskCreate(logic_analyzer_task, "la_task", LA_TASK_STACK * 4, config, 5 /*configMAX_PRIORITIES - 2*/, &logic_analyzer_task_handle))
     {
         ret = ESP_ERR_NO_MEM;
         goto _freedma_ret;

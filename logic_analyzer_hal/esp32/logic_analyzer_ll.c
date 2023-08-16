@@ -96,7 +96,7 @@ static void logic_analyzer_ll_set_mode()
 //
 // esp32 RefMan - 12.5
 // In the LCD mode, the frequency of WS is half of fBCK
-// LA_CLK_SAMPLE_RATE = pll160/2 = 80 000 000 hz
+// LA_HW_CLK_SAMPLE_RATE = pll160/2 = 80 000 000 hz
 // convert sample rate to i2s register dividers
 //
 static div_68_t logic_analyzer_ll_convert_sample_rate(int sample_rate)
@@ -108,7 +108,7 @@ static div_68_t logic_analyzer_ll_convert_sample_rate(int sample_rate)
     int delta_div_6 = 0;
     int delta = 0;
     int mindelta = 32767;
-    int cnt = LA_CLK_SAMPLE_RATE / sample_rate;
+    int cnt = LA_HW_CLK_SAMPLE_RATE / sample_rate;
     // extra div div_8+(div_8a/div_8b)
     // int div_8a = 1;
     // int div_8b = 0;
@@ -256,7 +256,7 @@ void logic_analyzer_ll_stop()
 int logic_analyzer_ll_get_sample_rate(int sample_rate)
 {
     div_68_t ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
-    return LA_CLK_SAMPLE_RATE / (ldiv.div_6 * ldiv.div_8);
+    return LA_HW_CLK_SAMPLE_RATE / (ldiv.div_6 * ldiv.div_8);
 }
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
 {

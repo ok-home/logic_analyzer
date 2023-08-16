@@ -238,6 +238,16 @@ menu "Logic Analyzer Configuration"
             int "Meashured timeout Sek"
             range -1 60
             default 20
+
+        config ANALYZER_CHANNELS
+            int "Meashured channels"
+            range 8 16
+            default 16
+
+        config ANALYZER_PSRAM
+            int "Samples save to PSRAM (1) RAM (0)"
+            range 0 1
+            default 0
     
     endif
 

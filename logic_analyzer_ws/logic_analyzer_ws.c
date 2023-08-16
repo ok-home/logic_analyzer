@@ -21,8 +21,8 @@ static logic_analyzer_config_t la_cfg = {
     .trigger_edge = LA_PIN_EDGE,
     .number_of_samples = LA_SAMPLE_COUNT,
     .sample_rate = LA_SAMPLE_RATE,
-    .number_channels = LA_MAX_PIN,
-    .samples_to_psram = LA_MIN_PSRAM,
+    .number_channels = LA_ANALYZER_CHANNELS,
+    .samples_to_psram = LA_ANALYZER_PSRAM,
     .meashure_timeout = LA_DEFAULT_TiMEOUT,
     .logic_analyzer_cb = NULL};
 
