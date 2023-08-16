@@ -426,7 +426,8 @@
                 statusstr.innerHTML = data;
                 if (data == "redraw") {
                 statusstr.innerHTML = "redraw logic analyzer config,restart";
-                socket.close();
+                //socket.close();
+                removeAll();
                 return;
             }
 
@@ -545,6 +546,24 @@
     socket.onmessage = function (event) {
         receiveWsData(event.data);
     };
+
+    // test without reboot - remove cfg+datalist
+    function removeAll(){
+        let tmpl = document.querySelector('#config').querySelectorAll('input');
+        for (let tmp of tmpl) {
+            tmp.remove();
+            }
+//        tmpl =  document.querySelector('#options').querySelectorAll('options');   
+//        for (let tmp of tmpl) {
+//            tmp.remove();
+//            }    
+        tmpl =  document.querySelector('#datalist').querySelectorAll('datalist');   
+        for (let tmp of tmpl) {
+            tmp.remove();
+            }
+        socket.send("deldiv");    
+    }
+
 
     //https://involta.ru/tools/validator-html/
 </script>

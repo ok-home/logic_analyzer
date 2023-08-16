@@ -339,6 +339,15 @@ static void logic_analyzer_read_json(void *arg)
             {
                 send_ws_string(REDRAW_MSG);
             }
+            else if(strncmp("deldiv" , json_string, 6) == 0)
+            {
+                la_hw.current_channels =  la_cfg.number_channels;
+                la_hw.current_psram = la_cfg.samples_to_psram;
+                logic_analyzer_get_hw_param( &la_hw ); // get HW params 
+                draw_html_datalist();   // build datalist div
+                draw_html_options();    // build options div
+                draw_html_config();     // build config div
+            }
             else
             {
                 ESP_LOGE(TAG, "Receive undefined string %s", json_string);
