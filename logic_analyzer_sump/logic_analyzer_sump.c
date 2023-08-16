@@ -133,7 +133,7 @@ static void sump_writeByte(uint8_t byte)
 // loop read sump command 
 static void logic_analyzer_sump_task(void *arg)
 {
-    // read hw parametrs
+    // read hw parametrs -> remove -> may by on metadata
     la_hw.current_channels =  la_cfg.number_channels;
     la_hw.current_psram = la_cfg.samples_to_psram;
     logic_analyzer_get_hw_param( &la_hw );
@@ -233,6 +233,10 @@ static void sump_cmd_parser(uint8_t cmdByte)
 
 static void sump_get_metadata()
 {
+        // read hw parametrs
+    la_hw.current_channels =  la_cfg.number_channels;
+    la_hw.current_psram = la_cfg.samples_to_psram;
+    logic_analyzer_get_hw_param( &la_hw );
     /* device name */
     sump_writeByte((uint8_t)0x01);
     sump_write_data((uint8_t *)"ESP32", 6);
@@ -240,7 +244,7 @@ static void sump_get_metadata()
     sump_writeByte((uint8_t)0x02);
     sump_write_data((uint8_t *)"0.00", 5);
     /* sample memory */
-    uint32_t capture_size = la_hw.max_sample_cnt * (la_hw.channels/8); // buff size bytes ??
+    uint32_t capture_size = la_hw.max_sample_cnt * (la_cfg.channels/8); // buff size bytes ??
     sump_writeByte((uint8_t)0x21);
     sump_write_data((uint8_t *) &capture_size,4); // test
 //    sump_writeByte((uint8_t)(capture_size >> 24) & 0xFF);
