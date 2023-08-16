@@ -239,16 +239,32 @@ menu "Logic Analyzer Configuration"
             range -1 60
             default 20
 
-        config ANALYZER_CHANNELS
-            int "Meashured channels"
-            range 8 16
-            default 16
+        if IDF_TARGET_ESP32
+            config ANALYZER_CHANNELS
+                int "Meashured channels 16"
+                range 16 16
+                default 16
 
-        config ANALYZER_PSRAM
-            int "Samples save to PSRAM (1) RAM (0)"
-            range 0 1
-            default 0
-    
+            config ANALYZER_PSRAM
+                int "Samples save to RAM (0)"
+                range 0 0
+                default 0
+
+        #endif
+
+        if IDF_TARGET_ESP32S3
+            config ANALYZER_CHANNELS
+                int "Meashured channels 8/16"
+                range 8 16
+                default 8
+
+            config ANALYZER_PSRAM
+                int "Samples save to PSRAM (1) RAM (0)"
+                range 0 1
+                default 0
+
+        #endif
+
     endif
 
 endmenu
