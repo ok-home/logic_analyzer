@@ -1,14 +1,10 @@
-
-#define MAX_PIN LA_MAX_PIN
-
-#define MIN_GPIO LA_MIN_GPIO
-#define MAX_GPIO LA_MAX_GPIO
-#define MAX_SAMPLE_CNT LA_MAX_SAMPLE_CNT
-#define MIN_SAMPLE_CNT LA_MIN_SAMPLE_CNT
-#define MAX_CLK LA_MAX_SAMPLE_RATE
-#define MIN_CLK LA_MIN_SAMPLE_RATE
+#define MIN_GPIO LA_HW_MIN_GPIO
+#define MAX_GPIO LA_HW_MAX_GPIO
 
 #define END_CFG_MSG "endcfg"
+#define END_HW_REQ_MSG "endhwr"
+#define REDRAW_MSG "redraw"
+#define CLEAR_DIV_MSG "clrdiv"
 
 enum hdrID_name {
     HDR_CONFIG,
@@ -30,6 +26,8 @@ enum rowID_name {
     ROW_SMP,
     ROW_CLK,
     ROW_TIMEOUT,
+    ROW_CHANNELS,
+    ROW_PSRAM,
     ROW_LST,
     ROW_START,
     ROW_ZOOM,
@@ -43,7 +41,9 @@ const char *rowID[] = {
     [ROW_EDG] = "edg",
     [ROW_SMP] = "smp",
     [ROW_CLK] = "clk",
-    [ROW_TIMEOUT]="tmo",
+    [ROW_TIMEOUT] ="tmo",
+    [ROW_CHANNELS] ="chn",
+    [ROW_PSRAM] = "ram", 
     [ROW_LST] = "lst",
     [ROW_START] = "beg",
     [ROW_ZOOM] = "zom",
@@ -58,6 +58,8 @@ enum rowLabel{
     ROW_LBL_SAMPLE,
     ROW_LBL_CLOCK,
     ROW_LBL_TIMEOUT,
+    ROW_LBL_CHANNELS,
+    ROW_LBL_PSRAM,
     ROW_LBL_START,
     ROW_LBL_ZOOM,
     ROW_LBL_MEASH_SAMPLES,
@@ -71,6 +73,8 @@ const char *rowLbl[] = {
     [ROW_LBL_SAMPLE] = "Sample Count",
     [ROW_LBL_CLOCK] = "Sample Clock Hz",
     [ROW_LBL_TIMEOUT]="Timeout Sek",
+    [ROW_LBL_CHANNELS] = "Channels",
+    [ROW_LBL_PSRAM] = "Psram",
     [ROW_LBL_START] = "Start",
     [ROW_LBL_ZOOM] = "Zoom to fit",
     [ROW_LBL_MEASH_SAMPLES] = "Samples",
@@ -94,7 +98,8 @@ enum HTML_EVENT_IDX {
     CHECK_CFG_DATA_EVENT    = 1,
     START_EVENT             = 2,
     ZOOM_EVENT              = 3,
-    SAVE_EVENT              = 4
+    SAVE_EVENT              = 4,
+    GET_HW_PARAM            = 5
 };
 
 enum DATALIST_ROW{
@@ -103,7 +108,9 @@ enum DATALIST_ROW{
     DATALIST_SAMPLE = 2,
     DATALIST_CLK = 3,
     DATALIST_TIMEOUT = 4,
-    DATALIST_MAX = 5
+    DATALIST_CHANNELS =5,
+    DATALIST_PSRAM = 6,
+    DATALIST_MAX = 7
 };
 typedef struct {
     int32_t     value;
@@ -112,7 +119,8 @@ typedef struct {
 } options_list_t;
 
 #ifdef CONFIG_IDF_TARGET_ESP32
-const options_list_t options[]={
+const options_list_t  pin_options[]=
+    {   //DATALIST_PIN lst00
     {-1,"Disable","lst00"},
     {0,"GPIO0","lst00"},
     {1,"GPIO1","lst00"},
@@ -148,23 +156,32 @@ const options_list_t options[]={
     {37,"GPIO37","lst00"},
     {38,"GPIO38","lst00"},
     {39,"GPIO39","lst00"},
-
+    {0,"",""}    
+    };
+const options_list_t  edge_options[]=
+    {   //DATALIST_EDGE lst01
     {1,"POS_EDGE","lst01"},
     {2,"NEG_EDGE","lst01"},
-
-    {100,"","lst02"},
-    {200,"","lst02"},
-    {500,"","lst02"},
-    {1000,"","lst02"},
-    {2000,"","lst02"},
-    {5000,"","lst02"},
-    {10000,"","lst02"},
-    {20000,"","lst02"},
-    {30000,"","lst02"},
-    {40000,"","lst02"},
-    {50000,"","lst02"},
-    {60000,"","lst02"},
-
+    {0,"",""}    
+    };
+const options_list_t  sample_options[]=
+    {   //DATALIST_SAMPLE lst02
+    {100,"100","lst02"},
+    {200,"200","lst02"},
+    {500,"500","lst02"},
+    {1000,"1 000","lst02"},
+    {2000,"2 000","lst02"},
+    {5000,"5 000","lst02"},
+    {10000,"10 000","lst02"},
+    {20000,"20 000","lst02"},
+    {30000,"30 000","lst02"},
+    {40000,"40 000","lst02"},
+    {50000,"50 000","lst02"},
+    {60000,"60 000","lst02"},
+    {0,"",""}
+    };
+const options_list_t  clk_options[]=    
+    {   //DATALIST_CLK lst03
     {5000,"5 kHz","lst03"},
     {10000,"10 kHz","lst03"},
     {20000,"20 kHz","lst03"},
@@ -178,20 +195,34 @@ const options_list_t options[]={
     {10000000,"10 MHz","lst03"},
     {20000000,"20 MHz","lst03"},
     {40000000,"40 MHz","lst03"},
-
-   // {0,"Restart LA","lst04"},
+    {0,"",""}    
+    };
+const options_list_t  timeout_options[]=
+    {   //DATALIST_TIMEOUT lst04
     {1,"1 Sek","lst04"},
     {2,"2 Sek","lst04"},
     {5,"5 Sek","lst04"},
     {10,"10 Sek","lst04"},
     {20,"20 Sek","lst04"},
     {60,"60 Sek","lst04"},
-    {-1,"No Timeout","lst04"}
-};
-#endif //CONFIG_IDF_TARGET_ESP32
+    {-1,"No Timeout","lst04"},
+    {0,"",""}
+    };
+const options_list_t  channel_options[]=    
+    {   //DATALIST_CHANNELS lst05
+    {16,"16 ch only on ESP32","lst05"},
+    {0,"",""}
+    };
+const options_list_t  psram_options[]=
+    {   //DATALIST_PSRAM lst06
+    {0,"RAM only on ESP32","lst06"},
+    {0,"",""}
+    };
 
+#endif
 #ifdef CONFIG_IDF_TARGET_ESP32S3
-const options_list_t options[]={
+const options_list_t  pin_options[]=
+    {   //DATALIST_PIN lst00
     {-1,"Disable","lst00"},
     {0,"GPIO0","lst00"},
     {1,"GPIO1","lst00"},
@@ -238,47 +269,50 @@ const options_list_t options[]={
     {46,"GPIO46","lst00"},
     {47,"GPIO47","lst00"},
     {48,"GPIO48","lst00"},
-
+    {-2,"",""}    
+    };
+const options_list_t  edge_options[]=
+    {   //DATALIST_EDGE lst01
     {1,"POS_EDGE","lst01"},
     {2,"NEG_EDGE","lst01"},
-
-    {100,"","lst02"},
-    {200,"","lst02"},
-    {500,"","lst02"},
-    {1000,"","lst02"},
-    {2000,"","lst02"},
-    {5000,"","lst02"},
-    {10000,"","lst02"},
-    {20000,"","lst02"},
-    {30000,"","lst02"},
-    {40000,"","lst02"},
-    {50000,"","lst02"},
-    {60000,"","lst02"},
-    {70000,"","lst02"},
-    {80000,"","lst02"},
-    {90000,"","lst02"},
-    {100000,"","lst02"},
-#if defined (CONFIG_ANALYZER_CHANNEL_NUMBERS_8) || defined (CONFIG_ANALYZER_USE_PSRAM)
-    {120000,"","lst02"},
-    {140000,"","lst02"},
-    {160000,"","lst02"},
-    {180000,"","lst02"},
-    {200000,"","lst02"},
-#endif //defined (CONFIG_ANALYZER_CHANNEL_NUMBERS_8) || defined (CONFIG_ANALYZER_USE_PSRAM)
-#ifdef CONFIG_ANALYZER_USE_PSRAM
-    {500000,"","lst02"},
-    {1000000,"","lst02"},
-    {2000000,"","lst02"},
-    {3000000,"","lst02"},
-    {4000000,"","lst02"},
-#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8  
-    {5000000,"","lst02"},
-    {6000000,"","lst02"},
-    {7000000,"","lst02"},
-    {8000000,"","lst02"},
-#endif  //CONFIG_ANALYZER_CHANNEL_NUMBERS_8  
-#endif  //CONFIG_ANALYZER_USE_PSRAM
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
+    {2,"",""}    
+    };
+const options_list_t  sample_options[]=
+    {   //DATALIST_SAMPLE lst02
+    {100,"100","lst02"},
+    {200,"200","lst02"},
+    {500,"500","lst02"},
+    {1000,"1k","lst02"},
+    {2000,"2k","lst02"},
+    {5000,"5k","lst02"},
+    {10000,"10k","lst02"},
+    {20000,"20k","lst02"},
+    {30000,"30k","lst02"},
+    {40000,"40k","lst02"},
+    {50000,"50k","lst02"},
+    {60000,"60k","lst02"},
+    {70000,"70k","lst02"},
+    {80000,"80k","lst02"},
+    {90000,"90k","lst02"},
+    {100000,"100k","lst02"},
+    {120000,"120k","lst02"},
+    {140000,"140k","lst02"},
+    {160000,"160k","lst02"},
+    {180000,"180k","lst02"},
+    {200000,"200k","lst02"},
+    {500000,"500k","lst02"},
+    {1000000,"1m","lst02"},
+    {2000000,"2m","lst02"},
+    {3000000,"3m","lst02"},
+    {4000000,"4m","lst02"},
+    {5000000,"5m","lst02"},
+    {6000000,"6m","lst02"},
+    {7000000,"7m","lst02"},
+    {8000000,"8m","lst02"},
+    {-2,"",""}
+    };
+const options_list_t  clk_options[]=    
+    {   //DATALIST_CLK lst03
     {5000,"5 kHz","lst03"},
     {10000,"10 kHz","lst03"},
     {20000,"20 kHz","lst03"},
@@ -286,31 +320,37 @@ const options_list_t options[]={
     {100000,"100 kHz","lst03"},
     {200000,"200 kHz","lst03"},
     {500000,"500 kHz","lst03"},
-#endif
     {1000000,"1 MHz","lst03"},
     {2000000,"2 MHz","lst03"},
     {5000000,"5 MHz","lst03"},
     {10000000,"10 MHz","lst03"},
-#ifndef CONFIG_ANALYZER_USE_PSRAM
     {20000000,"20 MHz","lst03"},
     {40000000,"40 MHz","lst03"},
-#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8
-    {53000000,"53 MHz","lst03"},
     {80000000,"80 MHz","lst03"},
-#endif //CONFIG_ANALYZER_CHANNEL_NUMBERS_8
-#else //CONFIG_ANALYZER_USE_PSRAM
-#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8
-    {20000000,"20 MHz","lst03"},
-#endif //CONFIG_ANALYZER_CHANNEL_NUMBERS_8
-#endif //CONFIG_ANALYZER_CHANNEL_NUMBERS_8
-
-   // {0,"Restart LA","lst04"},
+    {-2,"",""}    
+    };
+const options_list_t  timeout_options[]=
+    {   //DATALIST_TIMEOUT lst04
     {1,"1 Sek","lst04"},
     {2,"2 Sek","lst04"},
     {5,"5 Sek","lst04"},
     {10,"10 Sek","lst04"},
     {20,"20 Sek","lst04"},
     {60,"60 Sek","lst04"},
-    {-1,"No Timeout","lst04"}
-};
-#endif //CONFIG_IDF_TARGET_ESP32S3
+    {-1,"No Timeout","lst04"},
+    {-2,"",""}
+    };
+const options_list_t  channel_options[]=    
+    {   //DATALIST_CHANNELS lst05
+    {8,"8 ch on ESP32S3","lst05"},
+    {16,"16 ch on ESP32S3","lst05"},
+    {-2,"",""}
+    };
+const options_list_t  psram_options[]=
+    {   //DATALIST_PSRAM lst06
+    {0,"RAM on ESP32S3","lst06"},
+    {1,"PSRAM on ESP32S3","lst06"},
+    {-2,"",""}
+    };
+
+#endif

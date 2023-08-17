@@ -10,6 +10,7 @@
 #include "freertos/task.h"
 #include "driver/uart.h"
 #include "driver/gpio.h"
+#include "esp_log.h"
 
 #include "logic_analyzer_pin_definition.h"
 #include "logic_analyzer_hal.h"
@@ -29,16 +30,22 @@ static void sump_writeByte(uint8_t byte);
 static void sump_cmd_parser(uint8_t cmdByte);
 static void sump_get_metadata();
 static void sump_capture_and_send_samples();
-static void sump_la_cb(uint8_t *buf, int cnt, int clk);
+static void sump_la_cb(uint8_t *buf, int cnt, int clk,int channel);
 
-logic_analyzer_config_t la_cfg = {
+// for SUMP pin & cfg definition from menuconfig
+static logic_analyzer_config_t la_cfg = {
         .pin = {LA_PIN_0,LA_PIN_1,LA_PIN_2,LA_PIN_3,LA_PIN_4,LA_PIN_5,LA_PIN_6,LA_PIN_7,LA_PIN_8,LA_PIN_9,LA_PIN_10,LA_PIN_11,LA_PIN_12,LA_PIN_13,LA_PIN_14,LA_PIN_15},
         .pin_trigger = LA_PIN_TRIGGER,
         .trigger_edge = LA_PIN_EDGE,
         .number_of_samples = LA_SAMPLE_COUNT,
         .sample_rate = LA_SAMPLE_RATE,
-        .meashure_timeout = LA_DEFAULT_TiMEOUT, // portMAX_DELAY,
+        .number_channels = LA_ANALYZER_CHANNELS,
+        .samples_to_psram = LA_ANALYZER_PSRAM,
+        .meashure_timeout = LA_DEFAULT_TiMEOUT, 
         .logic_analyzer_cb = sump_la_cb};
+// hw parametrs
+static logic_analyzer_hw_param_t la_hw;
+
 static void sump_capture_and_send_samples()
 {
     la_cfg.number_of_samples = readCount;
@@ -53,37 +60,56 @@ static void sump_capture_and_send_samples()
     }
 
     la_cfg.trigger_edge = first_trigger_val ? GPIO_INTR_POSEDGE : GPIO_INTR_NEGEDGE;
-
     int err = start_logic_analyzer(&la_cfg);
     if (err)
     {
       return;  
     }
 }
-static void sump_la_cb(uint8_t *buf, int cnt, int clk)
+static void sump_la_cb(uint8_t *buf, int cnt, int clk, int channels)
 {
     if (buf == NULL)
     {
         return;
     }
-    // sigrok - data send on reverse order ????
-#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8
-    uint8_t *bufff = (uint8_t*)buf + readCount - 1;
-    for (int i = 0; i < readCount; i++)
+    // sigrok - data send on reverse order 
+    // psram - burst align - cnt may be less then readCnt -> send zero sample
+    int zero_sample = 0;
+    int diff = readCount-cnt;
+    if(channels == 8)
     {
-        sump_write_data((uint8_t *)(bufff), 1);
-        bufff--;
+        uint8_t *bufff = (uint8_t*)buf + readCount - 1 - diff;
+        for (int i = 0; i < readCount; i++)
+        {
+            if(i < diff) // zero sample
+            {
+                sump_write_data((uint8_t *)(&zero_sample), 1);
+                ESP_LOGI("SKIP","%d %d",diff,i);
+            }
+            else
+            {
+                sump_write_data((uint8_t *)(bufff), 1);
+                bufff--;
+            }
+        }
     }
-#else    
-   uint16_t *bufff = (uint16_t*)buf + readCount - 1;
-    for (int i = 0; i < readCount; i++)
-    {
-        sump_write_data((uint8_t *)(bufff), 2);
-        bufff--;
+    else // 16 channels
+    {   
+        uint16_t *bufff = (uint16_t*)buf + readCount - 1 - diff;
+        for (int i = 0; i < readCount; i++)
+        {
+            if(i < diff) // zero sample
+            {
+                sump_write_data((uint8_t *)(&zero_sample), 2);                
+            }
+            else
+            {
+                sump_write_data((uint8_t *)(bufff), 2);
+                bufff--;
+            }
+        }
     }
-#endif
 }
-
 static void sump_config_uart()
 {
     /* Configure parameters of an UART driver,
@@ -98,11 +124,11 @@ static void sump_config_uart()
     };
     int intr_alloc_flags = ESP_INTR_FLAG_IRAM;
 
-    ESP_ERROR_CHECK(uart_driver_install(SUMP_UART_PORT_NUM, UART_BUF_SIZE, 0, 0, NULL, intr_alloc_flags));
+    ESP_ERROR_CHECK(uart_driver_install(SUMP_UART_PORT_NUM, UART_BUF_SIZE, UART_BUF_SIZE, 0, NULL, intr_alloc_flags));
     ESP_ERROR_CHECK(uart_param_config(SUMP_UART_PORT_NUM, &uart_config));
     ESP_ERROR_CHECK(uart_set_pin(SUMP_UART_PORT_NUM, SUMP_TEST_TXD, SUMP_TEST_RXD, SUMP_TEST_RTS, SUMP_TEST_CTS));
+    ESP_ERROR_CHECK(uart_set_sw_flow_ctrl(SUMP_UART_PORT_NUM, true, 16, 32));// ??
 }
-
 static void sump_getCmd4(uint8_t *cmd)
 {
     uart_read_bytes(SUMP_UART_PORT_NUM, cmd, 4, portMAX_DELAY);
@@ -122,9 +148,14 @@ static void sump_writeByte(uint8_t byte)
     uart_write_bytes(SUMP_UART_PORT_NUM, &byte, 1);
 }
 
-// loop read sump command // test only
+// loop read sump command 
 static void logic_analyzer_sump_task(void *arg)
 {
+    // read hw parametrs -> remove -> may by on metadata
+    la_hw.current_channels =  la_cfg.number_channels;
+    la_hw.current_psram = la_cfg.samples_to_psram;
+    logic_analyzer_get_hw_param( &la_hw );
+
     sump_config_uart();
     while (1)
     {
@@ -132,7 +163,6 @@ static void logic_analyzer_sump_task(void *arg)
         sump_cmd_parser(cmd);
     }
 }
-
 void logic_analyzer_sump(void)
 {
     xTaskCreate(logic_analyzer_sump_task, "sump_task", 2048*4, NULL, 1, NULL);
@@ -206,6 +236,12 @@ static void sump_cmd_parser(uint8_t cmdByte)
         readCount = ((cmd.u_cmd16[0]&0xffff)+1)*4;
         delayCount = ((cmd.u_cmd16[1]&0xffff)+1)*4;
         break;
+    case SUMP_SET_BIG_READ_CNT: // samples or bytes ??????
+        sump_getCmd4(cmd.u_cmd8);
+        readCount = (cmd.u_cmd32+1)*4;
+        //delayCount = ((cmd.u_cmd16[1]&0xffff)+1)*4;
+        break;
+
     case SUMP_SET_FLAGS:
         sump_getCmd4(cmd.u_cmd8);
         break;
@@ -221,6 +257,10 @@ static void sump_cmd_parser(uint8_t cmdByte)
 
 static void sump_get_metadata()
 {
+        // read hw parametrs
+    la_hw.current_channels =  la_cfg.number_channels;
+    la_hw.current_psram = la_cfg.samples_to_psram;
+    logic_analyzer_get_hw_param( &la_hw );
     /* device name */
     sump_writeByte((uint8_t)0x01);
     sump_write_data((uint8_t *)"ESP32", 6);
@@ -228,14 +268,14 @@ static void sump_get_metadata()
     sump_writeByte((uint8_t)0x02);
     sump_write_data((uint8_t *)"0.00", 5);
     /* sample memory */
+    uint32_t capture_size = la_hw.max_sample_cnt * (la_cfg.number_channels/8); // buff size bytes 
     sump_writeByte((uint8_t)0x21);
-    uint32_t capture_size = MAX_CAPTURE_SIZE; // buff size bytes ??
     sump_writeByte((uint8_t)(capture_size >> 24) & 0xFF);
     sump_writeByte((uint8_t)(capture_size >> 16) & 0xFF);
     sump_writeByte((uint8_t)(capture_size >> 8) & 0xFF);
     sump_writeByte((uint8_t)(capture_size >> 0) & 0xFF);
-    /* sample rate (20MHz) */
-    uint32_t capture_speed = MAX_SAMPLE_RATE;
+    /* sample rate defined on HW */
+    uint32_t capture_speed = la_hw.max_sample_rate;
     sump_writeByte((uint8_t)0x23);
     sump_writeByte((uint8_t)(capture_speed >> 24) & 0xFF);
     sump_writeByte((uint8_t)(capture_speed >> 16) & 0xFF);
@@ -243,11 +283,7 @@ static void sump_get_metadata()
     sump_writeByte((uint8_t)(capture_speed >> 0) & 0xFF);
     /* number of probes */
     sump_writeByte((uint8_t)0x40);
-#ifdef CONFIG_ANALYZER_CHANNEL_NUMBERS_8
-    sump_writeByte((uint8_t)0x8); // 8
-#else
-    sump_writeByte((uint8_t)0x10); // 16
-#endif
+    sump_writeByte((uint8_t)la_cfg.number_channels & 0xff); // 8/16
     /* protocol version (2) */
     sump_writeByte((uint8_t)0x41);
     sump_writeByte((uint8_t)0x02);

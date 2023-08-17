@@ -17,10 +17,6 @@ menu "Logic Analyzer Configuration"
 
     if IDF_TARGET_ESP32S3
 
-        config ANALYZER_USE_PSRAM
-            bool "Allocate sample buffer in PSRAM"
-            default n
-
         config ANALYZER_PCLK_PIN
             int "GPIO NUM for PCLK"
             range -1 48
@@ -47,18 +43,6 @@ menu "Logic Analyzer Configuration"
                 default 7
 
         endif
-
-        choice ANALYZER_CHANNEL_NUMBERS
-            prompt "Channel numbers 8/16"
-            default ANALYZER_CHANNEL_NUMBERS_8
-
-            config ANALYZER_CHANNEL_NUMBERS_8
-                bool "8"
-
-            config ANALYZER_CHANNEL_NUMBERS_16
-                bool "16"
-
-        endchoice
 
     endif
 
@@ -238,7 +222,17 @@ menu "Logic Analyzer Configuration"
             int "Meashured timeout Sek"
             range -1 60
             default 20
-    
+
+        config ANALYZER_CHANNELS
+            int "Meashured channels 8/16"
+            range 8 16
+            default 16
+
+        config ANALYZER_PSRAM
+            int "Samples save to RAM (0) PSRAM (1)"
+            range 0 1
+            default 0
+
     endif
 
 endmenu

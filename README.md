@@ -25,14 +25,15 @@
 3. ESP32S3 -> requires one GPIO pin not connected anywhere for PCLK signal, for sample rate less than 1 MHz - you can allow 1 LEDC channel connection
 
  - 1 capture trigger channel. The trigger is organized on interrupts along the fronts. In the ESP32, interrupts are processed for about 2 µS (rev0.1) - Accordingly, the delay from the trigger to the start of the data is about 2 µS. In current versions, the trigger has been moved to Hilevel interrupts ( level 5 ), the delay from the trigger to the beginning of the data has been reduced to 0.3 µS.
- - All mode settings are moved to Menuconfig. Channels, Trigger, Sample rate is additionally configured in the WEB interface
+ - All mode settings are moved to Menuconfig. Channels, Trigger, Sample rate, use PSRAM is additionally configured in the WEB interface
  - The analyzer allows you to work on the measured device. We install the software on the patient as a standard external component of the ESP IDF, configure the GPIO for channels (checked - GPIO, I2C, I2S, SPI, LED PWM, IRQ_GPIO, UART, USB. I think that the rest will also work), shows both input and output signals of the patient. Trigger restrictions in this mode - you cannot assign a trigger to a pin (GPIO) that has an interrupt assigned to the patient software (the analyzer will reconfigure itself) - in the latest version (interrupt level 5) the restriction is partially removed, but the trigger will fire on those fronts (levels ) that are assigned to the patient software.
  - You can make the analyzer as a separate device, but I don't see much point. There are enough cheap analogs with similar characteristics on the market. The main advantage of self-diagnostics is that we connect the component to the project and see what happens there. It is clear that the patient's software can already use all the memory - then the volume of samples will greatly decrease - but we will still see at least levels and a small number of readings.
  ## Simple web interface
  - Completely wireless connection
  - Easy GPIO configuration per channels
+ - Switching the number of channels 8/16 and the use of PSRAM
  - View samples (without protocol analyzer)
- - Saving data in .bin format, which can then be transferred to the same Sigrok PulseView if necessary.
+ - Saving data in .bin format, which can then be transferred to the Sigrok PulseView if necessary.
  - Connect to WIFI - example_connect in menuconfig
  ## Sigrok PulseView can be used as visualization and protocol analyzer
  - Open software
@@ -85,14 +86,12 @@
    - ANALYZER_SEPARATE_MODE - to work as a separate device (own GPIO setting)
    - ANALYZER_USE_WS - use WEB interface
    - ANALYZER_USE_SUMP - connect directly to PulseView via COM port
-   - ANALYZER_USE_PORT_ASSIGN - set default channels (Channels, trigger, frequency and number of samples)
+   - ANALYZER_USE_PORT_ASSIGN - set default channels (Channels, trigger, frequency and number of samples, numbe of channels, use PSRAM)
  - Settings for ESP32
    - ANALYZER_USE_I2S_CHANNEL - used I2S channel ( 0/1 )
  - Settings for ESP32S3
-   - ANALYZER_USE_PSRAM - save samples to PSRAM (requires ESP IDF ver5.2 for proper cache handling)
    - ANALYZER_PCLK_PIN - GPIO number for PCLK transit
    - ANALYZER_USE_LEDC_TIMER_FOR_PCLK - enable LEDC channel for sample rate less than 1 MHz
-   - ANALYZER_CHANNEL_NUMBERS - select the number of analyzer channels 8/16
  ## To use Hi-level interrupt, you need to set CONFIG_ESP_SYSTEM_CHECK_INT_LEVEL = ESP_SYSTEM_CHECK_INT_LEVEL_4 in menuconfig
 
  ## Parts of the code used in the project

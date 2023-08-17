@@ -2,12 +2,6 @@
 //43-tx 44-rx
 // sigrok default sample rate
 #define PULSEVIEW_MAX_SAMPLE_RATE 100000000
-// logic analyzer max data buff size
-#define MAX_CAPTURE_SIZE (LA_MAX_SAMPLE_CNT * LA_BYTE_IN_SAMPLE)
-// logic analyzer max count sample
-#define MAX_SAMPLE_COUNT (MAX_CAPTURE_SIZE / LA_BYTE_IN_SAMPLE)
-// logic analyzer max sample clock HZ (sigrok not use this)
-#define MAX_SAMPLE_RATE LA_MAX_SAMPLE_RATE
 
 // define uart port - default port
 #ifdef CONFIG_ANALYZER_USE_SUMP
@@ -29,7 +23,7 @@
 #define SUMP_TEST_RTS (UART_PIN_NO_CHANGE)
 #define SUMP_TEST_CTS (UART_PIN_NO_CHANGE)
 
-#define UART_BUF_SIZE (256)
+#define UART_BUF_SIZE (2048)
 
 /*
  *  SUMP COMMAND DEFINITION
@@ -62,6 +56,10 @@
 #define SUMP_SET_DIVIDER 0x80
 #define SUMP_SET_READ_DELAY_COUNT 0x81
 #define SUMP_SET_FLAGS 0x82
+#define SUMP_SET_BIG_READ_CNT 0x83
+
+// 84 - f9 1000
+// 83 - f9 1000
 //#define SUMP_SET_RLE 0x0100
 
 /* extended commands -- self-test unsupported, but metadata is returned. */

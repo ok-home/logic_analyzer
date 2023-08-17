@@ -56,7 +56,6 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
     I2SX.int_clr.val = status.val;
     if (status.in_suc_eof)
     {
-
         vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
     }
     if (HPTaskAwoken == pdTRUE)
@@ -96,7 +95,7 @@ static void logic_analyzer_ll_set_mode()
 //
 // esp32 RefMan - 12.5
 // In the LCD mode, the frequency of WS is half of fBCK
-// LA_CLK_SAMPLE_RATE = pll160/2 = 80 000 000 hz
+// LA_HW_CLK_SAMPLE_RATE = pll160/2 = 80 000 000 hz
 // convert sample rate to i2s register dividers
 //
 static div_68_t logic_analyzer_ll_convert_sample_rate(int sample_rate)
@@ -108,7 +107,7 @@ static div_68_t logic_analyzer_ll_convert_sample_rate(int sample_rate)
     int delta_div_6 = 0;
     int delta = 0;
     int mindelta = 32767;
-    int cnt = LA_CLK_SAMPLE_RATE / sample_rate;
+    int cnt = LA_HW_CLK_SAMPLE_RATE / sample_rate;
     // extra div div_8+(div_8a/div_8b)
     // int div_8a = 1;
     // int div_8b = 0;
@@ -163,13 +162,13 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     I2SX.sample_rate_conf.rx_bck_div_num = ldiv.div_6; // bclk div_6
 }
 // set i2s pins as input, vsync, hsync, henable as const to stop transfer mode
-static void logic_analyzer_ll_set_pin(int *data_pins)
+static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
 {
 
     vTaskDelay(5);
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
 
-    for (int i = 0; i < LA_MAX_PIN; i++)
+    for (int i = 0; i < channels; i++)
     {
         if (data_pins[i] < 0) // pin disable - already 0
         {
@@ -183,7 +182,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
     }
 #else
     // external not tested ??
-    for (int i = 0; i < LA_MAX_PIN; i++)
+    for (int i = 0; i < channels; i++)
     {
         if (data_pins[i] < 0) // pin disable - already 0
         {
@@ -207,7 +206,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins)
     gpio_matrix_in(0x38, I2SXI_H_ENABLE_IDX, false);
 }
 // start i2s module, set sample rate, sample count, set dma, prestart -> transfer started from vsync
-void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame)
+void logic_analyzer_ll_config(int *data_pins, int sample_rate,int channels, la_frame_t *frame)
 {
     // Enable and configure I2S peripheral
     periph_module_enable(PERIPH_I2SX_MODULE);
@@ -216,7 +215,7 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, la_frame_t *frame
     logic_analyzer_ll_reset();
     logic_analyzer_ll_set_mode();
     logic_analyzer_ll_set_clock(sample_rate);
-    logic_analyzer_ll_set_pin(data_pins);
+    logic_analyzer_ll_set_pin(data_pins,channels);
     // set dma descriptor
     I2SX.rx_eof_num = frame->fb.len / sizeof(uint32_t); // count in 32 bit word
     I2SX.in_link.addr = ((uint32_t) & (frame->dma[0]));
@@ -256,7 +255,7 @@ void logic_analyzer_ll_stop()
 int logic_analyzer_ll_get_sample_rate(int sample_rate)
 {
     div_68_t ldiv = logic_analyzer_ll_convert_sample_rate(sample_rate);
-    return LA_CLK_SAMPLE_RATE / (ldiv.div_6 * ldiv.div_8);
+    return LA_HW_CLK_SAMPLE_RATE / (ldiv.div_6 * ldiv.div_8);
 }
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
 {
