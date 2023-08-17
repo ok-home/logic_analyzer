@@ -60,7 +60,6 @@ static void sump_capture_and_send_samples()
     }
 
     la_cfg.trigger_edge = first_trigger_val ? GPIO_INTR_POSEDGE : GPIO_INTR_NEGEDGE;
-ESP_LOGI("CFG","cnt %d clk %d psr %d ch %d",la_cfg.number_of_samples,la_cfg.sample_rate,la_cfg.samples_to_psram,la_cfg.number_channels);
     int err = start_logic_analyzer(&la_cfg);
     if (err)
     {
@@ -74,14 +73,23 @@ static void sump_la_cb(uint8_t *buf, int cnt, int clk, int channels)
         return;
     }
     // sigrok - data send on reverse order 
-    // todo psram - burst align
+    // psram - burst align - cnt may be less then readCnt -> send zero sample
+    int zero_sample = 0;
+    int diff = readCount-cnt;
     if(channels == 8)
     {
         uint8_t *bufff = (uint8_t*)buf + readCount - 1;
         for (int i = 0; i < readCount; i++)
         {
-            sump_write_data((uint8_t *)(bufff), 1);
-            bufff--;
+            if(i < diff) // zero sample
+            {
+                sump_write_data((uint8_t *)(&zero_sample), 1);
+            }
+            else
+            {
+                sump_write_data((uint8_t *)(bufff), 1);
+                bufff--;
+            }
         }
     }
     else // 16 channels
@@ -89,8 +97,15 @@ static void sump_la_cb(uint8_t *buf, int cnt, int clk, int channels)
         uint16_t *bufff = (uint16_t*)buf + readCount - 1;
         for (int i = 0; i < readCount; i++)
         {
-            sump_write_data((uint8_t *)(bufff), 2);
-            bufff--;
+            if(i < diff) // zero sample
+            {
+                sump_write_data((uint8_t *)(&zero_sample), 2);                
+            }
+            else
+            {
+                sump_write_data((uint8_t *)(bufff), 2);
+                bufff--;
+            }
         }
     }
 }
@@ -111,6 +126,7 @@ static void sump_config_uart()
     ESP_ERROR_CHECK(uart_driver_install(SUMP_UART_PORT_NUM, UART_BUF_SIZE, 0, 0, NULL, intr_alloc_flags));
     ESP_ERROR_CHECK(uart_param_config(SUMP_UART_PORT_NUM, &uart_config));
     ESP_ERROR_CHECK(uart_set_pin(SUMP_UART_PORT_NUM, SUMP_TEST_TXD, SUMP_TEST_RXD, SUMP_TEST_RTS, SUMP_TEST_CTS));
+    ESP_ERROR_CHECK(uart_set_sw_flow_ctrl(SUMP_UART_PORT_NUM, true, 32, 32));// ??
 }
 static void sump_getCmd4(uint8_t *cmd)
 {
@@ -251,7 +267,7 @@ static void sump_get_metadata()
     sump_writeByte((uint8_t)0x02);
     sump_write_data((uint8_t *)"0.00", 5);
     /* sample memory */
-    uint32_t capture_size = la_hw.max_sample_cnt * (la_cfg.number_channels/8); // buff size bytes ??
+    uint32_t capture_size = la_hw.max_sample_cnt * (la_cfg.number_channels/8); // buff size bytes 
     sump_writeByte((uint8_t)0x21);
     sump_writeByte((uint8_t)(capture_size >> 24) & 0xFF);
     sump_writeByte((uint8_t)(capture_size >> 16) & 0xFF);
