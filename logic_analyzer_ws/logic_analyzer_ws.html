@@ -67,11 +67,12 @@
     </div>
     <div class="chs" id="config">
     </div>
-    <div class="chs" id="wifi">
-    </div>
     <div id="datalist">
     </div>
     <div id="EchoString" class="logstr">ОШИБКА ПЕРЕДАЧИ</div>
+    <div id="LogArea">
+        <input type="text" id="logtext">
+    </div>
 </body>
 
 <template id="tpl_list">
@@ -158,6 +159,7 @@
     const color_left_border = "red";
 
     let statusstr = document.getElementById("EchoString");
+    let textstr = document.getElementById("logtext");
     let canvas = document.getElementById("myCanvas");
     let ctx = canvas.getContext("2d", { willReadFrequently: true });
 
@@ -411,6 +413,7 @@
                         analyzerData = new Uint8Array(data);
                     }
                 statusstr.innerHTML = "Received " + analyzerData.length + " samples";
+                textstr.value = "Received " + analyzerData.length + " samples" + "\n\r"+textstr.value;
                 curr_canvas_x_point = 0;
                 curr_array_start_point = 0;
                 click_array_point = curr_array_start_point;//zoom point
@@ -423,6 +426,7 @@
             } else {
                 // text frame
                 statusstr.innerHTML = data;
+                textstr.value = data +"\n\r"+textstr.value;
                 if (data == "redraw") {
                 statusstr.innerHTML = "redraw logic analyzer config";
                 //socket.close();
