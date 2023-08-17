@@ -15,11 +15,7 @@
 
 #include "esp_idf_version.h"
 
-#ifdef CONFIG_ANALYZER_USE_PSRAM
 #define LA_HW_PSRAM 1
-#else
-#undef LA_HW_PSRAM
-#endif
 
 // cache err -> define only > 5.2.0
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 2, 0)
@@ -37,10 +33,10 @@
 #define LA_MIN_SAMPLE_RATE 1000000
 #endif
 
-#ifdef LA_HW_PSRAM
+//#ifdef LA_HW_PSRAM
 //16-32 GDMA BURST
 #define GDMA_PSRAM_BURST 32
-#endif
+//#endif
 
 #define LA_HW_MAX_CHANNELS 16
 #define LA_HW_MIN_CHANNELS 8

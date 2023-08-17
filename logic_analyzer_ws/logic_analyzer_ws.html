@@ -69,9 +69,9 @@
     </div>
     <div id="datalist">
     </div>
-    <div id="EchoString" class="logstr">ОШИБКА ПЕРЕДАЧИ</div>
+    <div id="EchoString" class="logstr"></div>
     <div id="LogArea">
-        <input type="text" id="logtext">
+        <textarea  id="logtext" rows="4" cols="50"></textarea>
     </div>
 </body>
 
@@ -412,8 +412,8 @@
                         max_channels = 8;
                         analyzerData = new Uint8Array(data);
                     }
-                statusstr.innerHTML = "Received " + analyzerData.length + " samples";
-                textstr.value = "Received " + analyzerData.length + " samples" + "\n\r"+textstr.value;
+                //statusstr.innerHTML = "Received " + analyzerData.length + " samples";
+                textstr.value = "Received " + analyzerData.length + " samples" + "\n"+textstr.value;
                 curr_canvas_x_point = 0;
                 curr_array_start_point = 0;
                 click_array_point = curr_array_start_point;//zoom point
@@ -425,10 +425,10 @@
                 }
             } else {
                 // text frame
-                statusstr.innerHTML = data;
-                textstr.value = data +"\n\r"+textstr.value;
+                //statusstr.innerHTML = data;
+                textstr.value = data +"\n"+textstr.value;
                 if (data == "redraw") {
-                statusstr.innerHTML = "redraw logic analyzer config";
+                //statusstr.innerHTML = "redraw logic analyzer config";
                 //socket.close();
                 removeAll();
                 return;
@@ -533,17 +533,20 @@
     var socket = new WebSocket(wsHostStr);
     socket.binaryType = "arraybuffer";
     socket.onopen = function () {
-        statusstr.innerHTML = "Соединение установлено";
+        //statusstr.innerHTML = "Соединение установлено";
+        textstr.value = "Соединение установлено" +"\n"+textstr.value;
         curr_cnt = max_cnt;
         drawLineS(analyzerData, max_channels, curr_array_start_point, curr_cnt);// 
     };
     socket.onclose = function (event) {
-        statusstr.innerHTML = "Соединение закрыто";
-        statusstr.innerHTML += ' код: ' + event.code + ' причина: ' + event.reason;
+        //statusstr.innerHTML = "Соединение закрыто";
+        //statusstr.innerHTML += ' код: ' + event.code + ' причина: ' + event.reason;
+        textstr.value = "Соединение закрыто" +"\n"+textstr.value;
         document.location.reload();
     };
     socket.onerror = function (event) {
-        statusstr.innerHTML = "Ошибка сокета";
+        //statusstr.innerHTML = "Ошибка сокета";
+        textstr.value = "Ошибка сокета" +"\n"+textstr.value;
     };
 
     socket.onmessage = function (event) {

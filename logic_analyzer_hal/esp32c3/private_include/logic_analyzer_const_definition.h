@@ -15,11 +15,7 @@
 
 #include "esp_idf_version.h"
 
-#ifdef CONFIG_ANALYZER_USE_PSRAM
-#define LA_HW_PSRAM 1
-#else
 #undef LA_HW_PSRAM
-#endif
 
 
 #undef LA_HW_PSRAM

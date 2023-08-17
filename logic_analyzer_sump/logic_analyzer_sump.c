@@ -78,12 +78,13 @@ static void sump_la_cb(uint8_t *buf, int cnt, int clk, int channels)
     int diff = readCount-cnt;
     if(channels == 8)
     {
-        uint8_t *bufff = (uint8_t*)buf + readCount - 1;
+        uint8_t *bufff = (uint8_t*)buf + readCount - 1 - diff;
         for (int i = 0; i < readCount; i++)
         {
             if(i < diff) // zero sample
             {
                 sump_write_data((uint8_t *)(&zero_sample), 1);
+                ESP_LOGI("SKIP","%d %d",diff,i);
             }
             else
             {
@@ -94,7 +95,7 @@ static void sump_la_cb(uint8_t *buf, int cnt, int clk, int channels)
     }
     else // 16 channels
     {   
-        uint16_t *bufff = (uint16_t*)buf + readCount - 1;
+        uint16_t *bufff = (uint16_t*)buf + readCount - 1 - diff;
         for (int i = 0; i < readCount; i++)
         {
             if(i < diff) // zero sample
@@ -123,10 +124,10 @@ static void sump_config_uart()
     };
     int intr_alloc_flags = ESP_INTR_FLAG_IRAM;
 
-    ESP_ERROR_CHECK(uart_driver_install(SUMP_UART_PORT_NUM, UART_BUF_SIZE, 0, 0, NULL, intr_alloc_flags));
+    ESP_ERROR_CHECK(uart_driver_install(SUMP_UART_PORT_NUM, UART_BUF_SIZE, UART_BUF_SIZE, 0, NULL, intr_alloc_flags));
     ESP_ERROR_CHECK(uart_param_config(SUMP_UART_PORT_NUM, &uart_config));
     ESP_ERROR_CHECK(uart_set_pin(SUMP_UART_PORT_NUM, SUMP_TEST_TXD, SUMP_TEST_RXD, SUMP_TEST_RTS, SUMP_TEST_CTS));
-    ESP_ERROR_CHECK(uart_set_sw_flow_ctrl(SUMP_UART_PORT_NUM, true, 32, 32));// ??
+    ESP_ERROR_CHECK(uart_set_sw_flow_ctrl(SUMP_UART_PORT_NUM, true, 16, 32));// ??
 }
 static void sump_getCmd4(uint8_t *cmd)
 {
