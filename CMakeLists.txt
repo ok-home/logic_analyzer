@@ -46,6 +46,24 @@ set( priv_require
     endif()
   endif()
 
+  if(IDF_TARGET STREQUAL "esp32c3")
+    list(APPEND srcs
+        logic_analyzer_hal/esp32c3/logic_analyzer_ll.c      
+    )
+    list(APPEND priv_includedir
+        logic_analyzer_hal/esp32c3/private_include
+    )
+#    if(CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT)
+#        list( APPEND srcs 
+#            logic_analyzer_hal/esp32c3/logic_analyzer_triggered_isr_start.c
+#            )
+#    endif()
+  endif()
+
+
+
+
+
 if(CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT)
     list( APPEND srcs 
         logic_analyzer_hal/logic_analyzer_hi_interrupt_handler.s 

@@ -354,3 +354,91 @@ const options_list_t  psram_options[]=
     };
 
 #endif
+#ifdef CONFIG_IDF_TARGET_ESP32C3
+const options_list_t  pin_options[]=
+    {   //DATALIST_PIN lst00
+    {-1,"Disable","lst00"},
+    {0,"GPIO0","lst00"},
+    {1,"GPIO1","lst00"},
+    {2,"GPIO2","lst00"},
+    {3,"GPIO3","lst00"},
+    {4,"GPIO4","lst00"},
+    {5,"GPIO5","lst00"},
+    {6,"GPIO6","lst00"},
+    {7,"GPIO7","lst00"},
+    {8,"GPIO8","lst00"},
+    {9,"GPIO9","lst00"},
+    {10,"GPIO10","lst00"},
+    {11,"GPIO11","lst00"},
+    {12,"GPIO12","lst00"},
+    {13,"GPIO13","lst00"},
+    {14,"GPIO14","lst00"},
+    {15,"GPIO15","lst00"},
+    {16,"GPIO16","lst00"},
+    {17,"GPIO17","lst00"},
+    {18,"GPIO18","lst00"},
+    {19,"GPIO19","lst00"},
+    {20,"GPIO20","lst00"},
+    {21,"GPIO21","lst00"},
+    {0,"",""}    
+    };
+const options_list_t  edge_options[]=
+    {   //DATALIST_EDGE lst01
+    {1,"POS_EDGE","lst01"},
+    {2,"NEG_EDGE","lst01"},
+    {0,"",""}    
+    };
+const options_list_t  sample_options[]=
+    {   //DATALIST_SAMPLE lst02
+    {100,"100","lst02"},
+    {200,"200","lst02"},
+    {500,"500","lst02"},
+    {1000,"1 000","lst02"},
+    {2000,"2 000","lst02"},
+    {5000,"5 000","lst02"},
+    {10000,"10 000","lst02"},
+    {20000,"20 000","lst02"},
+    {30000,"30 000","lst02"},
+    {0,"",""}
+    };
+const options_list_t  clk_options[]=    
+    {   //DATALIST_CLK lst03
+    {5000,"5 kHz","lst03"},
+    {10000,"10 kHz","lst03"},
+    {20000,"20 kHz","lst03"},
+    {50000,"50 kHz","lst03"},
+    {100000,"100 kHz","lst03"},
+    {200000,"200 kHz","lst03"},
+    {500000,"500 kHz","lst03"},
+    {1000000,"1 MHz","lst03"},
+    {2000000,"2 MHz","lst03"},
+    {5000000,"5 MHz","lst03"},
+    {10000000,"10 MHz","lst03"},
+    {20000000,"20 MHz","lst03"},
+    {40000000,"40 MHz","lst03"},
+    {80000000,"80 MHz","lst03"},
+    {0,"",""}    
+    };
+const options_list_t  timeout_options[]=
+    {   //DATALIST_TIMEOUT lst04
+    {1,"1 Sek","lst04"},
+    {2,"2 Sek","lst04"},
+    {5,"5 Sek","lst04"},
+    {10,"10 Sek","lst04"},
+    {20,"20 Sek","lst04"},
+    {60,"60 Sek","lst04"},
+    {-1,"No Timeout","lst04"},
+    {0,"",""}
+    };
+const options_list_t  channel_options[]=    
+    {   //DATALIST_CHANNELS lst05
+    {8,"8 ch only on ESP32C3","lst05"},
+    {0,"",""}
+    };
+const options_list_t  psram_options[]=
+    {   //DATALIST_PSRAM lst06
+    {0,"RAM only on ESP32C3","lst06"},
+    {0,"",""}
+    };
+
+#endif

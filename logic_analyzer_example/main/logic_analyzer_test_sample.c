@@ -18,6 +18,19 @@
 // definition test sample
 //43-tx 44-rx
 // output pin ledc example
+#ifdef CONFIG_IDF_TARGET_ESP32C3
+#define LEDC_OUTPUT_IO (6)
+// output pin gpio blink example 
+#define GPIO_BLINK (7)
+// input wired example pins
+#define IN_PORT_1 (14)
+#define IN_PORT_2 (15)
+
+#define GPIO_IRQ_PIN_26 (4)
+#define GPIO_IRQ_PIN_27 (5)
+
+#else
+
 #define LEDC_OUTPUT_IO (12)
 // output pin gpio blink example 
 #define GPIO_BLINK (13)
@@ -27,6 +40,9 @@
 
 #define GPIO_IRQ_PIN_26 (2)
 #define GPIO_IRQ_PIN_27 (5)
+
+#endif
+
 
 #define LEDC_TIMER LEDC_TIMER_0
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
@@ -129,26 +145,26 @@ void IRAM_ATTR on_off()
     gpio_set_level(GPIO_BLINK, 1);
     gpio_set_level(GPIO_BLINK, 0);
 
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
-    GPIO.out_w1ts = mask;
-    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
 
     portEXIT_CRITICAL(&gpio_spinlock);
 }
@@ -195,26 +211,26 @@ void gpio_blink(void *p)
         gpio_set_level(GPIO_BLINK, 1);
         gpio_set_level(GPIO_BLINK, 0);
 
-        GPIO.out_w1ts = mask;
-        GPIO.out_w1tc = mask;
-        GPIO.out_w1ts = mask;
-        GPIO.out_w1tc = mask;
-        GPIO.out_w1ts = mask;
-        GPIO.out_w1tc = mask;
-        GPIO.out_w1ts = mask;
-        GPIO.out_w1tc = mask;
-        GPIO.out_w1ts = mask;
-        GPIO.out_w1tc = mask;
-        GPIO.out_w1ts = mask;
-        GPIO.out_w1tc = mask;
-        GPIO.out_w1ts = mask;
-        GPIO.out_w1tc = mask;
-        GPIO.out_w1ts = mask;
-        GPIO.out_w1tc = mask;
-        GPIO.out_w1ts = mask;
-        GPIO.out_w1tc = mask;
-        GPIO.out_w1ts = mask;
-        GPIO.out_w1tc = mask;
+        GPIO.out_w1ts.val = mask;
+        GPIO.out_w1tc.val = mask;
+        GPIO.out_w1ts.val = mask;
+        GPIO.out_w1tc.val = mask;
+        GPIO.out_w1ts.val = mask;
+        GPIO.out_w1tc.val = mask;
+        GPIO.out_w1ts.val = mask;
+        GPIO.out_w1tc.val = mask;
+        GPIO.out_w1ts.val = mask;
+        GPIO.out_w1tc.val = mask;
+        GPIO.out_w1ts.val = mask;
+        GPIO.out_w1tc.val = mask;
+        GPIO.out_w1ts.val = mask;
+        GPIO.out_w1tc.val = mask;
+        GPIO.out_w1ts.val = mask;
+        GPIO.out_w1tc.val = mask;
+        GPIO.out_w1ts.val = mask;
+        GPIO.out_w1tc.val = mask;
+        GPIO.out_w1ts.val = mask;
+        GPIO.out_w1tc.val = mask;
 
         portEXIT_CRITICAL(&gpio_spinlock);
 
