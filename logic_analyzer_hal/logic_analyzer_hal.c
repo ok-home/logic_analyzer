@@ -68,21 +68,38 @@ esp_err_t logic_analyzer_get_hw_param(logic_analyzer_hw_param_t *hw)
     int max_ram = 0;
     if (hw->current_psram) // psram
     {
+        max_ram = (int)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
+        if(hw->current_channels > 4){
         hw->max_sample_rate = (hw->current_channels == 8 ? LA_HW_MAX_PSRAM_8_SAMPLE_RATE : LA_HW_MAX_PSRAM_16_SAMPLE_RATE);
         hw->min_sample_rate = (hw->current_channels == 8 ? LA_HW_MIN_8_SAMPLE_RATE : LA_HW_MIN_16_SAMPLE_RATE);
-
-        max_ram = (int)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
         hw->max_sample_cnt = (hw->current_channels == 8 ? max_ram : max_ram / 2);
         hw->min_sample_cnt = (hw->current_channels == 8 ? LA_HW_MIN_8_SAMPLE_CNT : LA_HW_MIN_16_SAMPLE_CNT);
+        }
+        else // channels = 4
+        {
+            hw->max_sample_rate = LA_HW_MAX_PSRAM_8_SAMPLE_RATE ; //4
+            hw->min_sample_rate = LA_HW_MIN_8_SAMPLE_RATE; //4
+            hw->max_sample_cnt = max_ram * 2;
+            hw->min_sample_cnt = LA_HW_MIN_8_SAMPLE_CNT; //4
+        }
     }
     else // ram
     {
+        max_ram = (int)heap_caps_get_largest_free_block(MALLOC_CAP_DMA);
+        if(hw->current_channels > 4){
         hw->max_sample_rate = (hw->current_channels == 8 ? LA_HW_MAX_RAM_8_SAMPLE_RATE : LA_HW_MAX_RAM_16_SAMPLE_RATE);
         hw->min_sample_rate = (hw->current_channels == 8 ? LA_HW_MIN_8_SAMPLE_RATE : LA_HW_MIN_16_SAMPLE_RATE);
-
-        max_ram = (int)heap_caps_get_largest_free_block(MALLOC_CAP_DMA);
         hw->max_sample_cnt = (hw->current_channels == 8 ? max_ram : max_ram / 2);
         hw->min_sample_cnt = (hw->current_channels == 8 ? LA_HW_MIN_8_SAMPLE_CNT : LA_HW_MIN_16_SAMPLE_CNT);
+        }
+        else
+        {
+            hw->max_sample_rate = LA_HW_MAX_RAM_8_SAMPLE_RATE ; //4
+            hw->min_sample_rate = LA_HW_MIN_8_SAMPLE_RATE; //4
+            hw->max_sample_cnt = max_ram * 2;
+            hw->min_sample_cnt = LA_HW_MIN_8_SAMPLE_CNT; //4
+
+        }
     }
     return ESP_OK;
 }
@@ -190,7 +207,7 @@ static void logic_analyzer_task(void *arg)
 #ifdef CONFIG_IDF_TARGET_ESP32
             // esp32 -> sample sequence in 32 word - adr0=sample1, adr1=sample0
             // swap sample sequence on esp32.
-            swap_buf((uint16_t *)la_frame.fb.buf, la_frame.fb.len / (cfg->number_channels / 8));
+            swap_buf((uint16_t *)la_frame.fb.buf, la_frame.fb.len / (cfg->number_channels / 8));  // 16 channels only on esp32
 #endif
             // synchronize cpu cache and psram after dma transfer
             // !!Attention -> ESP_CACHE_MSYNC_FLAG_DIR_M2C defined on IDF version 5.2.X, current compile on master branch
@@ -201,7 +218,8 @@ static void logic_analyzer_task(void *arg)
                 if (err)
                     ESP_LOGE("CACHE", "ERR %x", err);
             }
-#endif
+#endif      
+            int l_samples = (cfg->number_channels > 4 ) ? (la_frame.fb.len / (cfg->number_channels / 8)) : la_frame.fb.len * 2 ; // (8/16)/(4)
             cfg->logic_analyzer_cb((uint8_t *)la_frame.fb.buf, la_frame.fb.len / (cfg->number_channels / 8), logic_analyzer_ll_get_sample_rate(cfg->sample_rate), cfg->number_channels);
             logic_analyzer_stop();
             vTaskDelete(logic_analyzer_task_handle);
@@ -305,11 +323,10 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     }
 
     // allocate frame buffer
-
+    uint32_t bytes_to_alloc = config->number_channels > 4 ?  (config->number_of_samples * (config->number_channels / 8)) : (config->number_of_samples / 2); 
     if (config->samples_to_psram == 0)
     {
         // alloc on RAM
-        uint32_t bytes_to_alloc = config->number_of_samples * (config->number_channels / 8);
         uint32_t largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_DMA); // byte
         if (largest_free_block < bytes_to_alloc + ((bytes_to_alloc / DMA_FRAME) + 1) * sizeof(lldesc_t))
         {
@@ -323,8 +340,8 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     }
     else
     {
-        // alloc on PSRAM ->  todo check free ram for lldescr ???
-        uint32_t bytes_to_alloc = config->number_of_samples * (config->number_channels / 8);
+        // alloc on PSRAM ->  todo check free ram for lldescr ???  
+        // PSRAM - only esp32s3 - 8/16 channels
         uint32_t largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
         if (largest_free_block < bytes_to_alloc)
         {
@@ -332,7 +349,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         }
         ESP_LOGI("DMA PSRAM HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
         la_frame.fb.len = bytes_to_alloc & ~(GDMA_PSRAM_BURST - 1); // 16-32 bytes align
-                                                                    //    la_frame.fb.buf = heap_caps_aligned_alloc(GDMA_PSRAM_BURST, la_frame.fb.len, MALLOC_CAP_SPIRAM);
+        //    la_frame.fb.buf = heap_caps_aligned_alloc(GDMA_PSRAM_BURST, la_frame.fb.len, MALLOC_CAP_SPIRAM);
         la_frame.fb.buf = heap_caps_aligned_calloc(GDMA_PSRAM_BURST, la_frame.fb.len, 1, MALLOC_CAP_SPIRAM);
         ESP_LOGI("DMA PSRAM HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
     }

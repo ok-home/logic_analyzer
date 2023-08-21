@@ -399,6 +399,9 @@ const options_list_t  sample_options[]=
     {10000,"10 000","lst02"},
     {20000,"20 000","lst02"},
     {30000,"30 000","lst02"},
+    {40000,"40 000","lst02"},
+    {50000,"50 000","lst02"},
+    {60000,"60 000","lst02"},
     {0,"",""}
     };
 const options_list_t  clk_options[]=    
@@ -432,7 +435,7 @@ const options_list_t  timeout_options[]=
     };
 const options_list_t  channel_options[]=    
     {   //DATALIST_CHANNELS lst05
-    {8,"8 ch only on ESP32C3","lst05"},
+    {4,"4 ch only on ESP32C3","lst05"},
     {0,"",""}
     };
 const options_list_t  psram_options[]=

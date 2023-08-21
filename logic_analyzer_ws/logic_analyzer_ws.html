@@ -402,15 +402,27 @@
             if (data instanceof ArrayBuffer) {
                 // check max_channel
                 let tmpl = document.querySelector('#config').querySelectorAll('input');
-                if(tmpl.length>16)
+                if(tmpl.length>20) // 16 ch
                     {
                         max_channels = 16;
                         analyzerData = new Uint16Array(data);
                     }
-                else
+                else if(tmpl.length>12) // 8 ch
                     {
                         max_channels = 8;
                         analyzerData = new Uint8Array(data);
+                    }
+                    else // 4 ch
+                    {
+                        max_channels = 4; // 8 
+                        let tmpArr = new Uint8Array(data);
+                        analyzerData = new Uint8Array(tmpArr.length*2);
+                        let idx=0;
+                        for( let tmpl in tmpArr)
+                        {
+                            analyzerData[idx++]=tmpl & 0xf;
+                            analyzerData[idx++]=(tmpl >> 4) & 0xf;
+                        }
                     }
                 //statusstr.innerHTML = "Received " + analyzerData.length + " samples";
                 textstr.value = "Received " + analyzerData.length + " samples" + "\n"+textstr.value;
