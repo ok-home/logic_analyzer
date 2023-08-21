@@ -225,7 +225,7 @@ menu "Logic Analyzer Configuration"
 
         config ANALYZER_CHANNELS
             int "Meashured channels 8/16"
-            range 8 16
+            range 4 16
             default 16
 
         config ANALYZER_PSRAM

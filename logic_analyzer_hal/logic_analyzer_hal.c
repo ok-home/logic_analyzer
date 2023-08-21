@@ -220,7 +220,7 @@ static void logic_analyzer_task(void *arg)
             }
 #endif      
             int l_samples = (cfg->number_channels > 4 ) ? (la_frame.fb.len / (cfg->number_channels / 8)) : la_frame.fb.len * 2 ; // (8/16)/(4)
-            cfg->logic_analyzer_cb((uint8_t *)la_frame.fb.buf, la_frame.fb.len / (cfg->number_channels / 8), logic_analyzer_ll_get_sample_rate(cfg->sample_rate), cfg->number_channels);
+            cfg->logic_analyzer_cb((uint8_t *)la_frame.fb.buf, l_samples, logic_analyzer_ll_get_sample_rate(cfg->sample_rate), cfg->number_channels);
             logic_analyzer_stop();
             vTaskDelete(logic_analyzer_task_handle);
         }

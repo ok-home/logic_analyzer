@@ -46,14 +46,13 @@ static void logic_analyzer_cb(uint8_t *sample_buf, int samples, int sample_rate,
 {
     char jsonstr[64];
     esp_err_t ret = 0;
-
     if (samples) // data ready
     {
+        int  l_samples = channels > 4 ? (samples * (channels / 8)) : (samples / 2);
         sprintf(jsonstr, "{\"rowID\":\"%s%02d\",\"rowVal\":\"%d\"}", rowID[ROW_MSMP], 0, samples);
         ret = send_ws_string(jsonstr);
         sprintf(jsonstr, "{\"rowID\":\"%s%02d\",\"rowVal\":\"%d\"}", rowID[ROW_MCLK], 0, sample_rate);
         ret = send_ws_string(jsonstr);
-        int  l_samples = channels > 4 ? (samples * (channels / 8)) : (samples / 2);
         ESP_LOGI(TAG, "Start samples transfer %d", l_samples);
         send_ws_string("Start samples transfer");
 
