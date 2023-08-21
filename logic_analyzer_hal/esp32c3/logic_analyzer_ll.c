@@ -27,6 +27,7 @@
 
 #include "driver/spi_master.h"
 #include "soc/spi_periph.h"
+#include "hal/spi_ll.h"
 
 #define TAG "esp32c3_ll"
 
@@ -167,6 +168,13 @@ void logic_analyzer_ll_deinit_dma_eof_isr()
 {
 }
 
+
+
+
+
+
+
+
 #ifdef NON_DRIVER_WORK
 
 static intr_handle_t isr_handle;
@@ -175,8 +183,9 @@ static int dma_num = 0;
 //  trigger isr handle -> start transfer
 void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
-    //gpio_matrix_in(0x38, CAM_V_SYNC_IDX, false); // enable transfer
-    //gpio_intr_disable((int)pin);
+   //GSPI.cmd.usr = 1 ;
+   GSPI2.dma_conf.dma_rx_ena = 1; 
+   gpio_intr_disable((int)pin);
 }
 // transfer done -> isr from dma descr_empty
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
@@ -205,6 +214,17 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
         portYIELD_FROM_ISR();
     }
 }
+
+int logic_analyzer_ll_get_sample_rate(int sample_rate)
+{
+   spi_ll_clock_val_t reg_val;
+   return spi_ll_master_cal_clock(80000000, sample_rate, 16, &reg_val);
+}
+static void logic_analyzer_ll_set_clock(int sample_rate)
+{
+   spi_ll_set_clk_source(&GSPI2,SPI_CLK_SRC_APB);
+   spi_ll_master_set_clock(&GSPI2,80000000,sample_rate,16);
+}
 // datapin only - no separate mode - no pin to start transfer - transfer ready
 static void logic_analyzer_ll_set_pin(int *data_pins,int channels)
 {
@@ -232,16 +252,19 @@ static void logic_analyzer_ll_set_pin(int *data_pins,int channels)
 static void logic_analyzer_ll_set_mode(int sample_rate,int channels)
 {
    //GPSPI2
+   // LL config
+
+   //spi_ll_set_clk_source(&GSPI2,SPI_CLK_SRC_APB);
+
+   logic_analyzer_ll_set_clock(sample_rate);
 
    GSPI2.slave.val = 0;
    GSPI2.slave.slave_mode = 0; // master
 
    GSPI.cmd.val = 0 ;
-   //GSPI.cmd.conf_bitlen = 
-   //GSPI.cmd.update = 
 
    // enable init mode
-   GSPI.cmd.usr = 1 ; //before or aftr cfg ??
+//   GSPI.cmd.usr = 1 ; //before or aftr cfg ??
    GSPI2.slave.usr_conf = 0 ; // single transfer
    
    GSPI2.user.val = 0;
@@ -250,14 +273,15 @@ static void logic_analyzer_ll_set_mode(int sample_rate,int channels)
    GSPI2.user.usr_dummy = 0;//
    GSPI2.user.usr_addr = 0;//
    GSPI2.user.usr_cmd = 0;//
+   GSPI2.user.doutdin = 0;//
 
    //GSPI2.ms_dlen.ms_data_bitlen = 0x0; // transfer len in bits // setup on prestart mode
 
    GSPI2.ctrl.val = 0 ;
    GSPI2.ctrl.fread_quad = 1; //4 lines parralel
 
-   GSPI2.ms_dlen.ms_data_bitlen = 0x0; // transfer len in bits // setup on prestart mode
-   GSPI.cmd.usr = 1 ; before or aftr cfg ?? - start ?? set to 0 ??
+   //GSPI2.ms_dlen.ms_data_bitlen = 0x0; // transfer len in bits // setup on prestart mode
+   //GSPI.cmd.usr = 1 ; //before or aftr cfg ?? - start ?? set to 0 ??
 
    GSPI2.dma_conf.rx_afifo_rst = 1;
    GSPI2.dma_conf.buf_afifo_rst = 1;
@@ -268,9 +292,9 @@ static void logic_analyzer_ll_set_mode(int sample_rate,int channels)
 
    GSPI.cmd.update = 1;
 
-//rx_eof_en
-   GSPI2.dma_conf.rx_eof_en = 0 // 1 &
-   GSPI2.dma_conf.dma_rx_ena = 1; // start transfer
+   //rx_eof_en
+   //GSPI2.dma_conf.rx_eof_en = 0; // 1 &
+   //GSPI2.dma_conf.dma_rx_ena = 1; // start transfer
 
 
 
@@ -339,11 +363,14 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
     // set dma descriptor
     GDMA.channel[dma_num].in.link.addr = ((uint32_t) & (frame->dma[0])) & 0xfffff;
 #ifdef EOF_CTRL
-    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = frame->fb.len - 1; // count in byte
+    GSPI2.ms_dlen.ms_data_bitlen = frame->fb.len * 8 - 1; // count in bits
+    GSPI2.dma_conf.rx_eof_en = 1; // 1 &
 #else
-    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = 64; // eof controlled to DMA linked list cam -> non stop, ( bytelen = any digit )
+    GSPI2.ms_dlen.ms_data_bitlen = frame->fb.len * 8 - 1; // eof controlled to DMA linked list cam -> non stop, ( bytelen = any digit )
+    GSPI2.dma_conf.rx_eof_en = 0; // 1 &
 #endif
-    LCD_CAM.cam_ctrl.cam_update = 1;
+    GSPI.cmd.update = 1;
+    GSPI.cmd.usr = 1 ;
     //  pre start
     GDMA.channel[dma_num].in.int_ena.in_suc_eof = 1;
     GDMA.channel[dma_num].in.int_clr.in_suc_eof = 1;
@@ -352,9 +379,25 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
 
     GDMA.channel[dma_num].in.link.stop = 0;
     GDMA.channel[dma_num].in.link.start = 1; //??
-    //LCD_CAM.cam_ctrl1.cam_start = 1; // enable  transfer
-}
+   
+   //GSPI2.dma_conf.dma_rx_ena = 1; // start transfer
 
+}
+void logic_analyzer_ll_start()
+{
+   //GSPI.cmd.usr = 1 ;
+   GSPI2.dma_conf.dma_rx_ena = 1; 
+}
+void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
+{
+
+    gpio_install_isr_service(0);                 // default
+    gpio_set_intr_type(pin_trigger, trigger_edge);
+    gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
+    gpio_intr_disable(pin_trigger);
+    gpio_intr_enable(pin_trigger); // start transfer on irq
+
+}
 
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
 {
@@ -376,4 +419,6 @@ void logic_analyzer_ll_deinit_dma_eof_isr()
     esp_intr_free(isr_handle);
 }
 
+
 #endif
+
