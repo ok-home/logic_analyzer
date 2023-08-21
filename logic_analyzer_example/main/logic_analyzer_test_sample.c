@@ -48,7 +48,7 @@
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
 #define LEDC_CHANNEL LEDC_CHANNEL_0
 #define LEDC_DUTY_RES LEDC_TIMER_4_BIT // Set duty resolution to
-#define LEDC_DUTY (2)                  // Set duty to 50%.
+#define LEDC_DUTY (6)                  // Set duty to 50%.
 #define LEDC_FREQUENCY (100000)        // Frequency in Hertz. Set frequency at 100 kHz
 
 static void example_ledc_init(void)

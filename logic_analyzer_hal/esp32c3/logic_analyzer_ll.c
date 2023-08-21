@@ -184,7 +184,6 @@ static int dma_num = 0;
 //  trigger isr handle -> start transfer
 void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
-   GPSPI2.dma_conf.dma_rx_ena = 1;
    GPSPI2.cmd.usr = 1;
    gpio_intr_disable((int)pin);
 }
@@ -227,13 +226,12 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
    GPSPI2.clk_gate.clk_en = 1;
    GPSPI2.clk_gate.mst_clk_active = 1;
    spi_ll_set_clk_source(&GPSPI2, SPI_CLK_SRC_APB);
-   int clk = spi_ll_master_set_clock(&GPSPI2, 80000000, sample_rate, 16);
-   ESP_LOGI("CLK","clk=%d",clk);
+   spi_ll_master_set_clock(&GPSPI2, 80000000, sample_rate, 16);
 }
 // datapin only - no separate mode - no pin to start transfer - transfer ready
 static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
 {
-    vTaskDelay(5); //??
+    //vTaskDelay(5); //??
    if (data_pins[0] >= 0)
    {
       PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[0]]);
@@ -256,11 +254,9 @@ static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
    }
 }
 
-// set cam mode register -> 8/16 bit, eof control from dma,
+// set SPI register - half quad master
 static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
 {
-   // GPSPI2
-   //  LL config
 
    logic_analyzer_ll_set_clock(sample_rate);
 
@@ -268,8 +264,6 @@ static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
    GPSPI2.user.doutdin = 0;   // half
    GPSPI2.user.usr_miso = 1;  // read
    GPSPI2.ctrl.fread_quad = 1; // 4 lines parralel
-   //bitlen
-  //GPSPI2.user.qpi_mode = 1;  // 4 lines parralel
 
    GPSPI2.dma_conf.rx_afifo_rst = 1;
    GPSPI2.dma_conf.buf_afifo_rst = 1;
@@ -277,7 +271,6 @@ static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
    GPSPI2.dma_conf.rx_afifo_rst = 0;
    GPSPI2.dma_conf.buf_afifo_rst = 0;
    GPSPI2.dma_conf.dma_afifo_rst = 0;
-
 }
 
 static esp_err_t logic_analyzer_ll_dma_init(void)
@@ -337,11 +330,10 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
    logic_analyzer_ll_dma_init();
    logic_analyzer_ll_set_mode(sample_rate, channels);
 
-
    // set dma descriptor
    GDMA.channel[dma_num].in.in_link.addr = ((uint32_t) & (frame->dma[0])) & 0xfffff;
 #ifdef EOF_CTRL
-   GPSPI2.ms_dlen.ms_data_bitlen = frame->fb.len/2 * 8 - 1; // count in bits
+   GPSPI2.ms_dlen.ms_data_bitlen = frame->fb.len * 8 - 1; // count in bits
    GPSPI2.dma_conf.rx_eof_en = 1;                         // 1 &
 #else
    GPSPI2.ms_dlen.ms_data_bitlen = frame->fb.len * 8 - 1; // eof controlled to DMA linked list cam -> non stop, ( bytelen = any digit )
@@ -356,19 +348,15 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
    GDMA.channel[dma_num].in.in_link.stop = 0;
    GDMA.channel[dma_num].in.in_link.start = 1; //??
 
+   GPSPI2.cmd.update = 1;
+   GPSPI2.dma_conf.dma_rx_ena = 1;
 }
 void logic_analyzer_ll_start()
 {
-   GPSPI2.cmd.update = 1;
-   ESP_LOGI(TAG,"start");
-   GPSPI2.dma_conf.dma_rx_ena = 1;
    GPSPI2.cmd.usr = 1;
-   vTaskDelay(10);
-   ESP_LOGI("STAT","raw=%lx",GPSPI2.dma_int_raw.val);
 }
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
-
    gpio_install_isr_service(0); // default
    gpio_set_intr_type(pin_trigger, trigger_edge);
    gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
@@ -377,7 +365,18 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 }
 void logic_analyzer_ll_stop()
 {
-      GPSPI2.dma_conf.dma_rx_ena = 0;
+   GPSPI2.dma_conf.dma_rx_ena = 0;
+
+   GDMA.channel[dma_num].in.in_link.stop = 1;
+   GDMA.channel[dma_num].in.in_link.start = 0;
+
+   GDMA.intr[dma_num].ena.in_suc_eof = 0;
+   GDMA.intr[dma_num].clr.in_suc_eof = 1;
+   GDMA.intr[dma_num].ena.in_dscr_empty = 0;
+   GDMA.intr[dma_num].clr.in_dscr_empty = 1;
+
+   GDMA.channel[dma_num].in.in_link.addr = 0;
+
 }
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
 {
