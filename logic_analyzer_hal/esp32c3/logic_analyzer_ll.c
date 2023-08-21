@@ -183,8 +183,8 @@ static int dma_num = 0;
 //  trigger isr handle -> start transfer
 void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
-   //GSPI.cmd.usr = 1 ;
    GSPI2.dma_conf.dma_rx_ena = 1; 
+   GSPI.cmd.usr = 1 ;
    gpio_intr_disable((int)pin);
 }
 // transfer done -> isr from dma descr_empty
@@ -370,7 +370,7 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
     GSPI2.dma_conf.rx_eof_en = 0; // 1 &
 #endif
     GSPI.cmd.update = 1;
-    GSPI.cmd.usr = 1 ;
+    //GSPI.cmd.usr = 1 ;
     //  pre start
     GDMA.channel[dma_num].in.int_ena.in_suc_eof = 1;
     GDMA.channel[dma_num].in.int_clr.in_suc_eof = 1;
@@ -385,8 +385,8 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
 }
 void logic_analyzer_ll_start()
 {
-   //GSPI.cmd.usr = 1 ;
    GSPI2.dma_conf.dma_rx_ena = 1; 
+   GSPI.cmd.usr = 1 ;
 }
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
