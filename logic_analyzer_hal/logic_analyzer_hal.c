@@ -369,7 +369,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     // configure   - pin definition, pin trigger, sample frame & dma frame, clock divider
     logic_analyzer_ll_config(config->pin, config->sample_rate, config->number_channels, &la_frame);
     // start main task - check logic analyzer get data & call cb // todo -> test priority change
-    if (pdPASS != xTaskCreate(logic_analyzer_task, "la_task", LA_TASK_STACK * 4, config, uxTaskPriorityGet(null)/*configMAX_PRIORITIES - 5*/, &logic_analyzer_task_handle))
+    if (pdPASS != xTaskCreate(logic_analyzer_task, "la_task", LA_TASK_STACK * 4, config, uxTaskPriorityGet(NULL)/*configMAX_PRIORITIES - 5*/, &logic_analyzer_task_handle))
     {
         ret = ESP_ERR_NO_MEM;
         goto _freedma_ret;

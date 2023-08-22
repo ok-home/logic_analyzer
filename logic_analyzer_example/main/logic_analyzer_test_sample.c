@@ -144,7 +144,7 @@ void IRAM_ATTR on_off()
     gpio_set_level(GPIO_BLINK, 0);
     gpio_set_level(GPIO_BLINK, 1);
     gpio_set_level(GPIO_BLINK, 0);
-
+#ifdef CONFIG_IDF_TARGET_ESP32C3
     GPIO.out_w1ts.val = mask;
     GPIO.out_w1tc.val = mask;
     GPIO.out_w1ts.val = mask;
@@ -165,7 +165,28 @@ void IRAM_ATTR on_off()
     GPIO.out_w1tc.val = mask;
     GPIO.out_w1ts.val = mask;
     GPIO.out_w1tc.val = mask;
-
+#else
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+#endif
     portEXIT_CRITICAL(&gpio_spinlock);
 }
 void gpio_blink(void *p)
@@ -211,26 +232,49 @@ void gpio_blink(void *p)
         gpio_set_level(GPIO_BLINK, 1);
         gpio_set_level(GPIO_BLINK, 0);
 
-        GPIO.out_w1ts.val = mask;
-        GPIO.out_w1tc.val = mask;
-        GPIO.out_w1ts.val = mask;
-        GPIO.out_w1tc.val = mask;
-        GPIO.out_w1ts.val = mask;
-        GPIO.out_w1tc.val = mask;
-        GPIO.out_w1ts.val = mask;
-        GPIO.out_w1tc.val = mask;
-        GPIO.out_w1ts.val = mask;
-        GPIO.out_w1tc.val = mask;
-        GPIO.out_w1ts.val = mask;
-        GPIO.out_w1tc.val = mask;
-        GPIO.out_w1ts.val = mask;
-        GPIO.out_w1tc.val = mask;
-        GPIO.out_w1ts.val = mask;
-        GPIO.out_w1tc.val = mask;
-        GPIO.out_w1ts.val = mask;
-        GPIO.out_w1tc.val = mask;
-        GPIO.out_w1ts.val = mask;
-        GPIO.out_w1tc.val = mask;
+#ifdef CONFIG_IDF_TARGET_ESP32C3
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+    GPIO.out_w1ts.val = mask;
+    GPIO.out_w1tc.val = mask;
+#else
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+    GPIO.out_w1ts = mask;
+    GPIO.out_w1tc = mask;
+#endif
 
         portEXIT_CRITICAL(&gpio_spinlock);
 

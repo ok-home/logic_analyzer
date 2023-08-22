@@ -25,7 +25,7 @@
 #define gpio_matrix_in(a, b, c) esp_rom_gpio_connect_in_signal(a, b, c)
 #define gpio_matrix_out(a, b, c, d) esp_rom_gpio_connect_out_signal(a, b, c, d)
 
-#include "driver/spi_master.h"
+//#include "driver/spi_master.h"
 #include "soc/spi_periph.h"
 #include "hal/spi_ll.h"
 
@@ -231,20 +231,14 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 void logic_analyzer_ll_stop()
 {
    GPSPI2.dma_conf.dma_rx_ena = 0;
-
    GDMA.channel[dma_num].in.in_link.stop = 1;
-   GDMA.channel[dma_num].in.in_link.start = 0;
-
-   GDMA.intr[dma_num].ena.in_suc_eof = 0;
-   GDMA.intr[dma_num].clr.in_suc_eof = 1;
-   GDMA.intr[dma_num].ena.in_dscr_empty = 0;
-   GDMA.intr[dma_num].clr.in_dscr_empty = 1;
-
    GDMA.channel[dma_num].in.in_link.addr = 0;
 
 }
+#include "esp_cpu.h"
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
 {
+
    esp_err_t ret = ESP_OK;
 
    ret = esp_intr_alloc(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
