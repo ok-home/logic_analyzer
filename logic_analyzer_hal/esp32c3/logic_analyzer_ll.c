@@ -33,161 +33,19 @@
 
 #include "logic_analyzer_ll.h"
 
-#define NON_DRIVER_WORK
 #define EOF_CTRL
 
-#ifdef DRIVER_WORK
-static spi_device_handle_t la_spi;
-static spi_transaction_t la_trans;
-
-// if define external logic analyzer - define pin as gpio input
-// else - self diagnostic analyzer - define pin as defined on firmware + input to cam
-
-//  trigger isr handle -> start transfer
-void IRAM_ATTR la_ll_trigger_isr(void *pin)
-{
-}
-// transfer done -> eof isr from dma descr_empty
-static void IRAM_ATTR la_ll_dma_isr(void *handle)
-{
-}
-
-// sample rate may be not equal to config sample rate -> return real sample rate
-int logic_analyzer_ll_get_sample_rate(int sample_rate)
-{
-   int a_s_rate = 0;
-   spi_device_get_actual_freq(la_spi, &a_s_rate);
-   return a_s_rate * 1000;
-}
-// set cam pclk, clock & pin.  clock from cam clk or ledclk if clock < 1 MHz
-static void logic_analyzer_ll_set_clock(int sample_rate)
-{
-}
-// set cam mode register -> 8/16 bit, eof control from dma,
-static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
-{
-}
-// set cam input pin & vsync, hsynk, henable to const to stop transfer
-static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
-{
-   vTaskDelay(5); //??
-   if (data_pins[0] >= 0)
-   {
-      PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[0]]);
-      esp_rom_gpio_connect_in_signal(data_pins[0], spi_periph_signal[SPI2_HOST].spid_in, false); // 0
-   }
-   if (data_pins[1] >= 0)
-   {
-      PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[1]]);
-      esp_rom_gpio_connect_in_signal(data_pins[1], spi_periph_signal[SPI2_HOST].spiq_in, false); // 1
-   }
-   if (data_pins[2] >= 0)
-   {
-      PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[2]]);
-      esp_rom_gpio_connect_in_signal(data_pins[2], spi_periph_signal[SPI2_HOST].spiwp_in, false); // 2
-   }
-   if (data_pins[3] >= 0)
-   {
-      PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[data_pins[3]]);
-      esp_rom_gpio_connect_in_signal(data_pins[3], spi_periph_signal[SPI2_HOST].spihd_in, false); // 3
-   }
-}
-// find free gdma channel, enable dma clock, set dma mode, connect to cam module
-static esp_err_t logic_analyzer_ll_dma_init(void)
-{
-   return ESP_OK;
-}
-// enable cam module, set cam mode, pin mode, dma mode, dma descr, dma irq
-void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_frame_t *frame)
-{
-   // debug
-   // for(int i=0;i<frame->fb.len;i++)
-   //{
-   //   frame->fb.buf[i] = i & 0xff;
-   //}
-   // debug
-   esp_err_t ret;
-   memset(&la_spi, 0, sizeof(la_spi));
-   spi_bus_config_t buscfg = {
-       .data0_io_num = -1,
-       .data1_io_num = -1,
-       .data2_io_num = -1,
-       .data3_io_num = -1,
-       .sclk_io_num = -1,
-       //.flags = SPICOMMON_BUSFLAG_MASTER | SPICOMMON_BUSFLAG_OCTAL,
-       .max_transfer_sz = frame->fb.len};
-   spi_device_interface_config_t devcfg = {
-       .clock_speed_hz = sample_rate, // Clock out at 1 MHz
-       .mode = 0,                     // SPI mode 0
-       .spics_io_num = -1,            // CS pin
-       .queue_size = 1,               // We want to be able to queue 7 transactions at a time
-       .flags = SPI_DEVICE_TXBIT_LSBFIRST | SPI_DEVICE_HALFDUPLEX,
-   };
-   // Initialize the SPI bus
-   ret = spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO);
-   ESP_ERROR_CHECK(ret);
-   // Attach the LCD to the SPI bus
-   ret = spi_bus_add_device(SPI2_HOST, &devcfg, &la_spi);
-   ESP_ERROR_CHECK(ret);
-
-   memset(&la_trans, 0, sizeof(la_trans)); // Zero out the transaction
-   la_trans.rxlength = frame->fb.len * 8;  // bit
-   la_trans.rx_buffer = frame->fb.buf;     // Data
-   la_trans.flags = SPI_TRANS_MODE_QIO;
-
-   logic_analyzer_ll_set_pin(data_pins, channels);
-}
-// start transfer without trigger
-void logic_analyzer_ll_start()
-{
-}
-// start transfer with trigger -> set irq -> v_sync set to enable on irq handler
-void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
-{
-   // tmp non int start
-}
-// full stop cam, dma, int, pclk, reset pclk pin to default
-void logic_analyzer_ll_stop()
-{
-}
-
-esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
-{
-   // tmp non interrupt start
-   spi_transaction_t *ret_trans;
-   esp_err_t ret = spi_device_queue_trans(la_spi, &la_trans, portMAX_DELAY);
-   if (ret != ESP_OK)
-      return ret;
-
-   ret = spi_device_get_trans_result(la_spi, &ret_trans, portMAX_DELAY);
-   if (ret != ESP_OK)
-      return ret;
-
-   xTaskNotifyGive((TaskHandle_t)task);
-   return ret;
-   return ESP_OK;
-}
-void logic_analyzer_ll_deinit_dma_eof_isr()
-{
-   // tmp non int stop
-   spi_bus_remove_device(la_spi);
-   spi_bus_free(SPI2_HOST);
-}
-
-#endif
-
-#ifdef NON_DRIVER_WORK
 
 static intr_handle_t isr_handle;
 static int dma_num = 0;
 
-//  trigger isr handle -> start transfer
+//  trigger isr handle -> start transfer -> slow int 3-4 mks
 void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
    GPSPI2.cmd.usr = 1;
    gpio_intr_disable((int)pin);
 }
-// transfer done -> isr from dma descr_empty
+// transfer done -> isr from eof or dma descr_empty
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
 {
    BaseType_t HPTaskAwoken = pdFALSE;
@@ -215,18 +73,19 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
       portYIELD_FROM_ISR();
    }
 }
-
+// real clock -> use idf spi_ll_master 
 int logic_analyzer_ll_get_sample_rate(int sample_rate)
 {
    spi_ll_clock_val_t reg_val;
    return spi_ll_master_cal_clock(80000000, sample_rate, 16, &reg_val);
 }
+// set clock -> use idf spi_ll_master 
 static void logic_analyzer_ll_set_clock(int sample_rate)
 {
-   GPSPI2.clk_gate.clk_en = 1;
-   GPSPI2.clk_gate.mst_clk_active = 1;
-   spi_ll_set_clk_source(&GPSPI2, SPI_CLK_SRC_APB);
-   spi_ll_master_set_clock(&GPSPI2, 80000000, sample_rate, 16);
+   GPSPI2.clk_gate.clk_en = 1;         // clk enable
+   GPSPI2.clk_gate.mst_clk_active = 1; // clk enable
+   spi_ll_set_clk_source(&GPSPI2, SPI_CLK_SRC_APB); // clk source 80 mHz - APB_CLK
+   spi_ll_master_set_clock(&GPSPI2, 80000000, sample_rate, 16); // set clk for spi
 }
 // datapin only - no separate mode - no pin to start transfer - transfer ready
 static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
@@ -264,7 +123,7 @@ static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
    GPSPI2.user.doutdin = 0;   // half
    GPSPI2.user.usr_miso = 1;  // read
    GPSPI2.ctrl.fread_quad = 1; // 4 lines parralel
-
+   // reset fifo
    GPSPI2.dma_conf.rx_afifo_rst = 1;
    GPSPI2.dma_conf.buf_afifo_rst = 1;
    GPSPI2.dma_conf.dma_afifo_rst = 1;
@@ -275,6 +134,7 @@ static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
 
 static esp_err_t logic_analyzer_ll_dma_init(void)
 {
+      // find free dma channel
    for (int x = (SOC_GDMA_PAIRS_PER_GROUP_MAX - 1); x >= 0; x--)
    {
       if (GDMA.channel[x].in.in_link.addr == 0x0)
@@ -289,7 +149,7 @@ static esp_err_t logic_analyzer_ll_dma_init(void)
          return ESP_FAIL;
       }
    }
-
+   // enable dma module
    if (REG_GET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN) == 0)
    {
       REG_CLR_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN);
@@ -297,27 +157,28 @@ static esp_err_t logic_analyzer_ll_dma_init(void)
       REG_SET_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST);
       REG_CLR_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST);
    }
-
+   // clrear dma interrupt
    GDMA.intr[dma_num].clr.val = ~0;
    GDMA.intr[dma_num].ena.val = 0;
-
+   // default mode
    GDMA.channel[dma_num].in.in_conf0.val = 0;
    GDMA.channel[dma_num].in.in_conf1.val = 0;
-
+   // reset dma
    GDMA.channel[dma_num].in.in_conf0.in_rst = 1;
    GDMA.channel[dma_num].in.in_conf0.in_rst = 0;
-
+   // set burst mode
    GDMA.channel[dma_num].in.in_conf0.indscr_burst_en = 1;
    GDMA.channel[dma_num].in.in_conf0.in_data_burst_en = 1;
-
+   // not check owner on ll descriptor & connect dma channel to GPSPI2
    GDMA.channel[dma_num].in.in_conf1.in_check_owner = 0;
-   GDMA.channel[dma_num].in.in_peri_sel.sel = 0; // SPI2
+   GDMA.channel[dma_num].in.in_peri_sel.sel = 0; // GPSPI2
 
    return ESP_OK;
 }
 
 void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_frame_t *frame)
 {
+   // enable GPSPI2 module
    if (REG_GET_BIT(SYSTEM_PERIP_CLK_EN0_REG, SYSTEM_SPI2_CLK_EN) == 0)
    {
       REG_CLR_BIT(SYSTEM_PERIP_CLK_EN0_REG, SYSTEM_SPI2_CLK_EN);
@@ -334,27 +195,30 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
    GDMA.channel[dma_num].in.in_link.addr = ((uint32_t) & (frame->dma[0])) & 0xfffff;
 #ifdef EOF_CTRL
    GPSPI2.ms_dlen.ms_data_bitlen = frame->fb.len * 8 - 1; // count in bits
-   GPSPI2.dma_conf.rx_eof_en = 1;                         // 1 &
+   GPSPI2.dma_conf.rx_eof_en = 1;                         // eof controlled gpspi2
 #else
-   GPSPI2.ms_dlen.ms_data_bitlen = frame->fb.len * 8 - 1; // eof controlled to DMA linked list cam -> non stop, ( bytelen = any digit )
-   GPSPI2.dma_conf.rx_eof_en = 0;                         // 1 &
+   GPSPI2.ms_dlen.ms_data_bitlen = frame->fb.len * 8 - 1; // eof controlled to DMA linked list -> non stop, ( bytelen = any digit ?? )
+   GPSPI2.dma_conf.rx_eof_en = 0;                         // eof controlled DMA linked list
 #endif
    //   pre start
+   // enably DMA interrupt
    GDMA.intr[dma_num].ena.in_suc_eof = 1;
    GDMA.intr[dma_num].clr.in_suc_eof = 1;
    GDMA.intr[dma_num].ena.in_dscr_empty = 1;
    GDMA.intr[dma_num].clr.in_dscr_empty = 1;
-
+   // enable DMA transfer
    GDMA.channel[dma_num].in.in_link.stop = 0;
    GDMA.channel[dma_num].in.in_link.start = 1; //??
-
+   // update GPSPI2 registers & enable gpspi2->dma transfer ( not start )
    GPSPI2.cmd.update = 1;
    GPSPI2.dma_conf.dma_rx_ena = 1;
 }
 void logic_analyzer_ll_start()
 {
+   // start gpspi2->dma transfer once
    GPSPI2.cmd.usr = 1;
 }
+// sllow interrupt -> gpio, may be redirect current irq 
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
    gpio_install_isr_service(0); // default
@@ -363,6 +227,7 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
    gpio_intr_disable(pin_trigger);
    gpio_intr_enable(pin_trigger); // start transfer on irq
 }
+// full stop dma & spi -> todo short command ?
 void logic_analyzer_ll_stop()
 {
    GPSPI2.dma_conf.dma_rx_ena = 0;
@@ -397,5 +262,3 @@ void logic_analyzer_ll_deinit_dma_eof_isr()
 {
    esp_intr_free(isr_handle);
 }
-
-#endif
