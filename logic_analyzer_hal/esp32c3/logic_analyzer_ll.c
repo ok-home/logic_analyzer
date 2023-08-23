@@ -34,16 +34,23 @@
 #include "logic_analyzer_ll.h"
 
 #define EOF_CTRL
-
+#define NMI_INTR
 
 static intr_handle_t isr_handle;
+static intr_handle_t gpio_isr_handle;
 static int dma_num = 0;
 
 //  trigger isr handle -> start transfer -> slow int 3-4 mks
 void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
    GPSPI2.cmd.usr = 1;
+   #ifdef NMI_INTR
+   REG_CLR_BIT((GPIO_PIN0_REG + (4 * (int)pin)),BIT(14));
+   esp_intr_disable(gpio_isr_handle);
+   esp_intr_free(gpio_isr_handle);
+   #else
    gpio_intr_disable((int)pin);
+   #endif   
 }
 // transfer done -> isr from eof or dma descr_empty
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
@@ -221,11 +228,16 @@ void logic_analyzer_ll_start()
 // sllow interrupt -> gpio, may be redirect current irq 
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
+   #ifdef NMI_INTR
+   esp_intr_alloc(ETS_GPIO_NMI_SOURCE,ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM,la_ll_trigger_isr,(void *)pin_trigger,&gpio_isr_handle);
+   REG_SET_BIT((GPIO_PIN0_REG + (4 * (int)pin)),BIT(14));
+   #else
    gpio_install_isr_service(0); // default
    gpio_set_intr_type(pin_trigger, trigger_edge);
    gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
    gpio_intr_disable(pin_trigger);
    gpio_intr_enable(pin_trigger); // start transfer on irq
+   #endif
 }
 // full stop dma & spi -> todo short command ?
 void logic_analyzer_ll_stop()
