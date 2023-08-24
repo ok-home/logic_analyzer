@@ -28,6 +28,7 @@
 //#include "driver/spi_master.h"
 #include "soc/spi_periph.h"
 #include "hal/spi_ll.h"
+#include "soc/gpio_struct.h"
 
 #define TAG "esp32c3_ll"
 
@@ -45,7 +46,7 @@ void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
    GPSPI2.cmd.usr = 1;
    #ifdef NMI_INTR
-   REG_CLR_BIT((GPIO_PIN0_REG + (4 * (int)pin)),BIT(14));
+   GPIO.pin[pin].int_ena &= 2; // clear nmi int bit
    esp_intr_disable(gpio_isr_handle);
    esp_intr_free(gpio_isr_handle);
    #else
@@ -229,8 +230,18 @@ void logic_analyzer_ll_start()
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
    #ifdef NMI_INTR
-   esp_intr_alloc(ETS_GPIO_NMI_SOURCE,ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM,la_ll_trigger_isr,(void *)pin_trigger,&gpio_isr_handle);
-   REG_SET_BIT((GPIO_PIN0_REG + (4 * (int)pin)),BIT(14));
+   if( esp_intr_alloc(ETS_GPIO_NMI_SOURCE,ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM,la_ll_trigger_isr,(void *)pin_trigger,&gpio_isr_handle))
+   {
+      f(GPIO.pin[pin].int_type == 0)
+      {
+         GPIO.pin[pin].int_type = trigger_edge;
+      }
+   GPIO.pin[pin].int_ena |= 2; // enable nmi intr
+   }
+   else
+   {
+      ESP_LOGI(TAG,"NMI intr alloc fail");
+   }
    #else
    gpio_install_isr_service(0); // default
    gpio_set_intr_type(pin_trigger, trigger_edge);
