@@ -63,11 +63,12 @@ set( priv_require
 
 
 
-
-if(CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT)
+if(IDF_TARGET STREQUAL "esp32s3" OR IDF_TARGET STREQUAL "esp32")
+ if(CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT)
     list( APPEND srcs 
         logic_analyzer_hal/logic_analyzer_hi_interrupt_handler.s 
         )
+ endif()
 endif()
 
 if(CONFIG_ANALYZER_USE_WS)
@@ -110,7 +111,8 @@ idf_component_register(
     PRIV_REQUIRES ${priv_require}
     EMBED_FILES ${embed}
 )
-
-if(CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT)
+if( IDF_TARGET STREQUAL "esp32s3" OR IDF_TARGET STREQUAL "esp32" )
+ if(CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT)
         target_link_libraries(${COMPONENT_LIB} INTERFACE "-u la_include_hi_interrupt")
+ endif()
 endif()

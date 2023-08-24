@@ -18,6 +18,7 @@
 #include "esp_idf_version.h"
 
 #undef LA_HW_PSRAM
+#undef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
 
 #define LA_HW_CLK_SAMPLE_RATE 160000000
 

@@ -15,8 +15,9 @@
 
 #include "esp_idf_version.h"
 
+#ifdef CONFIG_SPIRAM
 #define LA_HW_PSRAM 1
-
+#endif
 // cache err -> define only > 5.2.0
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 2, 0)
 #undef LA_HW_PSRAM

@@ -211,14 +211,14 @@ static void logic_analyzer_task(void *arg)
 #endif
             // synchronize cpu cache and psram after dma transfer, psram -> cache
             // !!Attention -> ESP_CACHE_MSYNC_FLAG_DIR_M2C defined on IDF version 5.2.X, current compile on master branch
-#ifdef CONFIG_IDF_TARGET_ESP32S3
+#ifdef LA_HW_PSRAM
             if (cfg->samples_to_psram)
             {
                 int err = esp_cache_msync(la_frame.fb.buf, la_frame.fb.len, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
                 if (err)
                     ESP_LOGE("CACHE", "ERR %x", err);
             }
-#endif      
+#endif 
             int l_samples = (cfg->number_channels > 4 ) ? (la_frame.fb.len / (cfg->number_channels / 8)) : la_frame.fb.len * 2 ; // (8/16)/(4)
             cfg->logic_analyzer_cb((uint8_t *)la_frame.fb.buf, l_samples, logic_analyzer_ll_get_sample_rate(cfg->sample_rate), cfg->number_channels);
             logic_analyzer_stop();

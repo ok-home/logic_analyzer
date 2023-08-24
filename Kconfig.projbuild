@@ -49,6 +49,7 @@ menu "Logic Analyzer Configuration"
     if ESP_SYSTEM_CHECK_INT_LEVEL_4
         config ANALYZER_USE_HI_LEVEL5_INTERRUPT
             bool "Use HI level5 interrupt"
+            depends on !IDF_TARGET_ESP32C3
             default y
             help
                 Use HI level5 interrupt.

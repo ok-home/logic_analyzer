@@ -45,13 +45,7 @@ static int dma_num = 0;
 void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
    GPSPI2.cmd.usr = 1;
-   #ifdef NMI_INTR
-   GPIO.pin[pin].int_ena &= 2; // clear nmi int bit
-   esp_intr_disable(gpio_isr_handle);
-   esp_intr_free(gpio_isr_handle);
-   #else
-   gpio_intr_disable((int)pin);
-   #endif   
+   GPIO.pin[(int)pin].int_ena &= ~2; // clear nmi int bit
 }
 // transfer done -> isr from eof or dma descr_empty
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
@@ -186,6 +180,7 @@ static esp_err_t logic_analyzer_ll_dma_init(void)
 
 void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_frame_t *frame)
 {
+   gpio_isr_handle = NULL;
    // enable GPSPI2 module
    if (REG_GET_BIT(SYSTEM_PERIP_CLK_EN0_REG, SYSTEM_SPI2_CLK_EN) == 0)
    {
@@ -229,26 +224,20 @@ void logic_analyzer_ll_start()
 // sllow interrupt -> gpio, may be redirect current irq 
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
-   #ifdef NMI_INTR
-   if( esp_intr_alloc(ETS_GPIO_NMI_SOURCE,ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM,la_ll_trigger_isr,(void *)pin_trigger,&gpio_isr_handle))
+   esp_err_t ret = esp_intr_alloc(ETS_GPIO_NMI_SOURCE,ESP_INTR_FLAG_LEVEL3 | ESP_INTR_FLAG_IRAM,la_ll_trigger_isr,(void *)pin_trigger,&gpio_isr_handle);
+   if( ret == ESP_OK )
    {
-      f(GPIO.pin[pin].int_type == 0)
+      if(GPIO.pin[pin_trigger].int_ena == 0)
       {
-         GPIO.pin[pin].int_type = trigger_edge;
+         GPIO.pin[pin_trigger].int_type = trigger_edge;
       }
-   GPIO.pin[pin].int_ena |= 2; // enable nmi intr
+   GPIO.status_w1tc.val = 0x1<<pin_trigger;
+   GPIO.pin[pin_trigger].int_ena |= 2; // enable nmi intr
    }
    else
    {
-      ESP_LOGI(TAG,"NMI intr alloc fail");
+      ESP_LOGE(TAG,"NMI intr alloc fail %x",ret);
    }
-   #else
-   gpio_install_isr_service(0); // default
-   gpio_set_intr_type(pin_trigger, trigger_edge);
-   gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
-   gpio_intr_disable(pin_trigger);
-   gpio_intr_enable(pin_trigger); // start transfer on irq
-   #endif
 }
 // full stop dma & spi -> todo short command ?
 void logic_analyzer_ll_stop()
@@ -257,6 +246,8 @@ void logic_analyzer_ll_stop()
    GDMA.channel[dma_num].in.in_link.stop = 1;
    GDMA.channel[dma_num].in.in_link.addr = 0;
 
+if(gpio_isr_handle)
+   {esp_intr_free(gpio_isr_handle);}
 }
 #include "esp_cpu.h"
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
