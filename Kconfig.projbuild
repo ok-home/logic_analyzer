@@ -57,6 +57,7 @@ menu "Logic Analyzer Configuration"
 
     config ANALYZER_SEPARATE_MODE
         bool "Separate mode"
+        depends on !IDF_TARGET_ESP32C3
         default n
         help
             In-app or separate device mode.

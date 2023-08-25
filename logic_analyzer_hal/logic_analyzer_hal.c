@@ -251,7 +251,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
 {
     esp_err_t ret = 0;
     logic_analyzer_hw_param_t hw_param;
-    // runtime check params
+    // runtime get HW params
     hw_param.current_channels = config->number_channels;
     hw_param.current_psram = config->samples_to_psram;
     logic_analyzer_get_hw_param(&hw_param);

@@ -34,9 +34,6 @@
 
 #include "logic_analyzer_ll.h"
 
-#define EOF_CTRL
-#define NMI_INTR
-
 static intr_handle_t isr_handle;
 static intr_handle_t gpio_isr_handle;
 static int dma_num = 0;
@@ -45,7 +42,7 @@ static int dma_num = 0;
 void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
    GPSPI2.cmd.usr = 1;
-   GPIO.pin[(int)pin].int_ena &= ~2; // clear nmi int bit
+   GPIO.pin[(int)pin].int_ena &= ~2; // clear nmi int bit -> disable nmi
 }
 // transfer done -> isr from eof or dma descr_empty
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
@@ -58,18 +55,12 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
       return;
    }
    GDMA.intr[dma_num].clr.val = status.val;
-#ifndef EOF_CTRL
-   if (status.in_dscr_empty)
-   {
-      vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
-   }
-#endif
-#ifdef EOF_CTRL
+
    if (status.in_suc_eof)
    {
       vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
    }
-#endif
+
    if (HPTaskAwoken == pdTRUE)
    {
       portYIELD_FROM_ISR();
@@ -125,6 +116,7 @@ static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
    GPSPI2.user.doutdin = 0;   // half
    GPSPI2.user.usr_miso = 1;  // read
    GPSPI2.ctrl.fread_quad = 1; // 4 lines parralel
+   GPSPI2.ctrl.rd_bit_order = 1; // LSB first
    // reset fifo
    GPSPI2.dma_conf.rx_afifo_rst = 1;
    GPSPI2.dma_conf.buf_afifo_rst = 1;
@@ -196,13 +188,10 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
 
    // set dma descriptor
    GDMA.channel[dma_num].in.in_link.addr = ((uint32_t) & (frame->dma[0])) & 0xfffff;
-#ifdef EOF_CTRL
+
    GPSPI2.ms_dlen.ms_data_bitlen = frame->fb.len * 8 - 1; // count in bits
    GPSPI2.dma_conf.rx_eof_en = 1;                         // eof controlled gpspi2
-#else
-   GPSPI2.ms_dlen.ms_data_bitlen = frame->fb.len * 8 - 1; // eof controlled to DMA linked list -> non stop, ( bytelen = any digit ?? )
-   GPSPI2.dma_conf.rx_eof_en = 0;                         // eof controlled DMA linked list
-#endif
+
    //   pre start
    // enably DMA interrupt
    GDMA.intr[dma_num].ena.in_suc_eof = 1;
@@ -221,22 +210,23 @@ void logic_analyzer_ll_start()
    // start gpspi2->dma transfer once
    GPSPI2.cmd.usr = 1;
 }
-// sllow interrupt -> gpio, may be redirect current irq 
+// slow interrupt -> gpio, may be redirect current irq 
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
    esp_err_t ret = esp_intr_alloc(ETS_GPIO_NMI_SOURCE,ESP_INTR_FLAG_LEVEL3 | ESP_INTR_FLAG_IRAM,la_ll_trigger_isr,(void *)pin_trigger,&gpio_isr_handle);
-   if( ret == ESP_OK )
+   if( ret )
    {
-      if(GPIO.pin[pin_trigger].int_ena == 0)
-      {
-         GPIO.pin[pin_trigger].int_type = trigger_edge;
-      }
-   GPIO.status_w1tc.val = 0x1<<pin_trigger;
-   GPIO.pin[pin_trigger].int_ena |= 2; // enable nmi intr
+      ESP_LOGE(TAG,"NMI intr alloc fail error=%x capture on non triggered mode",ret);
+      logic_analyzer_ll_start();  
    }
    else
    {
-      ESP_LOGE(TAG,"NMI intr alloc fail %x",ret);
+      if(GPIO.pin[pin_trigger].int_ena == 0)
+         {
+            GPIO.pin[pin_trigger].int_type = trigger_edge;
+         }
+      GPIO.status_w1tc.val = 0x1<<pin_trigger; // clear intr status
+      GPIO.pin[pin_trigger].int_ena |= 2; // enable nmi intr
    }
 }
 // full stop dma & spi -> todo short command ?
@@ -249,19 +239,14 @@ void logic_analyzer_ll_stop()
 if(gpio_isr_handle)
    {esp_intr_free(gpio_isr_handle);}
 }
-#include "esp_cpu.h"
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)
 {
-
-   esp_err_t ret = ESP_OK;
-
-   ret = esp_intr_alloc(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
+   esp_err_t ret = esp_intr_alloc(gdma_periph_signals.groups[0].pairs[dma_num].rx_irq_id,
                         ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
                         la_ll_dma_isr, (void *)task, &isr_handle);
-
    if (ret != ESP_OK)
    {
-      ESP_LOGE(TAG, "DMA interrupt allocation of analyzer failed");
+      ESP_LOGE(TAG, "DMA interrupt allocation of analyzer failed error=%x",ret);
       return ret;
    }
    return ret;

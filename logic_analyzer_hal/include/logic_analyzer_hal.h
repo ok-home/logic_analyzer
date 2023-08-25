@@ -11,7 +11,7 @@ extern "C" {
  * @brief logic analyzer callback
  *
  * @param- uint8_t *samle_buf   -  return pointer of samples
- * @param- int samples          - count of samples in 8/16 bit word depending of sample width
+ * @param- int samples          - count of samples in 4/8/16 bit word depending of sample width
  * @param- int sample_rate      - real sample rate in HZ
  * @param- int channels         - meashured channels
  * if param == 0 -> timeout detected

@@ -373,6 +373,7 @@
         drawLineS(analyzerData, max_channels, 0, max_cnt);
     }
     function saveByteArray() {
+        // 4 channels data save as 8 channels data
         let a = document.createElement("a");
         document.body.appendChild(a);
         a.style = "display: none";
@@ -421,9 +422,8 @@
                         let outIdx=0;
                         for( let inIdx = 0; inIdx < tmpArr.length; inIdx++)
                         {
-                            analyzerData[outIdx++]=(tmpArr[inIdx] >> 4) & 0xf;
                             analyzerData[outIdx++]=tmpArr[inIdx] & 0xf;
-                            
+                            analyzerData[outIdx++]=(tmpArr[inIdx] >> 4) & 0xf;
                         }
                     }
                 //statusstr.innerHTML = "Received " + analyzerData.length + " samples";
