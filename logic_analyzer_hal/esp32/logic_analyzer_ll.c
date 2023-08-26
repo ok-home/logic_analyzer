@@ -165,7 +165,7 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
 static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
 {
 
-    vTaskDelay(5);
+    //vTaskDelay(5);
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
 
     for (int i = 0; i < channels; i++)

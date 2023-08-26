@@ -121,12 +121,12 @@ static void sump_la_cb(uint8_t *buf, int cnt, int clk, int channels)
             {
                 if(i&1)
                 {
-                    sump_write_byte(*bufff & 0xf);
+                    sump_writeByte(*bufff & 0xf);
                     bufff--;
                 }
                 else
                 {
-                   sump_write_byte((*bufff>>4) & 0xf); 
+                   sump_writeByte((*bufff>>4) & 0xf); 
                 }
             }
         }

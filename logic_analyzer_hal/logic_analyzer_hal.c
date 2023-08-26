@@ -79,7 +79,7 @@ esp_err_t logic_analyzer_get_hw_param(logic_analyzer_hw_param_t *hw)
         {
             hw->max_sample_rate = LA_HW_MAX_PSRAM_8_SAMPLE_RATE ; //4
             hw->min_sample_rate = LA_HW_MIN_8_SAMPLE_RATE; //4
-            hw->max_sample_cnt = max_ram * 2;
+            hw->max_sample_cnt = LA_HW_MAX_PSRAM_8_SAMPLE_CNT;//4
             hw->min_sample_cnt = LA_HW_MIN_8_SAMPLE_CNT; //4
         }
     }
@@ -96,7 +96,7 @@ esp_err_t logic_analyzer_get_hw_param(logic_analyzer_hw_param_t *hw)
         {
             hw->max_sample_rate = LA_HW_MAX_RAM_8_SAMPLE_RATE ; //4
             hw->min_sample_rate = LA_HW_MIN_8_SAMPLE_RATE; //4
-            hw->max_sample_cnt = max_ram * 2;
+            hw->max_sample_cnt = LA_HW_MAX_RAM_8_SAMPLE_CNT;//4
             hw->min_sample_cnt = LA_HW_MIN_8_SAMPLE_CNT; //4
 
         }
@@ -358,7 +358,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         ret = ESP_ERR_NO_MEM;
         goto _retcode;
     }
-        ESP_LOGI("DMA HEAP","Allocated %d bytes",la_frame.fb.len);
+        ESP_LOGD("DMA HEAP","Allocated %d bytes",la_frame.fb.len);
     //  allocate dma descriptor buffer
     la_frame.dma = allocate_dma_descriptors(la_frame.fb.len, la_frame.fb.buf);
     if (la_frame.dma == NULL)
