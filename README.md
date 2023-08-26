@@ -1,14 +1,14 @@
 [Ru](/README-RU.md)
 
 | Supported Targets |  
-| ESP32    ESP32S3  | 
+| ESP32    ESP32S3 ESP32C3  | 
 | ----------------- |
 
 # Logic analyzer on ESP32 for self-diagnostics
  - No need to buy and connect an external logic analyzer
  - Connected as a component to your program (ESP IDF)
  - Displaying information on the WEB interface or Sigrok PulseView
- - Supported SOC -> ESP32, ESP32S3
+ - Supported SOC -> ESP32, ESP32S3, ESP32C3
 
 ![WebSocket](/la_ws.jpg)
 ![PulseView](/sigrok_esp.jpg)
