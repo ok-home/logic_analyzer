@@ -200,7 +200,7 @@ static void logic_analyzer_ll_set_mode(int sample_rate,int channels)
 // set cam input pin & vsync, hsynk, henable to const to stop transfer
 static void logic_analyzer_ll_set_pin(int *data_pins,int channels)
 {
-    vTaskDelay(5); //??
+    //vTaskDelay(5); //??
 
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
 

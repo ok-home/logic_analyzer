@@ -49,6 +49,7 @@ menu "Logic Analyzer Configuration"
     if ESP_SYSTEM_CHECK_INT_LEVEL_4
         config ANALYZER_USE_HI_LEVEL5_INTERRUPT
             bool "Use HI level5 interrupt"
+            depends on !IDF_TARGET_ESP32C3
             default y
             help
                 Use HI level5 interrupt.
@@ -56,6 +57,7 @@ menu "Logic Analyzer Configuration"
 
     config ANALYZER_SEPARATE_MODE
         bool "Separate mode"
+        depends on !IDF_TARGET_ESP32C3
         default n
         help
             In-app or separate device mode.
@@ -225,7 +227,7 @@ menu "Logic Analyzer Configuration"
 
         config ANALYZER_CHANNELS
             int "Meashured channels 8/16"
-            range 8 16
+            range 4 16
             default 16
 
         config ANALYZER_PSRAM

@@ -373,6 +373,7 @@
         drawLineS(analyzerData, max_channels, 0, max_cnt);
     }
     function saveByteArray() {
+        // 4 channels data save as 8 channels data
         let a = document.createElement("a");
         document.body.appendChild(a);
         a.style = "display: none";
@@ -402,15 +403,28 @@
             if (data instanceof ArrayBuffer) {
                 // check max_channel
                 let tmpl = document.querySelector('#config').querySelectorAll('input');
-                if(tmpl.length>16)
+                if(tmpl.length>20) // 16 ch
                     {
                         max_channels = 16;
                         analyzerData = new Uint16Array(data);
                     }
-                else
+                else if(tmpl.length>12) // 8 ch
                     {
                         max_channels = 8;
                         analyzerData = new Uint8Array(data);
+                    }
+                    else // 4 ch
+                    {
+                        max_channels = 4; // 8 
+                        //analyzerData = new Uint8Array(data);
+                        let tmpArr = new Uint8Array(data);
+                        analyzerData = new Uint8Array(tmpArr.length*2);
+                        let outIdx=0;
+                        for( let inIdx = 0; inIdx < tmpArr.length; inIdx++)
+                        {
+                            analyzerData[outIdx++]=tmpArr[inIdx] & 0xf;
+                            analyzerData[outIdx++]=(tmpArr[inIdx] >> 4) & 0xf;
+                        }
                     }
                 //statusstr.innerHTML = "Received " + analyzerData.length + " samples";
                 textstr.value = "Received " + analyzerData.length + " samples" + "\n"+textstr.value;

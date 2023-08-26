@@ -84,7 +84,6 @@ static void sump_la_cb(uint8_t *buf, int cnt, int clk, int channels)
             if(i < diff) // zero sample
             {
                 sump_write_data((uint8_t *)(&zero_sample), 1);
-                ESP_LOGI("SKIP","%d %d",diff,i);
             }
             else
             {
@@ -93,7 +92,7 @@ static void sump_la_cb(uint8_t *buf, int cnt, int clk, int channels)
             }
         }
     }
-    else // 16 channels
+    else if(channels == 16 ) // 16 channels
     {   
         uint16_t *bufff = (uint16_t*)buf + readCount - 1 - diff;
         for (int i = 0; i < readCount; i++)
@@ -109,6 +108,31 @@ static void sump_la_cb(uint8_t *buf, int cnt, int clk, int channels)
             }
         }
     }
+    else   // 4 channels
+    {
+        uint8_t *bufff = (uint8_t*)buf + (readCount/2) - 1 - diff;
+        for (int i = 0; i < readCount; i++)
+        {
+            if(i < diff) // zero sample
+            {
+                sump_write_data((uint8_t *)(&zero_sample), 1);
+            }
+            else
+            {
+                if(i&1)
+                {
+                    sump_writeByte(*bufff & 0xf);
+                    bufff--;
+                }
+                else
+                {
+                   sump_writeByte((*bufff>>4) & 0xf); 
+                }
+            }
+        }
+    }
+
+    
 }
 static void sump_config_uart()
 {
@@ -268,7 +292,7 @@ static void sump_get_metadata()
     sump_writeByte((uint8_t)0x02);
     sump_write_data((uint8_t *)"0.00", 5);
     /* sample memory */
-    uint32_t capture_size = la_hw.max_sample_cnt * (la_cfg.number_channels/8); // buff size bytes 
+    uint32_t capture_size = (la_hw.current_channels > 4 ) ? (la_hw.max_sample_cnt * (la_hw.current_channels/8)) : la_hw.max_sample_cnt ; // buff size bytes. 4 channels send as 8 channels 
     sump_writeByte((uint8_t)0x21);
     sump_writeByte((uint8_t)(capture_size >> 24) & 0xFF);
     sump_writeByte((uint8_t)(capture_size >> 16) & 0xFF);
@@ -283,7 +307,7 @@ static void sump_get_metadata()
     sump_writeByte((uint8_t)(capture_speed >> 0) & 0xFF);
     /* number of probes */
     sump_writeByte((uint8_t)0x40);
-    sump_writeByte((uint8_t)la_cfg.number_channels & 0xff); // 8/16
+    sump_writeByte((la_hw.current_channels > 4) ? ((uint8_t)la_hw.current_channels & 0xff) : 8 ); // 8/16 -> 4 channels send as 8 channels
     /* protocol version (2) */
     sump_writeByte((uint8_t)0x41);
     sump_writeByte((uint8_t)0x02);

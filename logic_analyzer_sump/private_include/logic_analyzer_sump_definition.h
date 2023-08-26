@@ -1,5 +1,7 @@
 // definition esp32s3
 //43-tx 44-rx
+// definition esp32c3
+//21-tx 20-rx
 // sigrok default sample rate
 #define PULSEVIEW_MAX_SAMPLE_RATE 100000000
 

@@ -19,10 +19,12 @@
 |         ESP32        |    16    |          50 000           |         40 MHz        |   I2S0/I2S1   | NO                                                 |
 |        ESP32S3       |  8<br>16 |     140 000<br>70 000     |    80 MHz<br>40 MHz   |    LCD_CAM    | One Free GPIO<br>One LEDC Channel for slow PCLK(3) |
 | ESP32S3<br>PSRAM8(1) |  8<br>16 |   8 000 000<br>4 000 000  |    10 MHz<br>5 MHZ    |    LCD_CAM    | One Free GPIO<br>One LEDC Channel for slow PCLK(3) |
+|       ESP32C3(4)     |    4     |          60 000           |         80 MHz        |    GPSPI2     | NO                                                 |
 
 1. I do not recommend using this mode unless necessary. PSRAM heavily loads the SPI bus, artifacts and delays in the operation of the main program are possible. Correct work with Cache requires ESP IDF ver 5.2 (in the current  master branch version)
 2. The maximum number of samples depends on the amount of free memory when your program is running, the analyzer will limit the number of samples and return the maximum possible.
 3. ESP32S3 -> requires one GPIO pin not connected anywhere for PCLK signal, for sample rate less than 1 MHz - you can allow 1 LEDC channel connection
+4. ESP32C3 -> trigger does not use HiLevel interrupts, Delay from trigger to start of data is 1.3-1.5 µs. SUMP operates in 8-channel mode, the upper 4 channels are not used.
 
  - 1 capture trigger channel. The trigger is organized on interrupts along the fronts. In the ESP32, interrupts are processed for about 2 µS (rev0.1) - Accordingly, the delay from the trigger to the start of the data is about 2 µS. In current versions, the trigger has been moved to Hilevel interrupts ( level 5 ), the delay from the trigger to the beginning of the data has been reduced to 0.3 µS.
  - All mode settings are moved to Menuconfig. Channels, Trigger, Sample rate, use PSRAM is additionally configured in the WEB interface
