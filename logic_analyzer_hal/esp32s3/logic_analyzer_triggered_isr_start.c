@@ -7,11 +7,11 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 /*
-* standart irq handlers too slow >2.5 mks
-* hi level 5 irq about 0.3 mks то start transfer
-*/
+ * standart irq handlers too slow >2.5 mks
+ * hi level 5 irq about 0.3 mks то start transfer
+ */
 
-//#include "soc/dport_reg.h"
+// #include "soc/dport_reg.h"
 #include "soc/interrupt_reg.h"
 #include "soc/gpio_reg.h"
 #include "soc/soc.h"
@@ -26,13 +26,13 @@ static int hi_interrupt_started = 0;
 void ll_hi_level_triggered_isr_timeout_stop(void)
 {
 #ifdef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
-    if(hi_interrupt_started)
+    if (hi_interrupt_started)
     {
-    // disable interrupt on core
-    _DPORT_REG_WRITE(la_hi_interrupt_state.dport_int_map_reg, la_hi_interrupt_state.dport_int_map_data_disable);
-    // clear GPIO interrupt enable on core // restore cfg register
-    REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, la_hi_interrupt_state.gpio_pin_cfg_backup_data);
-    hi_interrupt_started = 0;
+        // disable interrupt on core
+        _DPORT_REG_WRITE(la_hi_interrupt_state.dport_int_map_reg, la_hi_interrupt_state.dport_int_map_data_disable);
+        // clear GPIO interrupt enable on core // restore cfg register
+        REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, la_hi_interrupt_state.gpio_pin_cfg_backup_data);
+        hi_interrupt_started = 0;
     }
 #endif
 }
@@ -56,7 +56,7 @@ void ll_triggered_isr_alloc(void *arg)
 
     ESP_INTR_DISABLE(HI_INTERRUPT_NUMBER);
 
-    REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, 0);// todo clear only int bits       // disable all interrupt on GPIO
+    REG_WRITE(la_hi_interrupt_state.gpio_pin_cfg_reg, 0);                                  // todo clear only int bits       // disable all interrupt on GPIO
     REG_WRITE(la_hi_interrupt_state.gpio_stat_clr_reg, la_hi_interrupt_state.gpio_mask);   // clear intr status
     intr_matrix_set(la_hi_interrupt_state.cpu, ETS_GPIO_INTR_SOURCE, HI_INTERRUPT_NUMBER); // route gpio interrupt on hi-level int
 
@@ -122,16 +122,16 @@ void ll_hi_level_triggered_isr_start(int pin_trigger, int trigger_edge)
     {
         ESP_LOGD("TISR", "fast gpio interrupt");
         hi_interrupt_started = 1;
-        la_hi_interrupt_state.dport_int_map_data_disable = 6;                                                                                             // soft interrupt - disable gpio interrupt
+        la_hi_interrupt_state.dport_int_map_data_disable = 6;                                                                                                                 // soft interrupt - disable gpio interrupt
         la_hi_interrupt_state.dport_int_map_reg = (la_hi_interrupt_state.cpu == 0) ? INTERRUPT_CORE0_GPIO_INTERRUPT_PRO_MAP_REG : INTERRUPT_CORE1_GPIO_INTERRUPT_PRO_MAP_REG; // app/pro map register
-        la_hi_interrupt_state.dport_int_stat_reg = (la_hi_interrupt_state.cpu == 0) ? INTERRUPT_CORE0_INTR_STATUS_0_REG : INTERRUPT_CORE1_INTR_STATUS_0_REG;          // not used now // app/pro int status dport register
-        la_hi_interrupt_state.gpio_mask = (pin_trigger < 32) ? 1 << pin_trigger : 1 << (pin_trigger - 32);                                                // hi/low interupt mask ( 0-31 )( 32-39 )
-        la_hi_interrupt_state.gpio_stat_reg = (pin_trigger < 32) ? GPIO_STATUS_REG : GPIO_STATUS1_REG;                                                    // not used now // hi/low interupt status register ( 0-31 )( 32-39 )
-        la_hi_interrupt_state.gpio_stat_clr_reg = (pin_trigger < 32) ? GPIO_STATUS_W1TC_REG : GPIO_STATUS1_W1TC_REG;                                      // hi/low interupt status clear register ( 0-31 )( 32-39 )
-        la_hi_interrupt_state.gpio_pin_cfg_reg = GPIO_PIN0_REG + (4 * pin_trigger);                                                                       // gpio config register corresponded with trigger pin
-        la_hi_interrupt_state.gpio_pin_cfg_int_ena_core_bit = (la_hi_interrupt_state.cpu == 0) ? (1 << 13) : (1 << 13);                                   // app/pro enable interrupt in cfg gpio register - 0 for fast clear
+        la_hi_interrupt_state.dport_int_stat_reg = (la_hi_interrupt_state.cpu == 0) ? INTERRUPT_CORE0_INTR_STATUS_0_REG : INTERRUPT_CORE1_INTR_STATUS_0_REG;                  // not used now // app/pro int status dport register
+        la_hi_interrupt_state.gpio_mask = (pin_trigger < 32) ? 1 << pin_trigger : 1 << (pin_trigger - 32);                                                                    // hi/low interupt mask ( 0-31 )( 32-39 )
+        la_hi_interrupt_state.gpio_stat_reg = (pin_trigger < 32) ? GPIO_STATUS_REG : GPIO_STATUS1_REG;                                                                        // not used now // hi/low interupt status register ( 0-31 )( 32-39 )
+        la_hi_interrupt_state.gpio_stat_clr_reg = (pin_trigger < 32) ? GPIO_STATUS_W1TC_REG : GPIO_STATUS1_W1TC_REG;                                                          // hi/low interupt status clear register ( 0-31 )( 32-39 )
+        la_hi_interrupt_state.gpio_pin_cfg_reg = GPIO_PIN0_REG + (4 * pin_trigger);                                                                                           // gpio config register corresponded with trigger pin
+        la_hi_interrupt_state.gpio_pin_cfg_int_ena_core_bit = (la_hi_interrupt_state.cpu == 0) ? (1 << 13) : (1 << 13);                                                       // app/pro enable interrupt in cfg gpio register - 0 for fast clear
 
-        la_hi_interrupt_state.i2s_set_vsync_reg = GPIO_FUNC152_IN_SEL_CFG_REG;                                                                            // i2s0/i2s1
+        la_hi_interrupt_state.i2s_set_vsync_reg = GPIO_FUNC152_IN_SEL_CFG_REG; // i2s0/i2s1
         la_hi_interrupt_state.i2s_set_vsync_bit = HI_INTERRUPT_SET_VSYNC;
 
         // alloc hi level int on free core

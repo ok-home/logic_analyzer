@@ -14,18 +14,18 @@
 void app_main(void)
 {
     extern void test_sample_init();
-    //extern void test_air();
+    // extern void test_air();
     test_sample_init();
-    //test_air();
+    // test_air();
     vTaskDelay(5);
-    #ifdef CONFIG_ANALYZER_USE_SUMP
-    //esp_log_level_set("*", ESP_LOG_NONE); // sump default run on port0 - disable log
+#ifdef CONFIG_ANALYZER_USE_SUMP
+    // esp_log_level_set("*", ESP_LOG_NONE); // sump default run on port0 - disable log
     logic_analyzer_sump();
-    #endif
-    #ifdef CONFIG_ANALYZER_USE_WS
+#endif
+#ifdef CONFIG_ANALYZER_USE_WS
     logic_analyzer_ws_server();
-    #endif
-    while(1)
+#endif
+    while (1)
     {
         vTaskDelay(100);
     }

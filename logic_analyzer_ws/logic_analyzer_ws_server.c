@@ -24,7 +24,6 @@
  */
 static const char *TAG = "logic_analyzer_ws_server";
 
-
 static httpd_handle_t start_webserver(void)
 {
     httpd_handle_t server = NULL;
@@ -38,11 +37,11 @@ static httpd_handle_t start_webserver(void)
     {
         // Registering the ws handler
         ESP_LOGI(TAG, "Registering URI handlers");
-        if(logic_analyzer_register_uri_handlers(server))
+        if (logic_analyzer_register_uri_handlers(server))
         {
-        ESP_LOGE(TAG, "Error LA register_uri_handlers");
-        goto _ret;
-        }   
+            ESP_LOGE(TAG, "Error LA register_uri_handlers");
+            goto _ret;
+        }
         return server;
     }
 _ret:
@@ -84,8 +83,8 @@ static void connect_handler(void *arg, esp_event_base_t event_base,
         *server = start_webserver();
     }
 }
-// create & start ws server 
-// if server already running 
+// create & start ws server
+// if server already running
 // skip & go to la_ws - register uri handlers
 void logic_analyzer_ws_server(void)
 {

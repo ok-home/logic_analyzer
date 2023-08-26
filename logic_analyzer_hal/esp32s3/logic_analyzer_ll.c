@@ -142,7 +142,7 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
     if ((LA_HW_CLK_SAMPLE_RATE / sample_rate) > 160)
     {
-        ldiv = 8;  // cam clk to 20 MHz
+        ldiv = 8; // cam clk to 20 MHz
         logic_analyzer_ll_set_ledc_pclk(sample_rate);
     }
 #endif
@@ -156,7 +156,7 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     LCD_CAM.cam_ctrl.cam_clk_sel = 3; // Select Camera module source clock. 0: no clock. 2: APLL. 3: CLK160.
 }
 // set cam mode register -> 8/16 bit, eof control from dma,
-static void logic_analyzer_ll_set_mode(int sample_rate,int channels)
+static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
 {
     // attension !!
     // LCD_CAM.cam_ctrl1.cam_rec_data_bytelen -> logic_analyzer_ll_set_mode  clear len data
@@ -180,10 +180,14 @@ static void logic_analyzer_ll_set_mode(int sample_rate,int channels)
     LCD_CAM.cam_ctrl1.cam_clk_inv = 0;         // 1: Invert the input signal CAM_PCLK. 0: Do not invert. (R/W)
     LCD_CAM.cam_ctrl1.cam_vsync_filter_en = 0; // 1: Enable CAM_VSYNC filter function. 0: Bypass. (R/W)
 
-    if(channels == 8 )
-    {LCD_CAM.cam_ctrl1.cam_2byte_en = 0;} // 1: The width of input data is 16 bits. 0: The width of input data is 8 bits. (R/W)
+    if (channels == 8)
+    {
+        LCD_CAM.cam_ctrl1.cam_2byte_en = 0;
+    } // 1: The width of input data is 16 bits. 0: The width of input data is 8 bits. (R/W)
     else
-    {LCD_CAM.cam_ctrl1.cam_2byte_en = 1;} // 1: The width of input data is 16 bits. 0: The width of input data is 8 bits. (R/W)
+    {
+        LCD_CAM.cam_ctrl1.cam_2byte_en = 1;
+    } // 1: The width of input data is 16 bits. 0: The width of input data is 8 bits. (R/W)
 
     LCD_CAM.cam_ctrl1.cam_de_inv = 0;        // CAM_DE invert enable signal, valid in high level. (R/W)
     LCD_CAM.cam_ctrl1.cam_hsync_inv = 0;     // CAM_HSYNC invert enable signal, valid in high level. (R/W)
@@ -198,9 +202,9 @@ static void logic_analyzer_ll_set_mode(int sample_rate,int channels)
     LCD_CAM.cam_ctrl1.cam_afifo_reset = 0;
 }
 // set cam input pin & vsync, hsynk, henable to const to stop transfer
-static void logic_analyzer_ll_set_pin(int *data_pins,int channels)
+static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
 {
-    //vTaskDelay(5); //??
+    // vTaskDelay(5); //??
 
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
 
@@ -283,15 +287,15 @@ static esp_err_t logic_analyzer_ll_dma_init(void)
     GDMA.channel[dma_num].in.conf0.in_rst = 1;
     GDMA.channel[dma_num].in.conf0.in_rst = 0;
 #ifdef LA_HW_PSRAM
-    GDMA.channel[dma_num].in.conf1.in_ext_mem_bk_size = GDMA_PSRAM_BURST>>5; // 0-> 16 byte burst transfer, 1->32 byte burst transfer
+    GDMA.channel[dma_num].in.conf1.in_ext_mem_bk_size = GDMA_PSRAM_BURST >> 5; // 0-> 16 byte burst transfer, 1->32 byte burst transfer
 #else
     GDMA.channel[dma_num].in.conf0.indscr_burst_en = 1;
     GDMA.channel[dma_num].in.conf0.in_data_burst_en = 1;
 #endif
 
-    //GDMA.channel[dma_num].in.pri.rx_pri = 15;//rx prio 0-15
-    //GDMA.channel[dma_num].in.sram_size.in_size = 6;//This register is used to configure the size of L2 Tx FIFO for Rx channel. 0:16 bytes, 1:24 bytes, 2:32 bytes, 3: 40 bytes, 4: 48 bytes, 5:56 bytes, 6: 64 bytes, 7: 72 bytes, 8: 80 bytes.
-    //GDMA.channel[dma_num].in.wight.rx_weight = 15;//The weight of Rx channel 0-15
+    // GDMA.channel[dma_num].in.pri.rx_pri = 15;//rx prio 0-15
+    // GDMA.channel[dma_num].in.sram_size.in_size = 6;//This register is used to configure the size of L2 Tx FIFO for Rx channel. 0:16 bytes, 1:24 bytes, 2:32 bytes, 3: 40 bytes, 4: 48 bytes, 5:56 bytes, 6: 64 bytes, 7: 72 bytes, 8: 80 bytes.
+    // GDMA.channel[dma_num].in.wight.rx_weight = 15;//The weight of Rx channel 0-15
 
     GDMA.channel[dma_num].in.conf1.in_check_owner = 0;
     GDMA.channel[dma_num].in.peri_sel.sel = 5;
@@ -325,8 +329,8 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
         REG_SET_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_LCD_CAM_RST);
         REG_CLR_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_LCD_CAM_RST);
     }
-    logic_analyzer_ll_set_pin(data_pins,channels);
-    logic_analyzer_ll_set_mode(sample_rate,channels);
+    logic_analyzer_ll_set_pin(data_pins, channels);
+    logic_analyzer_ll_set_mode(sample_rate, channels);
     logic_analyzer_ll_dma_init();
 
     // set dma descriptor
@@ -380,7 +384,7 @@ void logic_analyzer_ll_stop()
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
     ledc_stop(LEDC_LOW_SPEED_MODE, CONFIG_ANALYZER_LEDC_CHANNEL_NUMBER, 0);
 #endif
-    gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN,GPIO_MODE_DISABLE);
+    gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_DISABLE);
 }
 
 esp_err_t logic_analyzer_ll_init_dma_eof_isr(TaskHandle_t task)

@@ -7,9 +7,9 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 /*
-* standart irq handlers too slow >2.5 mks
-* hi level 5 irq about 0.3 mks то start transfer
-*/
+ * standart irq handlers too slow >2.5 mks
+ * hi level 5 irq about 0.3 mks то start transfer
+ */
 #include "soc/dport_reg.h"
 #include "soc/gpio_reg.h"
 #include "soc/soc.h"
@@ -123,7 +123,7 @@ void ll_hi_level_triggered_isr_start(int pin_trigger, int trigger_edge)
         la_hi_interrupt_state.gpio_pin_cfg_reg = GPIO_PIN0_REG + (4 * pin_trigger);                                                                       // gpio config register corresponded with trigger pin
         la_hi_interrupt_state.gpio_pin_cfg_int_ena_core_bit = (la_hi_interrupt_state.cpu == 0) ? (1 << 15) : (1 << 13);                                   // app/pro enable interrupt in cfg gpio register - 0 for fast clear
 
-        la_hi_interrupt_state.i2s_set_vsync_reg = GPIO_FUNC_V_SYNC_IN_SEL_CFG_REG;                                                                            // i2s0/i2s1
+        la_hi_interrupt_state.i2s_set_vsync_reg = GPIO_FUNC_V_SYNC_IN_SEL_CFG_REG; // i2s0/i2s1
         la_hi_interrupt_state.i2s_set_vsync_bit = HI_INTERRUPT_SET_VSYNC;
 
         // alloc hi level int on free core

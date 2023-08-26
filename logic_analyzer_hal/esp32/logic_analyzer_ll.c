@@ -165,7 +165,7 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
 static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
 {
 
-    //vTaskDelay(5);
+    // vTaskDelay(5);
 #ifndef SEPARATE_MODE_LOGIC_ANALIZER
 
     for (int i = 0; i < channels; i++)
@@ -206,7 +206,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
     gpio_matrix_in(0x38, I2SXI_H_ENABLE_IDX, false);
 }
 // start i2s module, set sample rate, sample count, set dma, prestart -> transfer started from vsync
-void logic_analyzer_ll_config(int *data_pins, int sample_rate,int channels, la_frame_t *frame)
+void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_frame_t *frame)
 {
     // Enable and configure I2S peripheral
     periph_module_enable(PERIPH_I2SX_MODULE);
@@ -215,7 +215,7 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate,int channels, la_f
     logic_analyzer_ll_reset();
     logic_analyzer_ll_set_mode();
     logic_analyzer_ll_set_clock(sample_rate);
-    logic_analyzer_ll_set_pin(data_pins,channels);
+    logic_analyzer_ll_set_pin(data_pins, channels);
     // set dma descriptor
     I2SX.rx_eof_num = frame->fb.len / sizeof(uint32_t); // count in 32 bit word
     I2SX.in_link.addr = ((uint32_t) & (frame->dma[0]));

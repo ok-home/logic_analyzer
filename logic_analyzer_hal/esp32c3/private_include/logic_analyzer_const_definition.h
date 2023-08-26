@@ -8,7 +8,7 @@
 #include "hal/gpio_ll.h"
 #include "soc/gpio_struct.h"
 #include "soc/i2s_struct.h"
-//#include "soc/dport_reg.h"
+// #include "soc/dport_reg.h"
 #include "soc/gpio_reg.h"
 #include "esp32/rom/lldesc.h"
 #include "esp_private/periph_ctrl.h"
@@ -61,5 +61,3 @@
 #define LA_HW_MAX_PSRAM_16_SAMPLE_CNT LA_MAX_SAMPLE_CNT
 #define LA_HW_MAX_RAM_8_SAMPLE_CNT LA_MAX_SAMPLE_CNT
 #define LA_HW_MAX_RAM_16_SAMPLE_CNT LA_MAX_SAMPLE_CNT
-
-

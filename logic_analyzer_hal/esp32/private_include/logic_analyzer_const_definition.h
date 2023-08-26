@@ -46,8 +46,8 @@
 #define GDMA_PSRAM_BURST 32
 
 /*
-* I2S0/I2S1 menuconfig select - only esp32 target
-*/
+ * I2S0/I2S1 menuconfig select - only esp32 target
+ */
 
 #ifdef CONFIG_ANALYZER_USE_I2S_CHANNEL_0
 
