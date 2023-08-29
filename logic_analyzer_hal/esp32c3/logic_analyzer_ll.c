@@ -38,8 +38,9 @@ static intr_handle_t isr_handle;
 static intr_handle_t gpio_isr_handle;
 static int dma_num = 0;
 
-//#define HI_LEVEL_INT_RISCV 1
+#define HI_LEVEL_INT_RISCV 1
 #ifdef HI_LEVEL_INT_RISCV
+#include "riscv/rv_utils.h"
 // tmp hi_lvl_int
 typedef union
 {
@@ -86,7 +87,7 @@ void la_hi_level_int_enable(int pin_trigger)
    hi_level_trigger_pin = pin_trigger; // trigg_pin to hi_lvl_irq_handler
    hi_level_ivect_idx =  esp_intr_get_intno(gpio_isr_handle); // idx of handler in _vector_table
    hi_level_backup_ivect_data =  _vector_table[hi_level_ivect_idx]; // backup default handler in _vector_table
-   // jal x0 -> 0x6f ( 12 bit )
+
    int diff = (int)((uint8_t *)la_hi_level_ll_trigger_isr-(uint8_t*)&_vector_table[hi_level_ivect_idx]);
    int oo = diff;
    opcode_t ooo;
@@ -97,12 +98,11 @@ void la_hi_level_int_enable(int pin_trigger)
    ooo.b_1_10 = oo>>1;
    ooo.opcode = 0x6f;
    ooo.regs=0;
-   _vector_table_to_write = _vector_table-0x1c000;
-   ESP_LOGI("HLI","vt=%p vtw=%p",_vector_table,vector_table_to_write);
-   ESP_LOGI("HLI","isr=%p vta=%p diff=(%x %d) opcode=%x",la_hi_level_ll_trigger_isr,&_vector_table[hi_level_ivect_idx],diff,diff,ooo.val);
-
+   _vector_table_to_write = _vector_table-0x1c0000;
+   //esp_intr_dump(0);
+   //ESP_LOGI("HLI","vt=%p vtw=%p",_vector_table,_vector_table_to_write);
+   //ESP_LOGI("HLI","isr=%p vta=%p diff=(%x %d) opcode=%lx int=%ld",la_hi_level_ll_trigger_isr,&_vector_table[hi_level_ivect_idx],diff,diff,ooo.val,hi_level_ivect_idx);
    _vector_table_to_write[hi_level_ivect_idx] = ooo.val;
-   //_vector_table[hi_level_ivect_idx] = ;// change jal instruction to hi_lvl_irq_handler -> hack
 }
 #endif
 //  trigger isr handle -> start transfer -> slow int 3-4 mks
@@ -280,7 +280,10 @@ void logic_analyzer_ll_start()
 // slow interrupt -> gpio, may be redirect current irq
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
-   esp_err_t ret = esp_intr_alloc(ETS_GPIO_NMI_SOURCE, ESP_INTR_FLAG_LEVEL3 | ESP_INTR_FLAG_IRAM, la_ll_trigger_isr, (void *)pin_trigger, &gpio_isr_handle);
+   GPIO.pin[pin_trigger].int_ena &= ~2;        // enable nmi intr
+   GPIO.status_w1tc.val = 0x1 << pin_trigger; // clear intr status
+
+   esp_err_t ret = esp_intr_alloc(ETS_GPIO_NMI_SOURCE, ESP_INTR_FLAG_LEVEL3 | ESP_INTR_FLAG_IRAM , la_ll_trigger_isr, (void *)pin_trigger, &gpio_isr_handle);
    if (ret)
    {
       ESP_LOGE(TAG, "NMI intr alloc fail error=%x capture on non triggered mode", ret);

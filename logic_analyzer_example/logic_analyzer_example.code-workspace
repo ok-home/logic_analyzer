@@ -21,7 +21,8 @@
 			"dport_reg.h": "c",
 			"cache.h": "c",
 			"esp_http_server.h": "c",
-			"esp_cpu.h": "c"
+			"esp_cpu.h": "c",
+			"rv_utils.h": "c"
 		}
 	}
 }
