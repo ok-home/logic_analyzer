@@ -38,6 +38,73 @@ static intr_handle_t isr_handle;
 static intr_handle_t gpio_isr_handle;
 static int dma_num = 0;
 
+//#define HI_LEVEL_INT_RISCV 1
+#ifdef HI_LEVEL_INT_RISCV
+// tmp hi_lvl_int
+typedef union
+{
+   uint32_t val;
+   struct { // >> 1
+      uint32_t opcode:7;
+      uint32_t regs:5;
+      uint32_t b_12_19:8;
+      uint32_t b_11:1;
+      uint32_t b_1_10:10;
+      uint32_t b_20;
+   };
+} opcode_t;
+// jjj = opcode;
+// diff = (jjj.b_20<<20 | jjj.b_12_19<<12 | jjj.b_11<<11 | jjj.b_1_10<<1)|0xffe00000;
+//    oo = diff;
+//    ooo.val = 0; 
+//    ooo.b_20 = oo>>20;
+//    ooo.b_12_19 = oo>>12;
+//    ooo.b_11 = oo>>11;
+//    ooo.b_1_10 = oo>>1;
+//    ooo.opcode = 0x6f;
+//    ooo.regs=0;
+
+extern uint32_t _vector_table[32]; // swap to DRAM adress !!!!
+uint32_t *_vector_table_to_write;
+static int hi_level_trigger_pin = -1;
+static uint32_t hi_level_backup_ivect_data = 0;
+static uint32_t hi_level_ivect_idx = 0;
+__attribute__((interrupt))
+void IRAM_ATTR la_hi_level_ll_trigger_isr(void)
+{
+   GPSPI2.cmd.usr = 1; // start gdma
+   GPIO.pin[hi_level_trigger_pin].int_ena &= ~2; // clear nmi int bit -> disable nmi
+   _vector_table_to_write[hi_level_ivect_idx] = hi_level_backup_ivect_data; // restore _vector_table to default
+}
+   // change jal instruction to hi_lvl_irq_handler -> hack
+   // default handler -> _interrupt_handler -> jamp to ESP IDF IRQ dispatcher and irq call la_ll_trigger_isr
+   // hack -> change jal instruction in _vector_table to (j la_hi_level_ll_trigger_isr), it works without ESP IDF IRQ dispatcher - directly
+   // la_hi_level_ll_trigger_isr -> compiled with __attribute__((interrupt)) - code save & restore used register & mret instruction on return
+   // calculate offset to la_hi_level_ll_trigger_isr
+void la_hi_level_int_enable(int pin_trigger)
+{
+   hi_level_trigger_pin = pin_trigger; // trigg_pin to hi_lvl_irq_handler
+   hi_level_ivect_idx =  esp_intr_get_intno(gpio_isr_handle); // idx of handler in _vector_table
+   hi_level_backup_ivect_data =  _vector_table[hi_level_ivect_idx]; // backup default handler in _vector_table
+   // jal x0 -> 0x6f ( 12 bit )
+   int diff = (int)((uint8_t *)la_hi_level_ll_trigger_isr-(uint8_t*)&_vector_table[hi_level_ivect_idx]);
+   int oo = diff;
+   opcode_t ooo;
+   ooo.val = 0; 
+   ooo.b_20 = oo>>20;
+   ooo.b_12_19 = oo>>12;
+   ooo.b_11 = oo>>11;
+   ooo.b_1_10 = oo>>1;
+   ooo.opcode = 0x6f;
+   ooo.regs=0;
+   _vector_table_to_write = _vector_table-0x1c000;
+   ESP_LOGI("HLI","vt=%p vtw=%p",_vector_table,vector_table_to_write);
+   ESP_LOGI("HLI","isr=%p vta=%p diff=(%x %d) opcode=%x",la_hi_level_ll_trigger_isr,&_vector_table[hi_level_ivect_idx],diff,diff,ooo.val);
+
+   _vector_table_to_write[hi_level_ivect_idx] = ooo.val;
+   //_vector_table[hi_level_ivect_idx] = ;// change jal instruction to hi_lvl_irq_handler -> hack
+}
+#endif
 //  trigger isr handle -> start transfer -> slow int 3-4 mks
 void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
@@ -225,6 +292,11 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
       {
          GPIO.pin[pin_trigger].int_type = trigger_edge;
       }
+#ifdef HI_LEVEL_INT_RISCV
+
+   la_hi_level_int_enable(pin_trigger);
+
+#endif
       GPIO.status_w1tc.val = 0x1 << pin_trigger; // clear intr status
       GPIO.pin[pin_trigger].int_ena |= 2;        // enable nmi intr
    }
