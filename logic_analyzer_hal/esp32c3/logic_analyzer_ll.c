@@ -38,7 +38,7 @@ static intr_handle_t isr_handle;
 static intr_handle_t gpio_isr_handle;
 static int dma_num = 0;
 
-#define HI_LEVEL_INT_RISCV 1
+//#define HI_LEVEL_INT_RISCV 1
 #ifdef HI_LEVEL_INT_RISCV
 #include "riscv/rv_utils.h"
 // tmp hi_lvl_int
@@ -74,10 +74,12 @@ static uint32_t hi_level_ivect_idx = 0;
 __attribute__((interrupt))
 void IRAM_ATTR la_hi_level_ll_trigger_isr(void)
 {
+   if(GPIO.status.intr_st & (0x1<<hi_level_trigger_pin))
+   {
    GPSPI2.cmd.usr = 1; // start gdma
    GPIO.pin[hi_level_trigger_pin].int_ena &= ~2; // clear nmi int bit -> disable nmi
    _vector_table_to_write[hi_level_ivect_idx] = hi_level_backup_ivect_data; // restore _vector_table to default
-   ESP_DRAM_LOGI("IRQ-hl","stat =%x intstat=%x nmistat=%x sdioint?=%x nextstat=%x",GPIO.status.intr_st,GPIO.pcpu_int.intr,GPIO.pcpu_nmi_int.intr,GPIO.cpusdio_int.intr,GPIO.status_next.intr_st_next);
+   }
 }
    // change jal instruction to hi_lvl_irq_handler -> hack
    // default handler -> _interrupt_handler -> jamp to ESP IDF IRQ dispatcher and irq call la_ll_trigger_isr
@@ -294,15 +296,15 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
          GPIO.pin[pin_trigger].int_type = trigger_edge;
       }
 #ifdef HI_LEVEL_INT_RISCV
+   int irqn = esp_intr_get_intno(gpio_isr_handle);
+   //esprv_intc_int_set_priority(irqn,14);
+   //esprv_intc_int_set_type(irqn,0);
    // change irq ivect table
    la_hi_level_int_enable(pin_trigger);
 
 #endif
-      ESP_LOGI("IRQ-before","stat =%x intstat=%x nmistat=%x sdioint?=%x nextstat=%x",GPIO.status.intr_st,GPIO.pcpu_int.intr,GPIO.pcpu_nmi_int.intr,GPIO.cpusdio_int.intr,GPIO.status_next.intr_st_next);
-      GPIO.status_w1tc.val = 0x1 << pin_trigger; // clear intr status
-      ESP_LOGI("IRQ-clear","stat =%x intstat=%x nmistat=%x sdioint?=%x nextstat=%x",GPIO.status.intr_st,GPIO.pcpu_int.intr,GPIO.pcpu_nmi_int.intr,GPIO.cpusdio_int.intr,GPIO.status_next.intr_st_next);
+      GPIO.status_w1tc.val = (0x1 << pin_trigger); // clear intr status
       GPIO.pin[pin_trigger].int_ena |= 2;        // enable nmi intr
-      ESP_LOGI("IRQ-start","stat =%x intstat=%x nmistat=%x sdioint?=%x nextstat=%x",GPIO.status.intr_st,GPIO.pcpu_int.intr,GPIO.pcpu_nmi_int.intr,GPIO.cpusdio_int.intr,GPIO.status_next.intr_st_next);
    }
 }
 // full stop dma & spi -> todo short command ?
