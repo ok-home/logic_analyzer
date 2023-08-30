@@ -84,7 +84,7 @@
   - вишенка на торте - подключаемся любым каналом на TXD0 и смотрим свой же uart0 (только web)
   ## Настройки вынесены в menuconfig
    - Общие настройки
-     - ANALYZER_USE_HI_LEVEL5_INTERRUPT - триггер через прерывания высокого уровня
+     - ANALYZER_USE_HI_LEVEL_INTERRUPT - триггер через прерывания высокого уровня
      - ANALYZER_SEPARATE_MODE           - для работы как отдельное устройство ( своя настройка GPIO )
      - ANALYZER_USE_WS                  - использовать WEB интерфейс
      - ANALYZER_USE_SUMP                - подключаться непосредственно к PulseView по COM порту

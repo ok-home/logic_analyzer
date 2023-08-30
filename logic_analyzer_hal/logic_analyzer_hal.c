@@ -227,7 +227,7 @@ static void logic_analyzer_task(void *arg)
         }
         else // timeout detected
         {
-#ifdef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
+#ifdef CONFIG_ANALYZER_USE_HI_LEVEL_INTERRUPT
             ll_hi_level_triggered_isr_timeout_stop(); // restore gpio irq reg
 #endif
             cfg->logic_analyzer_cb(NULL, 0, 0, 0); // timeout
@@ -261,7 +261,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     {
         if (logic_analyzer_started)
         {
-#ifdef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
+#ifdef CONFIG_ANALYZER_USE_HI_LEVEL_INTERRUPT
             ll_hi_level_triggered_isr_timeout_stop(); // restore gpio irq reg
 #endif
             config->logic_analyzer_cb(NULL, 0, 0, 0); // timeout or restart

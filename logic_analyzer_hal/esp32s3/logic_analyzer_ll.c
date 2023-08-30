@@ -360,7 +360,7 @@ void logic_analyzer_ll_start()
 // start transfer with trigger -> set irq -> v_sync set to enable on irq handler
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
-#ifdef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
+#ifdef CONFIG_ANALYZER_USE_HI_LEVEL_INTERRUPT
     ll_hi_level_triggered_isr_start(pin_trigger, trigger_edge);
 #else
     gpio_install_isr_service(0);                 // default

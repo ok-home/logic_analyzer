@@ -23,7 +23,7 @@ static int hi_interrupt_started = 0;
 // reset hi level int to default mode
 void ll_hi_level_triggered_isr_timeout_stop(void)
 {
-#ifdef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
+#ifdef CONFIG_ANALYZER_USE_HI_LEVEL_INTERRUPT
     if (hi_interrupt_started)
     {
      // disable interrupt on core
