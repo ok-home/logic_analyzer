@@ -71,7 +71,7 @@
     </div>
     <div id="EchoString" class="logstr"></div>
     <div id="LogArea">
-        <textarea  id="logtext" rows="4" cols="50"></textarea>
+        <textarea id="logtext" rows="4" cols="50"></textarea>
     </div>
 </body>
 
@@ -310,8 +310,7 @@
 </script>
 <script> // event & validate html config data
     function getHWParam(e) {
-        if(checkData(this))
-        {
+        if (checkData(this)) {
             let tmp = document.getElementById("chn00");
             let str = JSON.stringify({ rowID: tmp.id, rowVal: tmp.value });
             socket.send(str);
@@ -403,31 +402,30 @@
             if (data instanceof ArrayBuffer) {
                 // check max_channel
                 let tmpl = document.querySelector('#config').querySelectorAll('input');
-                if(tmpl.length>20) // 16 ch
-                    {
-                        max_channels = 16;
-                        analyzerData = new Uint16Array(data);
+                if (tmpl.length > 20) // 16 ch
+                {
+                    max_channels = 16;
+                    analyzerData = new Uint16Array(data);
+                }
+                else if (tmpl.length > 12) // 8 ch
+                {
+                    max_channels = 8;
+                    analyzerData = new Uint8Array(data);
+                }
+                else // 4 ch
+                {
+                    max_channels = 4; // 8 
+                    //analyzerData = new Uint8Array(data);
+                    let tmpArr = new Uint8Array(data);
+                    analyzerData = new Uint8Array(tmpArr.length * 2);
+                    let outIdx = 0;
+                    for (let inIdx = 0; inIdx < tmpArr.length; inIdx++) {
+                        analyzerData[outIdx++] = tmpArr[inIdx] & 0xf;
+                        analyzerData[outIdx++] = (tmpArr[inIdx] >> 4) & 0xf;
                     }
-                else if(tmpl.length>12) // 8 ch
-                    {
-                        max_channels = 8;
-                        analyzerData = new Uint8Array(data);
-                    }
-                    else // 4 ch
-                    {
-                        max_channels = 4; // 8 
-                        //analyzerData = new Uint8Array(data);
-                        let tmpArr = new Uint8Array(data);
-                        analyzerData = new Uint8Array(tmpArr.length*2);
-                        let outIdx=0;
-                        for( let inIdx = 0; inIdx < tmpArr.length; inIdx++)
-                        {
-                            analyzerData[outIdx++]=tmpArr[inIdx] & 0xf;
-                            analyzerData[outIdx++]=(tmpArr[inIdx] >> 4) & 0xf;
-                        }
-                    }
+                }
                 //statusstr.innerHTML = "Received " + analyzerData.length + " samples";
-                textstr.value = "Received " + analyzerData.length + " samples" + "\n"+textstr.value;
+                textstr.value = "Received " + analyzerData.length + " samples" + "\n" + textstr.value;
                 curr_canvas_x_point = 0;
                 curr_array_start_point = 0;
                 click_array_point = curr_array_start_point;//zoom point
@@ -440,13 +438,13 @@
             } else {
                 // text frame
                 //statusstr.innerHTML = data;
-                textstr.value = data +"\n"+textstr.value;
+                textstr.value = data + "\n" + textstr.value;
                 if (data == "redraw") {
-                //statusstr.innerHTML = "redraw logic analyzer config";
-                //socket.close();
-                removeAll();
-                return;
-            }
+                    //statusstr.innerHTML = "redraw logic analyzer config";
+                    //socket.close();
+                    removeAll();
+                    return;
+                }
 
             }
         }
@@ -548,19 +546,19 @@
     socket.binaryType = "arraybuffer";
     socket.onopen = function () {
         //statusstr.innerHTML = "Соединение установлено";
-        textstr.value = "Соединение установлено" +"\n"+textstr.value;
+        textstr.value = "Соединение установлено" + "\n" + textstr.value;
         curr_cnt = max_cnt;
         drawLineS(analyzerData, max_channels, curr_array_start_point, curr_cnt);// 
     };
     socket.onclose = function (event) {
         //statusstr.innerHTML = "Соединение закрыто";
         //statusstr.innerHTML += ' код: ' + event.code + ' причина: ' + event.reason;
-        textstr.value = "Соединение закрыто" +"\n"+textstr.value;
+        textstr.value = "Соединение закрыто" + "\n" + textstr.value;
         document.location.reload();
     };
     socket.onerror = function (event) {
         //statusstr.innerHTML = "Ошибка сокета";
-        textstr.value = "Ошибка сокета" +"\n"+textstr.value;
+        textstr.value = "Ошибка сокета" + "\n" + textstr.value;
     };
 
     socket.onmessage = function (event) {
@@ -568,16 +566,16 @@
     };
 
     // test without reboot - remove cfg+datalist
-    function removeAll(){
+    function removeAll() {
         let tmpl = document.querySelector('#config').querySelectorAll('.cl1');
         for (let tmp of tmpl) {
             tmp.remove();
-            }
-        tmpl =  document.querySelector('#datalist').querySelectorAll('datalist');   
+        }
+        tmpl = document.querySelector('#datalist').querySelectorAll('datalist');
         for (let tmp of tmpl) {
             tmp.remove();
-            }
-        socket.send("clrdiv");    
+        }
+        socket.send("clrdiv");
     }
 
 

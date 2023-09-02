@@ -8,7 +8,6 @@
 #include "hal/gpio_ll.h"
 #include "soc/gpio_struct.h"
 #include "soc/i2s_struct.h"
-//#include "soc/dport_reg.h"
 #include "soc/gpio_reg.h"
 #include "esp32/rom/lldesc.h"
 #include "esp_private/periph_ctrl.h"
@@ -17,8 +16,14 @@
 
 #include "esp_idf_version.h"
 
+#ifdef CONFIG_ANALYZER_USE_HI_LEVEL_INTERRUPT
+#ifndef CONFIG_ESP_SYSTEM_MEMPROT_FEATURE
+#define HI_LEVEL_INT_RISCV
+#endif
+#endif
+
 #undef LA_HW_PSRAM
-#undef CONFIG_ANALYZER_USE_HI_LEVEL5_INTERRUPT
+#undef CONFIG_ANALYZER_USE_HI_LEVEL_INTERRUPT
 
 #define LA_HW_CLK_SAMPLE_RATE 160000000
 
@@ -61,5 +66,3 @@
 #define LA_HW_MAX_PSRAM_16_SAMPLE_CNT LA_MAX_SAMPLE_CNT
 #define LA_HW_MAX_RAM_8_SAMPLE_CNT LA_MAX_SAMPLE_CNT
 #define LA_HW_MAX_RAM_16_SAMPLE_CNT LA_MAX_SAMPLE_CNT
-
-

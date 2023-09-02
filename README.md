@@ -84,7 +84,7 @@
  - icing on the cake - we connect with any channel on TXD0 and watch our own uart0 (only web)
  ## Settings moved to menuconfig
  - General settings
-   - ANALYZER_USE_HI_LEVEL5_INTERRUPT - trigger via high level interrupts
+   - ANALYZER_USE_HI_LEVEL_INTERRUPT - trigger via high level interrupts
    - ANALYZER_SEPARATE_MODE - to work as a separate device (own GPIO setting)
    - ANALYZER_USE_WS - use WEB interface
    - ANALYZER_USE_SUMP - connect directly to PulseView via COM port

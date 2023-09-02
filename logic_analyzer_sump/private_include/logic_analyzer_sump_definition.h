@@ -1,17 +1,18 @@
+#pragma once
 // definition esp32s3
-//43-tx 44-rx
+// 43-tx 44-rx
 // definition esp32c3
-//21-tx 20-rx
+// 21-tx 20-rx
 // sigrok default sample rate
 #define PULSEVIEW_MAX_SAMPLE_RATE 100000000
 
 // define uart port - default port
 #ifdef CONFIG_ANALYZER_USE_SUMP
 
-#define SUMP_UART_PORT_NUM      CONFIG_ANALYZER_SUMP_UART_PORT_NUMBER
-#define SUMP_TEST_TXD           CONFIG_ANALYZER_SUMP_UART_PORT_TX_PIN
-#define SUMP_TEST_RXD           CONFIG_ANALYZER_SUMP_UART_PORT_RX_PIN
-#define SUMP_UART_BAUD_RATE     CONFIG_ANALYZER_SUMP_UART_PORT_BAUD_RATE
+#define SUMP_UART_PORT_NUM CONFIG_ANALYZER_SUMP_UART_PORT_NUMBER
+#define SUMP_TEST_TXD CONFIG_ANALYZER_SUMP_UART_PORT_TX_PIN
+#define SUMP_TEST_RXD CONFIG_ANALYZER_SUMP_UART_PORT_RX_PIN
+#define SUMP_UART_BAUD_RATE CONFIG_ANALYZER_SUMP_UART_PORT_BAUD_RATE
 
 #else
 
@@ -62,7 +63,7 @@
 
 // 84 - f9 1000
 // 83 - f9 1000
-//#define SUMP_SET_RLE 0x0100
+// #define SUMP_SET_RLE 0x0100
 
 /* extended commands -- self-test unsupported, but metadata is returned. */
 #define SUMP_SELF_TEST 0x03
