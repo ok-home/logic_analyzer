@@ -189,7 +189,7 @@ static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
 static esp_err_t logic_analyzer_ll_dma_init(void)
 {
    // find free dma channel
-   for (int x = (SOC_GDMA_PAIRS_PER_GROUP_MAX - 1); x >= 0; x--)
+   for (int x = (SOC_GDMA_PAIRS_PER_GROUP - 1); x >= 0; x--)
    {
       if (GDMA.channel[x].in.in_link.addr == 0x0)
       {
