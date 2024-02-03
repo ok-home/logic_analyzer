@@ -36,7 +36,6 @@
  - Switching the number of channels 8/16 and the use of PSRAM
  - View samples (without protocol analyzer)
  - Saving data in .bin format, which can then be transferred to the Sigrok PulseView if necessary.
- - Connect to WIFI - example_connect in menuconfig
  ## Sigrok PulseView can be used as visualization and protocol analyzer
  - Open software
  - Lots of protocol analyzers

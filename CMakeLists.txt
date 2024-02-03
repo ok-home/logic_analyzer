@@ -9,11 +9,9 @@ set( priv_includedir
     )
 set( priv_require 
     driver
-    protocol_examples_common
     esp_http_server 
     esp_wifi 
     nvs_flash 
-    esp_eth 
     esp_mm
     esp_psram 
     )
@@ -79,6 +77,11 @@ if(CONFIG_ANALYZER_USE_WS)
         list( APPEND srcs
             logic_analyzer_ws/logic_analyzer_ws_server.c
         )
+        if(CONFIG_ANALYZER_WIFI_CONNECT)
+            list( APPEND srcs
+                logic_analyzer_ws/logic_analyzer_wifi_connect.c
+        )
+        endif()
     endif()
 endif()
 

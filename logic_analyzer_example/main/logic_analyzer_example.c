@@ -2,7 +2,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
-#include "driver/gpio.h"
 
 #ifdef CONFIG_ANALYZER_USE_SUMP
 #include "logic_analyzer_sump.h"
