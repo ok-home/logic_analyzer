@@ -41,9 +41,7 @@ menu "Logic Analyzer Configuration"
                 int "LEDC_CHANNEL_NUMBER for PCLK"
                 range 0 7
                 default 7
-
         endif
-
     endif
 
     if ESP_SYSTEM_CHECK_INT_LEVEL_4
@@ -74,7 +72,28 @@ menu "Logic Analyzer Configuration"
             help
                 Start new WS server, or only register_uri_handlers on existing WS server.
     endif
-        
+
+    if  ANALYZER_START_WS_SERVER
+      config ANALYZER_WIFI_CONNECT
+      bool "Connect wifi"
+      default y
+        help
+            Connect wifi or use on existing connection.
+    endif
+
+    if  ANALYZER_WIFI_CONNECT
+        config ANALYZER_WIFI_SSID
+            string "wifi ssid"
+            default "myssid"
+            help
+                wifi ssid
+        config ANALYZER_WIFI_PASS
+            string "wifi password"
+            default "mypass"
+            help
+                wifi password
+    endif
+
     config ANALYZER_USE_SUMP
         bool "Direct connect to Sizrok PulseView"
         default n

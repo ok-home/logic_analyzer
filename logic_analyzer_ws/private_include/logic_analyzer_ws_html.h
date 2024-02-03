@@ -34,6 +34,8 @@ enum rowID_name
     ROW_LST,
     ROW_START,
     ROW_ZOOM,
+    ROW_ZOOM_MINUS,
+    ROW_ZOOM_PLUS,
     ROW_MSMP,
     ROW_MCLK,
     ROW_SAVE
@@ -50,6 +52,8 @@ const char *rowID[] = {
     [ROW_LST] = "lst",
     [ROW_START] = "beg",
     [ROW_ZOOM] = "zom",
+    [ROW_ZOOM_MINUS]= "zmi",
+    [ROW_ZOOM_PLUS]= "zpl",
     [ROW_MSMP] = "smp",
     [ROW_MCLK] = "clk",
     [ROW_SAVE] = "sav"};
@@ -65,6 +69,8 @@ enum rowLabel
     ROW_LBL_PSRAM,
     ROW_LBL_START,
     ROW_LBL_ZOOM,
+    ROW_LBL_ZOOM_MINUS,
+    ROW_LBL_ZOOM_PLUS,
     ROW_LBL_MEASH_SAMPLES,
     ROW_LBL_MEASH_CLOCK,
     ROW_LBL_SAVE
@@ -80,6 +86,8 @@ const char *rowLbl[] = {
     [ROW_LBL_PSRAM] = "Psram",
     [ROW_LBL_START] = "Start",
     [ROW_LBL_ZOOM] = "Zoom to fit",
+    [ROW_LBL_ZOOM_MINUS] = "Zoom--",
+    [ROW_LBL_ZOOM_PLUS] = "Zoom++",
     [ROW_LBL_MEASH_SAMPLES] = "Samples",
     [ROW_LBL_MEASH_CLOCK] = "Clock Hz",
     [ROW_LBL_SAVE] = "Save to RowBin"};
@@ -101,8 +109,10 @@ enum HTML_EVENT_IDX
     CHECK_CFG_DATA_EVENT = 1,
     START_EVENT = 2,
     ZOOM_EVENT = 3,
-    SAVE_EVENT = 4,
-    GET_HW_PARAM = 5
+    ZOOM_MINUS_EVENT = 4,
+    ZOOM_PLUS_EVENT = 5,
+    SAVE_EVENT = 6,
+    GET_HW_PARAM = 7
 };
 
 enum DATALIST_ROW

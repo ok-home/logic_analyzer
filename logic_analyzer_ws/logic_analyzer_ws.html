@@ -119,6 +119,8 @@
             checkCfgData,
             startMeashure,
             zoomToFit,
+            zoomMinus,
+            zoomPlus,
             saveByteArray,
             getHWParam
         ];
@@ -152,6 +154,7 @@
     const x_bord = 50;
     const y_bord = 50;
     const zoom_inc = 0.025;
+    const zoom_button_inc = 0.05;
     const min_cnt = 32;
 
     const color_black = "black";
@@ -370,6 +373,16 @@
         click_array_point = curr_array_start_point;//zoom point
         curr_cnt = max_cnt;
         drawLineS(analyzerData, max_channels, 0, max_cnt);
+    }
+    function zoomPlus(evt){
+        curr_cnt -= curr_cnt * zoom_button_inc;
+        curr_array_start_point = (mark_click_array_point - curr_cnt * (mark_curr_canvas_x_point / (x_canvas - x_bord)));
+        drawLineS(analyzerData, max_channels, curr_array_start_point, curr_cnt);
+    }
+    function zoomMinus(evt){
+        curr_cnt += curr_cnt * zoom_button_inc;
+        curr_array_start_point = (mark_click_array_point - curr_cnt * (mark_curr_canvas_x_point / (x_canvas - x_bord)));
+        drawLineS(analyzerData, max_channels, curr_array_start_point, curr_cnt);
     }
     function saveByteArray() {
         // 4 channels data save as 8 channels data
