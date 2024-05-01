@@ -94,33 +94,41 @@ menu "Logic Analyzer Configuration"
                 wifi password
     endif
 
+    config ANALYZER_USE_CLI
+        bool "Command line intrface with logic_analyzer_cli.py"
+        default n
+        help
+            Command line intrface with logic_analyzer_cli.py
+            Create RowBin.bin file for import from PulseView
+
+
     config ANALYZER_USE_SUMP
-        bool "Direct connect to Sizrok PulseView"
+        bool "Direct connect to Sigrok PulseView"
         default n
         help
             direct connect to Sigrok PulseView via sump protocol.
         
-    if ANALYZER_USE_SUMP
+    if ANALYZER_USE_SUMP || ANALYZER_USE_CLI
         
-        config ANALYZER_SUMP_UART_PORT_NUMBER
+        config ANALYZER_UART_PORT_NUMBER
             int "uart port number 0-2"
             default 0
             help
                 UART port number.
         
-        config ANALYZER_SUMP_UART_PORT_BAUD_RATE
+        config ANALYZER_UART_PORT_BAUD_RATE
             int "uart port baud rate"
             default 921600
             help
                 UART port baud rate.
         
-        config ANALYZER_SUMP_UART_PORT_RX_PIN
+        config ANALYZER_UART_PORT_RX_PIN
             int "uart port rx pin"
             default 3
             help
                 UART port port rx pin.
         
-        config ANALYZER_SUMP_UART_PORT_TX_PIN
+        config ANALYZER_UART_PORT_TX_PIN
             int "uart port tx pin"
             default 1
             help

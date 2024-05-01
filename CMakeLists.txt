@@ -97,6 +97,19 @@ if(CONFIG_ANALYZER_USE_SUMP)
     )
 endif()
 
+if(CONFIG_ANALYZER_USE_CLI)
+    list( APPEND srcs
+        logic_analyzer_cli/logic_analyzer_cli.c
+    )
+    list( APPEND includedir 
+        logic_analyzer_cli/include 
+    )
+    list( APPEND priv_includedir 
+        logic_analyzer_cli/private_include 
+    )
+endif()
+
+
 idf_component_register(
     SRCS ${srcs}
     INCLUDE_DIRS ${includedir}

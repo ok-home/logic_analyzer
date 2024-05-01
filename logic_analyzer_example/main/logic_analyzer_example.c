@@ -9,6 +9,9 @@
 #ifdef CONFIG_ANALYZER_USE_WS
 #include "logic_analyzer_ws_server.h"
 #endif
+#ifdef CONFIG_ANALYZER_USE_CLI
+#include "logic_analyzer_cli.h"
+#endif
 
 void app_main(void)
 {
@@ -25,6 +28,10 @@ void app_main(void)
 #endif
 #ifdef CONFIG_ANALYZER_USE_WS
     logic_analyzer_ws_server();
+#endif
+
+#ifdef CONFIG_ANALYZER_USE_CLI
+    logic_analyzer_cli();
 #endif
     while (1)
     {
