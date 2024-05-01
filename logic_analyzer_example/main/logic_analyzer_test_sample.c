@@ -290,5 +290,5 @@ void test_sample_init(void)
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
     xTaskCreate(gpio_blink, "tt", 2048 * 2, NULL, 1, NULL);
-    xTaskCreatePinnedToCore(irq_gpio_blink, "irq", 2048 * 2, NULL, 1, NULL, 1);
+    xTaskCreate(irq_gpio_blink, "irq", 2048 * 2, NULL, 1, NULL);
 }

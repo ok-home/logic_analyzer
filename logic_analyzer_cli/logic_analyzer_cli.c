@@ -247,6 +247,6 @@ static void logic_analyzer_cli_task(void *arg)
 }
 void logic_analyzer_cli(void)
 {
-    xTaskCreate(logic_analyzer_cli_task, "la_cli_task", 4096*2, NULL, 5, NULL);
+    xTaskCreate(logic_analyzer_cli_task, "la_cli_task", 4096*2, NULL, 10, NULL);
 }
 
