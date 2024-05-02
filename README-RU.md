@@ -96,7 +96,7 @@
    
   ## Для использования Hi-level interrupt необходимо в menuconfig поставить CONFIG_ESP_SYSTEM_CHECK_INT_LEVEL = ESP_SYSTEM_CHECK_INT_LEVEL_4
 
-  ## Добавлен CLI интерфейс для стабильной работы с PulseViev при ограничении RAM
+  ## Добавлен CLI интерфейс для стабильной работы с PulseView при ограничении RAM
    - минимальное потребление RAM
    - простой скрипт logic_analyzer_cli/logic_analyzer_cli.py для сохранения сэмплов в RowBin файл (необходимо добавить зависимость PySerial)
    - параметры скрипта задаются в файле la_cfg.json ( шаблон файла создается автоматически при первом запуске скрипта), GPIO,TRIGGER,TRBGGER EDGE,SAMPLES,SAMPLE RATE,NUMBER CHANNELS,RAM/PSRAM.

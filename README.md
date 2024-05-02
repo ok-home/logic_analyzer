@@ -95,7 +95,7 @@
    - ANALYZER_USE_LEDC_TIMER_FOR_PCLK - enable LEDC channel for sample rate less than 1 MHz
  ## To use Hi-level interrupt, you need to set CONFIG_ESP_SYSTEM_CHECK_INT_LEVEL = ESP_SYSTEM_CHECK_INT_LEVEL_4 in menuconfig
 
-## Added CLI interface for stable operation with PulseViev when RAM is limited
+## Added CLI interface for stable operation with PulseView when RAM is limited
   - minimal RAM consumption
   - a simple script logic_analyzer_cli/logic_analyzer_cli.py to save samples to a RowBin file (you need to add the PySerial dependency)
   - script parameters are set in the la_cfg.json file (the file template is created automatically the first time the script is launched), GPIO,TRIGGER,TRBGGER EDGE,SAMPLES,SAMPLE RATE,NUMBER CHANNELS,RAM/PSRAM.
