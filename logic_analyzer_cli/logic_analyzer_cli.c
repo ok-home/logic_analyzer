@@ -1,6 +1,6 @@
-/* logic analyzer sump example
+/* logic analyzer cli interface
 
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
+   This code is in the Public Domain (or CC0 licensed, at your option.)
 
    Unless required by applicable law or agreed to in writing, this
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
@@ -26,7 +26,6 @@
 
 static const char *TAG = "LOGIC ANALYZER CLI";
 
-//static int uart_read_line(char *buff, size_t size);
 static void uart_send_string(char *str);
 
 static logic_analyzer_config_t la_cfg = {
@@ -57,7 +56,6 @@ static void logic_analyzer_cli_cb(uint8_t *sample_buf, int samples, int sample_r
         ESP_LOGI(TAG, "Start samples transfer %d", samples);
         uart_send_string("Start samples transfer\n");
 
-        // ret = send_ws_bin((const uint8_t *)sample_buf, l_samples);
         for (int i = 0; i < bytes_in_buff; i++)
         {
             if (channels == 4)
@@ -117,7 +115,7 @@ static void uart_read_json(char *json_string)
     char val[16];
     esp_err_t ret = 0;
 
-    // parse json from ws
+    // parse json from UART
     if (json_to_str_parm(json_string, name, val) == ESP_OK)
     {
         if (strncmp("pin", name, 3) == 0) // gpio pins
