@@ -14,3 +14,4 @@
 .vscode_tmp/settings.json
 .vscode_tmp/tasks.json
 logic_analyzer_example/logic_analyzer_example.code-workspace
+logic_analyzer_example/laRowBin.bin

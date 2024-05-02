@@ -1,7 +1,6 @@
 import serial
 import serial.tools.list_ports
 import json
-import time
 import sys
 
 cfgFileName = "la_cfg.json"
@@ -85,9 +84,7 @@ def getAvailableCfgFromEsp():
 def readLaDataFromEsp():
     global ser
     global laConfig
-    #ser.flush()
-    #time.sleep(.1)
-    ser.read_all()
+    ser.reset_input_buffer()
     ser.write(bytes("endcfg\n",'utf-8'))
     param = {}
     cmd = ser.readline().decode("utf-8")
