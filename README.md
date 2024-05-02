@@ -95,6 +95,26 @@
    - ANALYZER_USE_LEDC_TIMER_FOR_PCLK - enable LEDC channel for sample rate less than 1 MHz
  ## To use Hi-level interrupt, you need to set CONFIG_ESP_SYSTEM_CHECK_INT_LEVEL = ESP_SYSTEM_CHECK_INT_LEVEL_4 in menuconfig
 
+## Added CLI interface for stable operation with PulseViev when RAM is limited
+  - minimal RAM consumption
+  - a simple script logic_analyzer_cli/logic_analyzer_cli.py to save samples to a RowBin file (you need to add the PySerial dependency)
+  - script parameters are set in the la_cfg.json file (the file template is created automatically the first time the script is launched), GPIO,TRIGGER,TRBGGER EDGE,SAMPLES,SAMPLE RATE,NUMBER CHANNELS,RAM/PSRAM.
+  - connection to the program code
+    - logic_analyzer_cli/include/logic_analyzer_cli.h
+    - set ANALYZER_USE_CLI and UART parameters in menuconfig
+    - compile and download program code with connected logic_analyzer
+    - connect to UART
+    - run logic_analyzer_cli.py with the parameters set in the file la_cfg.json
+  - connection to PulseView
+    - Import Raw binary logic data - a file created by the script
+    - setting the number of channels and sample frequency during the first import (esp32c3 - set 8 channels, 4 lower ones are used), in the future, if these parameters do not change, just do Reload
+  - for UART0 the same restrictions as for the SUMP interface
+  - advantages over SUMP interface
+    - look at the known PulseView bugs above - they are not here (except for UART0)
+    - simple GPIO configuration for channels via la_cfg.json
+
+![cli interface output](/la_cli.jpg)
+
  ## Parts of the code used in the project
   - [esp32-cam](https://github.com/espressif/esp32-camera) for I2S DMA
   - [EUA/ESP32_LogicAnalyzer](https://github.com/EUA/ESP32_LogicAnalyzer) for SUMP

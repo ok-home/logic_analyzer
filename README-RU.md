@@ -96,6 +96,26 @@
    
   ## Для использования Hi-level interrupt необходимо в menuconfig поставить CONFIG_ESP_SYSTEM_CHECK_INT_LEVEL = ESP_SYSTEM_CHECK_INT_LEVEL_4
 
+  ## Добавлен CLI интерфейс для стабильной работы с PulseViev при ограничении RAM
+   - минимальное потребление RAM
+   - простой скрипт logic_analyzer_cli/logic_analyzer_cli.py для сохранения сэмплов в RowBin файл (необходимо добавить зависимость PySerial)
+   - параметры скрипта задаются в файле la_cfg.json ( шаблон файла создается автоматически при первом запуске скрипта), GPIO,TRIGGER,TRBGGER EDGE,SAMPLES,SAMPLE RATE,NUMBER CHANNELS,RAM/PSRAM.
+   - подключение к коду программы
+     - logic_analyzer_cli/include/logic_analyzer_cli.h
+     - установить в menuconfig ANALYZER_USE_CLI и параметры UART
+     - скомпилировать и загрузить код программы с подключеным logic_analyzer
+     - подключиться к UART
+     - запустить logic_analyzer_cli.py с установлеными параметрами в файле la_cfg.json
+    - подключение к PulseView
+     - Import Raw binary logic data  - файл который создается скриптом
+     - задание количества каналов и частоты сэмплов при первом импорте (esp32c3 - ставим 8 каналов, используются 4 младших ), в дальнейшем если эти параметры не меняются достаточно сделать Reload
+   - для UART0 те же ограничения как для SUMP интерфейса
+   - преимущества перед SUMP интерфейсом
+     - смотрим выше известные баги PulseView - здесь их нет (кроме UART0)
+     - простая настройка GPIO на каналы через la_cfg.json
+
+![вывод cli интерфейса](/la_cli.jpg)
+
 ## В проекте использованы части кода
  - [esp32-cam](https://github.com/espressif/esp32-camera) for I2S DMA
  - [EUA/ESP32_LogicAnalyzer](https://github.com/EUA/ESP32_LogicAnalyzer) for SUMP
