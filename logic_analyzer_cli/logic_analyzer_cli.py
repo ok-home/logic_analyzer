@@ -22,7 +22,8 @@ def defaultCfgToFile():
         "PyCfg":{
             "dataFile":"laRowBin.bin",
             "PortName":"/dev/ttyACM1",
-            "PortSpeed":"921600" 
+            "PortSpeed":"921600",
+            "PortTimeout":"120" 
         },
         "EspCfg":{
             "pin0":"-1",
@@ -101,12 +102,11 @@ def readLaDataFromEsp():
                     data = ser.read(cnt)
                     with open(laConfig["PyCfg"]["dataFile"],"wb") as f:
                         f.write(data)
-                case "Samples transfer done\n":
                     print("Samples transferred to file "+laConfig["PyCfg"]["dataFile"])
-                    print("Samples="+param['smp']+" sample rate="+param['clk']+" channel="+param['chn'])
+                    print("Samples transferred "+str(len(data))+" of " +param['smp']+", sample rate="+param['clk']+" channel="+param['chn'])
                     break
                 case "Error - callback timeout deteсted\n":
-                    print("Error - timeout")
+                    print("Error: logic analyzer timeout")
                     break
                 case x if "{" in x:
                     param.update(json.loads(cmd))
@@ -127,7 +127,7 @@ def main():
     print("-------------------------------------------")
     readCfgFromFile()
     try:
-        ser = serial.Serial(laConfig["PyCfg"]["PortName"], int(laConfig["PyCfg"]["PortSpeed"]))
+        ser = serial.Serial(laConfig["PyCfg"]["PortName"], int(laConfig["PyCfg"]["PortSpeed"]),timeout=float(laConfig["PyCfg"]["PortTimeout"]))
         laCfgToEsp()
         readLaDataFromEsp()
         ser.close()
@@ -138,5 +138,4 @@ def main():
     print("-------------------------------------------")
 
 main()
-ser.close()
 print("exit")

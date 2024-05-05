@@ -72,7 +72,7 @@ static void logic_analyzer_cli_cb(uint8_t *sample_buf, int samples, int sample_r
         }
 
         ESP_LOGI(TAG, "Samples transfer done");
-        uart_send_string("Samples transfer done\n");
+        //uart_send_string("Samples transfer done\n");
     }
     else // timeout detected
     {
