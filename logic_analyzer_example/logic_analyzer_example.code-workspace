@@ -22,7 +22,8 @@
 			"cache.h": "c",
 			"esp_http_server.h": "c",
 			"esp_cpu.h": "c",
-			"rv_utils.h": "c"
+			"rv_utils.h": "c",
+			"usb_serial_jtag.h": "c"
 		}
 	}
 }

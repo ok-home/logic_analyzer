@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/uart.h"
 #include "driver/gpio.h"
 #include "sdkconfig.h"
 #include "esp_log.h"
@@ -24,8 +23,10 @@
 static const char *TAG = "LOGIC ANALYZER CLI";
 #define JSON_SIZE (256)
 #define SERIAL_UART 1
+//#define SERIAL_USB_JTAG 1 // test only
 
 #ifdef SERIAL_UART
+#include "driver/uart.h"
 #define BUF_SIZE (1024)
 static void logic_analyzer_serial_init()
 {
@@ -57,6 +58,23 @@ static int logic_analyzer_serial_read_bytes(char *buf, size_t size)
 }
 #endif
 
+#ifdef SERIAL_USB_JTAG // test only
+#include "driver/usb_serial_jtag.h"
+static void logic_analyzer_serial_init()
+{
+    usb_serial_jtag_driver_config_t usb_serial_jtag_config = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
+    usb_serial_jtag_driver_install(&usb_serial_jtag_config);
+}
+static void logic_analyzer_serial_write_bytes(const char *buf, size_t size)
+{
+    usb_serial_jtag_write_bytes(buf, size, portMAX_DELAY);
+}
+static int logic_analyzer_serial_read_bytes(char *buf, size_t size)
+{
+    return usb_serial_jtag_read_bytes(buf, size, portMAX_DELAY);
+}
+
+#endif
 
 
 static void logic_analyzer_send_string(char *str);
@@ -224,6 +242,7 @@ static void logic_analyzer_read_json(char *json_string)
 }
 static void logic_analyzer_send_string(char *str)
 {
+    //ESP_LOGI(TAG,"tx - %s",str);
     logic_analyzer_serial_write_bytes( str, strlen(str));
 }
 static int logic_analyzer_read_string(char *buff, size_t size)
@@ -237,6 +256,7 @@ static int logic_analyzer_read_string(char *buff, size_t size)
     }
     // idx++;
     buff[idx] = 0;
+        //ESP_LOGI(TAG,"rx - %s",buff);
     return idx;
 }
 static void logic_analyzer_cli_task(void *arg)
@@ -248,6 +268,7 @@ static void logic_analyzer_cli_task(void *arg)
         int len = logic_analyzer_read_string(data_str, JSON_SIZE);
         if (len)
         {
+            //ESP_LOGI(TAG,"rx-data- %s",data_str);
             logic_analyzer_read_json(data_str);
         }
     }
