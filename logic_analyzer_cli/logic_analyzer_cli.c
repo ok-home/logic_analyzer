@@ -21,12 +21,45 @@
 #include "logic_analyzer_const_definition.h"
 #include "jsmn.h"
 
-#define BUF_SIZE (1024)
-#define JSON_SIZE (256)
-
 static const char *TAG = "LOGIC ANALYZER CLI";
+#define JSON_SIZE (256)
+#define SERIAL_UART 1
 
-static void uart_send_string(char *str);
+#ifdef SERIAL_UART
+#define BUF_SIZE (1024)
+static void logic_analyzer_serial_init()
+{
+      /* Configure parameters of an UART driver,
+     * communication pins and install the driver */
+    uart_config_t uart_config = {
+        .baud_rate = CONFIG_ANALYZER_UART_PORT_BAUD_RATE,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_DEFAULT,
+    };
+    int intr_alloc_flags = 0;
+#if CONFIG_UART_ISR_IN_IRAM
+    intr_alloc_flags = ESP_INTR_FLAG_IRAM;
+#endif
+    ESP_ERROR_CHECK(uart_driver_install(CONFIG_ANALYZER_UART_PORT_NUMBER, BUF_SIZE * 2, 0, 0, NULL, intr_alloc_flags));
+    ESP_ERROR_CHECK(uart_param_config(CONFIG_ANALYZER_UART_PORT_NUMBER, &uart_config));
+    ESP_ERROR_CHECK(uart_set_pin(CONFIG_ANALYZER_UART_PORT_NUMBER, CONFIG_ANALYZER_UART_PORT_TX_PIN, CONFIG_ANALYZER_UART_PORT_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+}
+static void logic_analyzer_serial_write_bytes(const char *buf, size_t size)
+{
+    uart_write_bytes(CONFIG_ANALYZER_UART_PORT_NUMBER, buf, size);
+}
+static int logic_analyzer_serial_read_bytes(char *buf, size_t size)
+{
+    return uart_read_bytes(CONFIG_ANALYZER_UART_PORT_NUMBER, buf, size, portMAX_DELAY);
+}
+#endif
+
+
+
+static void logic_analyzer_send_string(char *str);
 
 static logic_analyzer_config_t la_cfg = {
     .pin = {LA_PIN_0, LA_PIN_1, LA_PIN_2, LA_PIN_3, LA_PIN_4, LA_PIN_5, LA_PIN_6, LA_PIN_7, LA_PIN_8, LA_PIN_9, LA_PIN_10, LA_PIN_11, LA_PIN_12, LA_PIN_13, LA_PIN_14, LA_PIN_15},
@@ -38,7 +71,6 @@ static logic_analyzer_config_t la_cfg = {
     .samples_to_psram = LA_ANALYZER_PSRAM,
     .meashure_timeout = LA_DEFAULT_TiMEOUT,
     .logic_analyzer_cb = NULL};
-
 static logic_analyzer_hw_param_t la_hw;
 
 static void logic_analyzer_cli_cb(uint8_t *sample_buf, int samples, int sample_rate, int channels)
@@ -48,39 +80,38 @@ static void logic_analyzer_cli_cb(uint8_t *sample_buf, int samples, int sample_r
     {
         int bytes_in_buff = channels > 4 ? (samples * (channels / 8)) : (samples / 2);
         sprintf(jsonstr, "{\"smp\":\"%d\"}\n", samples);
-        uart_send_string(jsonstr);
+        logic_analyzer_send_string(jsonstr);
         sprintf(jsonstr, "{\"clk\":\"%d\"}\n", sample_rate);
-        uart_send_string(jsonstr);
+        logic_analyzer_send_string(jsonstr);
         sprintf(jsonstr, "{\"chn\":\"%d\"}\n", channels);
-        uart_send_string(jsonstr);
+        logic_analyzer_send_string(jsonstr);
         ESP_LOGI(TAG, "Start samples transfer %d", samples);
-        uart_send_string("Start samples transfer\n");
+        logic_analyzer_send_string("Start samples transfer\n");
 
         for (int i = 0; i < bytes_in_buff; i++)
         {
             if (channels == 4)
             {
                 char data = sample_buf[i] & 0xf;
-                uart_write_bytes(CONFIG_ANALYZER_UART_PORT_NUMBER, (const char *)&data, 1);
+                logic_analyzer_serial_write_bytes( (const char *)&data, 1);
                 data = (sample_buf[i] >> 4) & 0xf;
-                uart_write_bytes(CONFIG_ANALYZER_UART_PORT_NUMBER, (const char *)&data, 1);
+                logic_analyzer_serial_write_bytes( (const char *)&data, 1);
             }
             else // 8 & 16  chann
             {
-                uart_write_bytes(CONFIG_ANALYZER_UART_PORT_NUMBER, (const char *)&sample_buf[i], 1);
+                logic_analyzer_serial_write_bytes( (const char *)&sample_buf[i], 1);
             }
         }
 
         ESP_LOGI(TAG, "Samples transfer done");
-        //uart_send_string("Samples transfer done\n");
+        //logic_analyzer_send_string("Samples transfer done\n");
     }
     else // timeout detected
     {
         ESP_LOGE(TAG, "Error - callback timeout deteсted");
-        uart_send_string("Error - callback timeout deteсted\n");
+        logic_analyzer_send_string("Error - callback timeout deteсted\n");
     }
 }
-
 // simple json parse -> only one parametr name/val
 static esp_err_t json_to_str_parm(char *jsonstr, char *nameStr, char *valStr) // распаковать строку json в пару  name/val
 {
@@ -107,8 +138,7 @@ static esp_err_t json_to_str_parm(char *jsonstr, char *nameStr, char *valStr) //
         valStr[0] = 0;
     return ESP_OK;
 }
-
-static void uart_read_json(char *json_string)
+static void logic_analyzer_read_json(char *json_string)
 {
     char send_str[64];
     char name[16];
@@ -162,12 +192,12 @@ static void uart_read_json(char *json_string)
             if (ret)
             {
                 ESP_LOGE(TAG, "Start logic analyzer error %x", ret);
-                uart_send_string("Start logic analyzer error\n");
+                logic_analyzer_send_string("Start logic analyzer error\n");
             }
             else
             {
                 ESP_LOGI(TAG, "Start logic analyzer OK");
-                uart_send_string("Start logic analyzer OK\n");
+                logic_analyzer_send_string("Start logic analyzer OK\n");
             }
         }
         else if (strncmp("getcfg", json_string, 6) == 0)
@@ -176,15 +206,15 @@ static void uart_read_json(char *json_string)
             la_hw.current_psram = la_cfg.samples_to_psram;
             logic_analyzer_get_hw_param(&la_hw); // get HW params
             sprintf(send_str, "Hardware sample rate and sample count for %d channel and %s\n", la_hw.current_channels, la_hw.current_psram ? "Psram" : "Ram");
-            uart_send_string(send_str);
+            logic_analyzer_send_string(send_str);
             sprintf(send_str, "   Available sample rate min %d max %d\n", la_hw.min_sample_rate, la_hw.max_sample_rate);
-            uart_send_string(send_str);
+            logic_analyzer_send_string(send_str);
             sprintf(send_str, "   Available sample count min %d max %d\n", la_hw.min_sample_cnt, la_hw.max_sample_cnt);
-            uart_send_string(send_str);
+            logic_analyzer_send_string(send_str);
             sprintf(send_str, "Available channels min %d max %d\n", la_hw.min_channels, la_hw.max_channels);
-            uart_send_string(send_str);
+            logic_analyzer_send_string(send_str);
             sprintf(send_str, "Available %s\n", la_hw.available_psram ? "Psram and Ram" : "Ram only");
-            uart_send_string(send_str);
+            logic_analyzer_send_string(send_str);
         }
         else
         {
@@ -192,15 +222,14 @@ static void uart_read_json(char *json_string)
         }
     }
 }
-
-static void uart_send_string(char *str)
+static void logic_analyzer_send_string(char *str)
 {
-    uart_write_bytes(CONFIG_ANALYZER_UART_PORT_NUMBER, str, strlen(str));
+    logic_analyzer_serial_write_bytes( str, strlen(str));
 }
-static int uart_read_line(char *buff, size_t size)
+static int logic_analyzer_read_string(char *buff, size_t size)
 {
     int idx = 0;
-    while (uart_read_bytes(CONFIG_ANALYZER_UART_PORT_NUMBER, &buff[idx], 1, portMAX_DELAY))
+    while (logic_analyzer_serial_read_bytes(&buff[idx], 1))
     {
         if (buff[idx] == '\n' || buff[idx] == 0 || idx == size - 1)
             break;
@@ -210,36 +239,16 @@ static int uart_read_line(char *buff, size_t size)
     buff[idx] = 0;
     return idx;
 }
-
 static void logic_analyzer_cli_task(void *arg)
 {
-    /* Configure parameters of an UART driver,
-     * communication pins and install the driver */
-    uart_config_t uart_config = {
-        .baud_rate = CONFIG_ANALYZER_UART_PORT_BAUD_RATE,
-        .data_bits = UART_DATA_8_BITS,
-        .parity = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-        .source_clk = UART_SCLK_DEFAULT,
-    };
-    int intr_alloc_flags = 0;
-
-#if CONFIG_UART_ISR_IN_IRAM
-    intr_alloc_flags = ESP_INTR_FLAG_IRAM;
-#endif
-
-    ESP_ERROR_CHECK(uart_driver_install(CONFIG_ANALYZER_UART_PORT_NUMBER, BUF_SIZE * 2, 0, 0, NULL, intr_alloc_flags));
-    ESP_ERROR_CHECK(uart_param_config(CONFIG_ANALYZER_UART_PORT_NUMBER, &uart_config));
-    ESP_ERROR_CHECK(uart_set_pin(CONFIG_ANALYZER_UART_PORT_NUMBER, CONFIG_ANALYZER_UART_PORT_TX_PIN, CONFIG_ANALYZER_UART_PORT_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
-
+    logic_analyzer_serial_init();
     char data_str[JSON_SIZE] = {0};
     while (1)
     {
-        int len = uart_read_line(data_str, JSON_SIZE);
+        int len = logic_analyzer_read_string(data_str, JSON_SIZE);
         if (len)
         {
-            uart_read_json(data_str);
+            logic_analyzer_read_json(data_str);
         }
     }
 }
