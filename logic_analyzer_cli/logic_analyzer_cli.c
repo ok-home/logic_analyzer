@@ -60,14 +60,25 @@ static int logic_analyzer_serial_read_bytes(char *buf, size_t size)
 
 #ifdef SERIAL_USB_JTAG // test only
 #include "driver/usb_serial_jtag.h"
+// hack - esp idf issue #12628
+#include "hal/usb_serial_jtag_ll.h"
+// 
 static void logic_analyzer_serial_init()
 {
-    usb_serial_jtag_driver_config_t usb_serial_jtag_config = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
+    usb_serial_jtag_driver_config_t usb_serial_jtag_config = {
+        .rx_buffer_size = 2048,
+        .tx_buffer_size = 64 // tx_buffer_size = usb tx packet size
+    };
+    
+    //USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
     usb_serial_jtag_driver_install(&usb_serial_jtag_config);
 }
 static void logic_analyzer_serial_write_bytes(const char *buf, size_t size)
 {
-    usb_serial_jtag_write_bytes(buf, size, portMAX_DELAY);
+    usb_serial_jtag_write_bytes(buf, size,portMAX_DELAY);
+    // hack - esp idf issue #12628
+    usb_serial_jtag_ll_txfifo_flush();
+    //
 }
 static int logic_analyzer_serial_read_bytes(char *buf, size_t size)
 {
@@ -275,6 +286,6 @@ static void logic_analyzer_cli_task(void *arg)
 }
 void logic_analyzer_cli(void)
 {
-    xTaskCreate(logic_analyzer_cli_task, "la_cli_task", 4096*2, NULL, 10, NULL);
+    xTaskCreate(logic_analyzer_cli_task, "la_cli_task", 4096*2, NULL, uxTaskPriorityGet(NULL), NULL);
 }
 

@@ -1,9 +1,9 @@
 {
  "PyCfg": {
   "dataFile": "laRowBin.bin",
-  "PortName": "/dev/ttyACM1",
+  "PortName": "/dev/ttyACM5",
   "PortSpeed": "921600",
-  "PortTimeout":"120"
+  "PortTimeout":"60"
  },
  "EspCfg": {
   "pin0": "12",
