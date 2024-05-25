@@ -88,30 +88,36 @@ def readLaDataFromEsp():
     ser.reset_input_buffer()
     ser.write(bytes("endcfg\n",'utf-8'))
     param = {}
-    cmd = ser.readline().decode("utf-8")
-    if cmd == "Start logic analyzer OK\n":
-        while 1:
-            cmd = ser.readline().decode("utf-8")
-            match cmd: 
-                case "Start samples transfer\n":
-                    print("Start transfer")
-                    if param['chn'] == '16':
-                        cnt = int(param['smp'])*2
-                    else :
-                        cnt = int(param['smp'])
-                    data = ser.read(cnt)
-                    with open(laConfig["PyCfg"]["dataFile"],"wb") as f:
-                        f.write(data)
-                    print("Samples transferred to file "+laConfig["PyCfg"]["dataFile"])
-                    print("Samples transferred "+str(len(data))+" of " +param['smp']+", sample rate="+param['clk']+" channel="+param['chn'])
-                    break
-                case "Error - callback timeout deteсted\n":
-                    print("Error: logic analyzer timeout")
-                    break
-                case x if "{" in x:
-                    param.update(json.loads(cmd))
-    else :
-        print("Error - check logic analyzer param in cfg.json")
+
+    while 1:
+        cmd = ser.readline().decode("utf-8")
+        match cmd: 
+            case "Start samples transfer\n":
+                print("Start samples transfer")
+                if param['chn'] == '16':
+                    cnt = int(param['smp'])*2
+                else :
+                    cnt = int(param['smp'])
+                data = ser.read(cnt)
+                with open(laConfig["PyCfg"]["dataFile"],"wb") as f:
+                    f.write(data)
+                print("Samples transferred to file "+laConfig["PyCfg"]["dataFile"])
+                print("Samples transferred "+str(len(data))+" of " +param['smp']+", sample rate="+param['clk']+" channel="+param['chn'])
+                break
+            case x if "{" in x:
+                param.update(json.loads(cmd))
+            case "Start logic analyzer OK\n":
+                print("Start logic analyzer OK")
+            case "Samples transfer done\n":
+                print("Samples transfer done")
+                break
+            case "Start logic analyzer error\n":
+                print("Error - check logic analyzer param in cfg.json")
+                break
+            case "Error - callback timeout deteсted\n":
+                print("Error: logic analyzer timeout")
+                break
+
     getAvailableCfgFromEsp()
 
 def main():
