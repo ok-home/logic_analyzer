@@ -18,6 +18,7 @@
 #include "logic_analyzer_const_definition.h"
 #include "logic_analyzer_sump_definition.h"
 #include "logic_analyzer_sump.h"
+#include "logic_analyzer_serial.h"
 
 static int first_trigger_pin = 0;
 static int first_trigger_val = 0;
@@ -45,8 +46,6 @@ static logic_analyzer_config_t la_cfg = {
     .logic_analyzer_cb = sump_la_cb};
 // hw parametrs
 static logic_analyzer_hw_param_t la_hw;
-
-
 
 static void sump_capture_and_send_samples()
 {
@@ -134,42 +133,24 @@ static void sump_la_cb(uint8_t *buf, int cnt, int clk, int channels)
         }
     }
 }
-static void sump_config_uart()
-{
-    /* Configure parameters of an UART driver,
-     * communication pins and install the driver */
-    uart_config_t uart_config = {
-        .baud_rate = SUMP_UART_BAUD_RATE,
-        .data_bits = UART_DATA_8_BITS,
-        .parity = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-        .source_clk = UART_SCLK_DEFAULT,
-    };
-    int intr_alloc_flags = ESP_INTR_FLAG_IRAM;
 
-    ESP_ERROR_CHECK(uart_driver_install(SUMP_UART_PORT_NUM, UART_BUF_SIZE, UART_BUF_SIZE, 0, NULL, intr_alloc_flags));
-    ESP_ERROR_CHECK(uart_param_config(SUMP_UART_PORT_NUM, &uart_config));
-    ESP_ERROR_CHECK(uart_set_pin(SUMP_UART_PORT_NUM, SUMP_TEST_TXD, SUMP_TEST_RXD, SUMP_TEST_RTS, SUMP_TEST_CTS));
-    ESP_ERROR_CHECK(uart_set_sw_flow_ctrl(SUMP_UART_PORT_NUM, true, 16, 32)); // ??
-}
 static void sump_getCmd4(uint8_t *cmd)
 {
-    uart_read_bytes(SUMP_UART_PORT_NUM, cmd, 4, portMAX_DELAY);
+    logic_analyzer_serial_read_bytes((char *)cmd, 4);
 }
 static uint8_t sump_getCmd()
 {
     uint8_t buf;
-    uart_read_bytes(SUMP_UART_PORT_NUM, &buf, 1, portMAX_DELAY);
+    logic_analyzer_serial_read_bytes((char *) &buf, 1);
     return buf;
 }
 static void sump_write_data(uint8_t *buf, int len)
 {
-    uart_write_bytes(SUMP_UART_PORT_NUM, (const char *)buf, len);
+    logic_analyzer_serial_write_bytes( (const char *)buf, len);
 }
 static void sump_writeByte(uint8_t byte)
 {
-    uart_write_bytes(SUMP_UART_PORT_NUM, &byte, 1);
+    logic_analyzer_serial_write_bytes( (const char *) &byte, 1);
 }
 
 // loop read sump command
@@ -180,7 +161,8 @@ static void logic_analyzer_sump_task(void *arg)
     la_hw.current_psram = la_cfg.samples_to_psram;
     logic_analyzer_get_hw_param(&la_hw);
 
-    sump_config_uart();
+    logic_analyzer_serial_init();
+
     while (1)
     {
         uint8_t cmd = sump_getCmd();

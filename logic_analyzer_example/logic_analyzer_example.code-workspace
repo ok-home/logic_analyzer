@@ -23,7 +23,8 @@
 			"esp_http_server.h": "c",
 			"esp_cpu.h": "c",
 			"rv_utils.h": "c",
-			"usb_serial_jtag.h": "c"
+			"usb_serial_jtag.h": "c",
+			"logic_analyzer_serial.h": "c"
 		}
 	}
 }

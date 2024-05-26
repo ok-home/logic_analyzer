@@ -118,6 +118,7 @@ menu "Logic Analyzer Configuration"
 
             config ANALYZER_USE_USB_SERIAL_JTAG
                 depends on !IDF_TARGET_ESP32
+                depends on !ANALYZER_USE_SUMP
                 bool "USB_SERIAL_JTAG"
         endchoice
     endif
