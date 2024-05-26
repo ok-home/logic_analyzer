@@ -22,10 +22,8 @@
 
 static const char *TAG = "LOGIC ANALYZER CLI";
 #define JSON_SIZE (256)
-#define SERIAL_UART 1
-//#define SERIAL_USB_JTAG 1 // test only
 
-#ifdef SERIAL_UART
+#ifdef CONFIG_ANALYZER_USE_UART
 #include "driver/uart.h"
 #define BUF_SIZE (1024)
 static void logic_analyzer_serial_init()
@@ -58,7 +56,7 @@ static int logic_analyzer_serial_read_bytes(char *buf, size_t size)
 }
 #endif
 
-#ifdef SERIAL_USB_JTAG // test only
+#ifdef CONFIG_ANALYZER_USE_USB_SERIAL_JTAG // test only
 #include "driver/usb_serial_jtag.h"
 // hack - esp idf issue #12628
 #include "hal/usb_serial_jtag_ll.h"

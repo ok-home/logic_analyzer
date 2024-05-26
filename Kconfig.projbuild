@@ -47,6 +47,7 @@ menu "Logic Analyzer Configuration"
     if ESP_SYSTEM_CHECK_INT_LEVEL_4
         config ANALYZER_USE_HI_LEVEL_INTERRUPT
             bool "Use HI level interrupt"
+            depends on !IDF_TARGET_ESP32C3
             default y
             help
                 Use HI level interrupt.
@@ -101,7 +102,6 @@ menu "Logic Analyzer Configuration"
             Command line intrface with logic_analyzer_cli.py
             Create RowBin.bin file for import from PulseView
 
-
     config ANALYZER_USE_SUMP
         bool "Direct connect to Sigrok PulseView"
         default n
@@ -109,8 +109,21 @@ menu "Logic Analyzer Configuration"
             direct connect to Sigrok PulseView via sump protocol.
         
     if ANALYZER_USE_SUMP || ANALYZER_USE_CLI
-        
-        config ANALYZER_UART_PORT_NUMBER
+        choice ANALYZER_USE_SERIAL
+            prompt "UART or USB_SERIAL_JTAG"
+            default ANALYZER_USE_UART
+
+            config ANALYZER_USE_UART
+                bool "UART"
+
+            config ANALYZER_USE_USB_SERIAL_JTAG
+                depends on !IDF_TARGET_ESP32
+                bool "USB_SERIAL_JTAG"
+        endchoice
+    endif
+
+    if ANALYZER_USE_UART 
+    config ANALYZER_UART_PORT_NUMBER
             int "uart port number 0-2"
             default 0
             help

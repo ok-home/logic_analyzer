@@ -15,7 +15,9 @@
 #include "hal/gpio_hal.h"
 
 // definition test sample
-// 43-tx 44-rx
+// esp32 uart -> 1-tx 3-rx
+// esp32s3 uart -> 43-tx 44-rx
+// esp32c3 uart -> 21-tx 20-rx
 // output pin ledc example
 #ifdef CONFIG_IDF_TARGET_ESP32C3
 #define LEDC_OUTPUT_IO (6)

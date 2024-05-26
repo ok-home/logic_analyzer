@@ -46,6 +46,8 @@ static logic_analyzer_config_t la_cfg = {
 // hw parametrs
 static logic_analyzer_hw_param_t la_hw;
 
+
+
 static void sump_capture_and_send_samples()
 {
     la_cfg.number_of_samples = readCount;
