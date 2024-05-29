@@ -102,9 +102,9 @@
    - параметры скрипта задаются в файле la_cfg.json ( шаблон файла создается автоматически при первом запуске скрипта), GPIO,TRIGGER,TRBGGER EDGE,SAMPLES,SAMPLE RATE,NUMBER CHANNELS,RAM/PSRAM.
    - подключение к коду программы
      - logic_analyzer_cli/include/logic_analyzer_cli.h
-     - установить в menuconfig ANALYZER_USE_CLI и параметры UART
+     - установить в menuconfig ANALYZER_USE_CLI и параметры UART/USB_SERIAL_JTAG
      - скомпилировать и загрузить код программы с подключеным logic_analyzer
-     - подключиться к UART
+     - подключиться к UART/USB
      - запустить logic_analyzer_cli.py с установлеными параметрами в файле la_cfg.json
     - подключение к PulseView
      - Import Raw binary logic data  - файл который создается скриптом
