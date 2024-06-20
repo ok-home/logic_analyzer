@@ -104,9 +104,6 @@ if(CONFIG_ANALYZER_USE_CLI)
     list( APPEND includedir 
         logic_analyzer_cli/include 
     )
-    list( APPEND priv_includedir 
-        logic_analyzer_cli/private_include 
-    )
 endif()
 
 
