@@ -111,7 +111,7 @@
   - for UART0 the same restrictions as for the SUMP interface
   - advantages over SUMP interface
     - look at the known PulseView bugs above - they are not here (except for UART0)
-    - simple GPIO configuration for channels via la_cfg.json
+    - simple GPIO configuration for channels via la_cfg.json  
 
 ![cli interface output](/la_cli.jpg)
 
