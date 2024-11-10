@@ -3,7 +3,7 @@
   "dataFile": "laRowBin.bin",
   "PortName": "/dev/ttyACM1",
   "PortSpeed": "921600",
-  "PortTimeout":"40"
+  "PortTimeout":"30"
  },
  "EspCfg": {
   "pin0": "12",
