@@ -35,9 +35,11 @@ static int logic_analyzer_serial_read_bytes(char *buf, size_t size)
 
 #ifdef CONFIG_ANALYZER_USE_USB_SERIAL_JTAG // test only
 #include "driver/usb_serial_jtag.h"
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0)
 // hack - esp idf issue #12628
 #include "hal/usb_serial_jtag_ll.h"
 // 
+#endif
 static void logic_analyzer_serial_init()
 {
     usb_serial_jtag_driver_config_t usb_serial_jtag_config = {
@@ -51,9 +53,11 @@ static void logic_analyzer_serial_init()
 static void logic_analyzer_serial_write_bytes(const char *buf, size_t size)
 {
     usb_serial_jtag_write_bytes(buf, size,portMAX_DELAY);
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0)
     // hack - esp idf issue #12628
     usb_serial_jtag_ll_txfifo_flush();
     //
+#endif
 }
 static int logic_analyzer_serial_read_bytes(char *buf, size_t size)
 {
