@@ -18,7 +18,7 @@
 #include "esp_psram.h"
 
 #define LA_TASK_STACK 2048
-#define DMA_FRAME 4032
+#define DMA_FRAME (4096-64) //3968
 
 // frame buff & dma descripter
 static la_frame_t la_frame = {
@@ -137,7 +137,12 @@ static lldesc_t *allocate_dma_descriptors(uint32_t size, uint8_t *buffer)
     uint32_t count = size / DMA_FRAME;     //  dma frames count
     uint32_t last_size = size % DMA_FRAME; // last frame bytes
 
-    lldesc_t *dma = (lldesc_t *)heap_caps_malloc((count + 1) * sizeof(lldesc_t), MALLOC_CAP_DMA);
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+    uint32_t cache_line_cnt = ((count + 1) * sizeof(lldesc_t) + 64)/64;
+    lldesc_t *dma = (lldesc_t *)heap_caps_aligned_calloc(64,cache_line_cnt ,64, MALLOC_CAP_DMA);
+#else
+    lldesc_t *dma = (lldesc_t *)heap_caps_calloc((count + 1) , sizeof(lldesc_t), MALLOC_CAP_DMA);
+#endif
     if (dma == NULL)
     {
         return dma;
@@ -145,22 +150,26 @@ static lldesc_t *allocate_dma_descriptors(uint32_t size, uint8_t *buffer)
     int x = 0;
     for (; x < count; x++)
     {
-        dma[x].size = DMA_FRAME;
-        dma[x].length = DMA_FRAME;
-        dma[x].sosf = 0;
-        dma[x].eof = 0;
-        dma[x].owner = 1;
-        dma[x].buf = buffer + DMA_FRAME * x;
-        dma[x].empty = (uint32_t)&dma[(x + 1)];
+        dma[x].dw0.size = DMA_FRAME;
+        dma[x].dw0.length = DMA_FRAME;
+        dma[x].dw0.suc_eof = 0;
+        dma[x].dw0.owner = 1;
+        dma[x].buffer = buffer + DMA_FRAME * x;
+        dma[x].next = &dma[(x + 1)];
     }
 
-    dma[x].size = last_size;
-    dma[x].length = last_size;
-    dma[x].sosf = 0;
-    dma[x].eof = 1;
-    dma[x].owner = 1;
-    dma[x].buf = buffer + DMA_FRAME * x;
-    dma[x].empty = 0;
+    dma[x].dw0.size = last_size;
+    dma[x].dw0.length = last_size;
+    dma[x].dw0.suc_eof = 0;
+    dma[x].dw0.owner = 1;
+    dma[x].buffer = buffer + DMA_FRAME * x;
+    dma[x].next = NULL;
+
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+    esp_cache_msync ( (void*)dma , 64*cache_line_cnt , ESP_CACHE_MSYNC_FLAG_DIR_C2M ) ;
+    ESP_LOGI("dma","x=%d cl=%ld",x,cache_line_cnt);
+#endif
+
 
     return dma;
 }
@@ -220,6 +229,10 @@ static void logic_analyzer_task(void *arg)
                     ESP_LOGE("CACHE", "ERR %x", err);
             }
 #endif
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+    esp_cache_msync(la_frame.fb.buf, la_frame.fb.len, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
+#endif
+
             int l_samples = (cfg->number_channels > 4) ? (la_frame.fb.len / (cfg->number_channels / 8)) : la_frame.fb.len * 2; // (8/16)/(4)
             cfg->logic_analyzer_cb((uint8_t *)la_frame.fb.buf, l_samples, logic_analyzer_ll_get_sample_rate(cfg->sample_rate), cfg->number_channels);
             logic_analyzer_stop();
@@ -333,32 +346,33 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         {
             bytes_to_alloc = largest_free_block - ((bytes_to_alloc / DMA_FRAME) + 2) * sizeof(lldesc_t); // free space with dma lldesc size
         }
-        ESP_LOGD("DMA HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
-        la_frame.fb.len = bytes_to_alloc & ~0x3; // burst transfer word align
-        la_frame.fb.buf = heap_caps_calloc(la_frame.fb.len, 1, MALLOC_CAP_DMA);
+        ESP_LOGI("DMA HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
+        la_frame.fb.len = bytes_to_alloc & ~(GDMA_PSRAM_BURST - 1); // 16-32 bytes align // for P4
+        la_frame.fb.buf = heap_caps_aligned_calloc(GDMA_PSRAM_BURST,la_frame.fb.len, 1, MALLOC_CAP_DMA);
         //    la_frame.fb.buf = heap_caps_malloc(la_frame.fb.len, MALLOC_CAP_DMA);
-        ESP_LOGD("DMA HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
+        ESP_LOGI("DMA HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
     }
     else
     {
         // alloc on PSRAM ->  todo check free ram for lldescr ???
-        // PSRAM - only esp32s3 - 8/16 channels
+        // PSRAM - only esp32s3/P4 - 8/16 channels
         uint32_t largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
         if (largest_free_block < bytes_to_alloc)
         {
             bytes_to_alloc = largest_free_block; // max free spiram
         }
-        ESP_LOGD("DMA PSRAM HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
+        ESP_LOGI("DMA PSRAM HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
         la_frame.fb.len = bytes_to_alloc & ~(GDMA_PSRAM_BURST - 1); // 16-32 bytes align
         //    la_frame.fb.buf = heap_caps_aligned_alloc(GDMA_PSRAM_BURST, la_frame.fb.len, MALLOC_CAP_SPIRAM);
         la_frame.fb.buf = heap_caps_aligned_calloc(GDMA_PSRAM_BURST, la_frame.fb.len, 1, MALLOC_CAP_SPIRAM);
-        ESP_LOGD("DMA PSRAM HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
+        ESP_LOGI("DMA PSRAM HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
     }
     if (la_frame.fb.buf == NULL)
     {
         ret = ESP_ERR_NO_MEM;
         goto _retcode;
     }
+    memset(la_frame.fb.buf,0xff,la_frame.fb.len);
     ESP_LOGD("DMA HEAP", "Allocated %d bytes", la_frame.fb.len);
     //  allocate dma descriptor buffer
     la_frame.dma = allocate_dma_descriptors(la_frame.fb.len, la_frame.fb.buf);

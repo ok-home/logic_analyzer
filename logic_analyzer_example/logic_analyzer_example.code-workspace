@@ -24,7 +24,25 @@
 			"esp_cpu.h": "c",
 			"rv_utils.h": "c",
 			"usb_serial_jtag.h": "c",
-			"logic_analyzer_serial.h": "c"
+			"logic_analyzer_serial.h": "c",
+			"task.h": "c",
+			"lcd_cam_reg.h": "c",
+			"lcd_cam_struct.h": "c",
+			"gdma_periph.h": "c",
+			"regdma.h": "c",
+			"esp_mac.h": "c",
+			"gpio_sig_map.h": "c",
+			"axi_dma_struct.h": "c",
+			"hp_sys_clkrst_reg.h": "c",
+			"dma_pms_struct.h": "c",
+			"esp_cache.h": "c",
+			"cam_ll.h": "c",
+			"variant": "c",
+			"gpio.h": "c",
+			"gpio_ext_struct.h": "c",
+			"soc_etm_source.h": "c",
+			"soc_etm_struct.h": "c",
+			"interrupts.h": "c"
 		}
 	}
 }

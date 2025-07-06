@@ -8,6 +8,25 @@ extern "C"
 {
 #endif
 
+typedef struct dma_descriptor_align8_s lldesc_t;
+struct dma_descriptor_align8_s {
+    struct {
+        uint32_t size : 12;         /*!< Buffer size */
+        uint32_t length : 12;       /*!< Number of valid bytes in the buffer */
+        uint32_t reversed24_27 : 4; /*!< Reserved */
+        uint32_t err_eof : 1;       /*!< Whether the received buffer contains error */
+        uint32_t reserved29 : 1;    /*!< Reserved */
+        uint32_t suc_eof : 1;       /*!< Whether the descriptor is the last one in the link */
+        uint32_t owner : 1;         /*!< Who is allowed to access the buffer that this descriptor points to */
+    } dw0;                          /*!< Descriptor Word 0 */
+    void *buffer;                   /*!< Pointer to the buffer */
+    lldesc_t *next;  /*!< Pointer to the next descriptor (set to NULL if the descriptor is the last one, e.g. suc_eof=1) */
+    uint32_t free;
+}; //__attribute__((aligned(8)));
+ESP_STATIC_ASSERT(sizeof(lldesc_t) == 16, "dma_descriptor_align8_t should occupy 16 bytes in memory");
+
+
+
     /**
      * @brief Data structure of logic analyzer frame buffer
      */

@@ -19,7 +19,8 @@
 // esp32s3 uart -> 43-tx 44-rx
 // esp32c3 uart -> 21-tx 20-rx
 // output pin ledc example
-#ifdef CONFIG_IDF_TARGET_ESP32C3
+#if defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32P4)
+
 #define LEDC_OUTPUT_IO (6)
 // output pin gpio blink example
 #define GPIO_BLINK (7)
@@ -144,7 +145,7 @@ void IRAM_ATTR on_off()
     gpio_set_level(GPIO_BLINK, 0);
     gpio_set_level(GPIO_BLINK, 1);
     gpio_set_level(GPIO_BLINK, 0);
-#ifdef CONFIG_IDF_TARGET_ESP32C3
+#if defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32P4)
     GPIO.out_w1ts.val = mask;
     GPIO.out_w1tc.val = mask;
     GPIO.out_w1ts.val = mask;
@@ -232,7 +233,7 @@ void gpio_blink(void *p)
         gpio_set_level(GPIO_BLINK, 1);
         gpio_set_level(GPIO_BLINK, 0);
 
-#ifdef CONFIG_IDF_TARGET_ESP32C3
+#if defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32P4)
         GPIO.out_w1ts.val = mask;
         GPIO.out_w1tc.val = mask;
         GPIO.out_w1ts.val = mask;

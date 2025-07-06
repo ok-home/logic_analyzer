@@ -9,7 +9,7 @@
 #include "soc/gpio_struct.h"
 #include "soc/i2s_struct.h"
 #include "soc/gpio_reg.h"
-#include "esp32/rom/lldesc.h"
+//#include "esp32/rom/lldesc.h"
 #include "esp_private/periph_ctrl.h"
 
 #include "driver/spi_master.h"

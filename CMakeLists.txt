@@ -53,11 +53,15 @@ set( priv_require
     list(APPEND priv_includedir
         logic_analyzer_hal/esp32c3/private_include
     )
-#    if(CONFIG_ANALYZER_USE_HI_LEVEL_INTERRUPT)
-#        list( APPEND srcs 
-#            logic_analyzer_hal/esp32c3/logic_analyzer_triggered_isr_start.c
-#            )
-#    endif()
+  endif()
+
+    if(IDF_TARGET STREQUAL "esp32p4")
+    list(APPEND srcs
+        logic_analyzer_hal/esp32p4/logic_analyzer_ll.c      
+    )
+    list(APPEND priv_includedir
+        logic_analyzer_hal/esp32p4/private_include
+    )
   endif()
 
 if(CONFIG_ANALYZER_USE_WS)
@@ -105,7 +109,6 @@ if(CONFIG_ANALYZER_USE_CLI)
         logic_analyzer_cli/include 
     )
 endif()
-
 
 idf_component_register(
     SRCS ${srcs}

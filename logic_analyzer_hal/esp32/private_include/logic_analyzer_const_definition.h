@@ -10,7 +10,7 @@
 #include "soc/i2s_struct.h"
 #include "soc/dport_reg.h"
 #include "soc/gpio_reg.h"
-#include "esp32/rom/lldesc.h"
+//#include "esp32/rom/lldesc.h"
 #include "esp_private/periph_ctrl.h"
 
 #undef LA_HW_PSRAM
@@ -43,7 +43,7 @@
 #define LA_HW_MAX_RAM_16_SAMPLE_CNT LA_MAX_SAMPLE_CNT
 
 // ????
-#define GDMA_PSRAM_BURST 32
+#define GDMA_PSRAM_BURST 128
 
 /*
  * I2S0/I2S1 menuconfig select - only esp32 target

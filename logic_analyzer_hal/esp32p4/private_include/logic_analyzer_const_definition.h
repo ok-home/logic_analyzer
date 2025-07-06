@@ -8,7 +8,6 @@
 #include "hal/gpio_ll.h"
 #include "soc/gpio_struct.h"
 #include "soc/i2s_struct.h"
-#include "soc/dport_reg.h"
 #include "soc/gpio_reg.h"
 //#include "soc/lldesc.h"
 #include "esp_private/periph_ctrl.h"
@@ -26,7 +25,7 @@
 #define LA_HW_CLK_SAMPLE_RATE 160000000
 
 #define LA_HW_MIN_GPIO -1
-#define LA_HW_MAX_GPIO 48
+#define LA_HW_MAX_GPIO 54
 
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
 #define LA_MIN_SAMPLE_RATE 20000
@@ -36,7 +35,7 @@
 
 // #ifdef LA_HW_PSRAM
 // 16-32 GDMA BURST
-#define GDMA_PSRAM_BURST 32
+#define GDMA_PSRAM_BURST 64
 // #endif
 
 #define LA_HW_MAX_CHANNELS 16
@@ -47,12 +46,12 @@
 #define LA_HW_MIN_16_SAMPLE_RATE LA_MIN_SAMPLE_RATE
 #define LA_HW_MIN_16_SAMPLE_CNT 100
 
-#define LA_HW_MAX_PSRAM_8_SAMPLE_RATE 20000000
-#define LA_HW_MAX_PSRAM_16_SAMPLE_RATE 10000000
+#define LA_HW_MAX_PSRAM_8_SAMPLE_RATE 40000000
+#define LA_HW_MAX_PSRAM_16_SAMPLE_RATE 20000000
 #define LA_HW_MAX_RAM_8_SAMPLE_RATE 80000000
 #define LA_HW_MAX_RAM_16_SAMPLE_RATE 40000000
 
-#define LA_HW_MAX_PSRAM_8_SAMPLE_CNT 8000000
-#define LA_HW_MAX_PSRAM_16_SAMPLE_CNT 4000000
-#define LA_HW_MAX_RAM_8_SAMPLE_CNT 200000
-#define LA_HW_MAX_RAM_16_SAMPLE_CNT 100000
+#define LA_HW_MAX_PSRAM_8_SAMPLE_CNT 32000000
+#define LA_HW_MAX_PSRAM_16_SAMPLE_CNT 16000000
+#define LA_HW_MAX_RAM_8_SAMPLE_CNT 400000
+#define LA_HW_MAX_RAM_16_SAMPLE_CNT 200000
