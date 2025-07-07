@@ -491,7 +491,7 @@ SOC_ETM.ch_ena_ad0_set.ch_set0 = 1; //ena ch0
       if(pin_trigger < 32)
         {GPIO.status_w1tc.val = (0x1 << pin_trigger);}
       else 
-        {GPIO.status1_w1tc.val = (0x1 << (pin_trigger-32)); 
+        {GPIO.status1_w1tc.val = (0x1 << (pin_trigger-32)); }
       GPIO.pin[pin_trigger].int_ena |= 2;          // enable GPIO_INT_1 intr
    }
 

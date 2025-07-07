@@ -348,8 +348,8 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         }
         ESP_LOGI("DMA HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
         la_frame.fb.len = bytes_to_alloc & ~(GDMA_PSRAM_BURST - 1); // 16-32 bytes align // for P4
-        la_frame.fb.buf = heap_caps_aligned_calloc(GDMA_PSRAM_BURST,la_frame.fb.len, 1, MALLOC_CAP_DMA);
-        //    la_frame.fb.buf = heap_caps_malloc(la_frame.fb.len, MALLOC_CAP_DMA);
+        //la_frame.fb.buf = heap_caps_aligned_calloc(GDMA_PSRAM_BURST,la_frame.fb.len, 1, MALLOC_CAP_DMA);
+          la_frame.fb.buf = heap_caps_aligned_alloc(GDMA_PSRAM_BURST,la_frame.fb.len, MALLOC_CAP_DMA);
         ESP_LOGI("DMA HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
     }
     else
@@ -363,8 +363,8 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         }
         ESP_LOGI("DMA PSRAM HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
         la_frame.fb.len = bytes_to_alloc & ~(GDMA_PSRAM_BURST - 1); // 16-32 bytes align
-        //    la_frame.fb.buf = heap_caps_aligned_alloc(GDMA_PSRAM_BURST, la_frame.fb.len, MALLOC_CAP_SPIRAM);
-        la_frame.fb.buf = heap_caps_aligned_calloc(GDMA_PSRAM_BURST, la_frame.fb.len, 1, MALLOC_CAP_SPIRAM);
+          la_frame.fb.buf = heap_caps_aligned_alloc(GDMA_PSRAM_BURST, la_frame.fb.len, MALLOC_CAP_SPIRAM);
+        //la_frame.fb.buf = heap_caps_aligned_calloc(GDMA_PSRAM_BURST, la_frame.fb.len, 1, MALLOC_CAP_SPIRAM);
         ESP_LOGI("DMA PSRAM HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
     }
     if (la_frame.fb.buf == NULL)
@@ -372,8 +372,10 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         ret = ESP_ERR_NO_MEM;
         goto _retcode;
     }
-    memset(la_frame.fb.buf,0xff,la_frame.fb.len);
-    ESP_LOGD("DMA HEAP", "Allocated %d bytes", la_frame.fb.len);
+    // FOR CALLOC !!!!!!!!!!!!!!!
+    //esp_cache_msync(la_frame.fb.buf, la_frame.fb.len, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
+
+    ESP_LOGI("DMA HEAP", "Allocated %d bytes", la_frame.fb.len);
     //  allocate dma descriptor buffer
     la_frame.dma = allocate_dma_descriptors(la_frame.fb.len, la_frame.fb.buf);
     if (la_frame.dma == NULL)
