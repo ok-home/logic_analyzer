@@ -81,7 +81,6 @@ void IRAM_ATTR la_ll_trigger_isr(void *pin)
     // clear GPIO_INT_1 int bit -> disable GPIO_INT_1
     GPIO.pin[(int)pin].int_ena &= ~2;
 #endif
-
 }
 // transfer done -> eof isr from dma descr_empty
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
@@ -99,12 +98,13 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
     {
         gpio_matrix_in(62, CAM_V_SYNC_PAD_IN_IDX, false); // enable cam
 #ifdef ETM_START
-        SOC_ETM.ch_ena_ad0_clr.ch_clr0 = 1; //dis ch0
+        SOC_ETM.ch_ena_ad0_clr.ch_clr0 = 1; // dis ch0
 #endif
         vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
     }
-    else{
-        ESP_EARLY_LOGI(TAG,"irq status=%x",status.val);
+    else
+    {
+        ESP_EARLY_LOGI(TAG, "irq status=%x", status.val);
     }
 #endif
 #ifdef EOF_CTRL
@@ -142,7 +142,7 @@ static void logic_analyzer_ll_set_ledc_pclk(int sample_rate)
         .duty = 1, // Set duty to 50%
         .hpoint = 0};
     ledc_channel_config(&ledc_channel);
-    ESP_LOGI(TAG,"CH=%d tmr=%d",CONFIG_ANALYZER_LEDC_CHANNEL_NUMBER,CONFIG_ANALYZER_LEDC_TIMER_NUMBER);
+    ESP_LOGI(TAG, "CH=%d tmr=%d", CONFIG_ANALYZER_LEDC_CHANNEL_NUMBER, CONFIG_ANALYZER_LEDC_TIMER_NUMBER);
 }
 #endif
 // sample rate may be not equal to config sample rate -> return real sample rate
@@ -166,7 +166,7 @@ int logic_analyzer_ll_get_sample_rate(int sample_rate)
 static void logic_analyzer_ll_set_clock(int sample_rate)
 {
 
-    int ldiv = (LA_HW_CLK_SAMPLE_RATE / sample_rate)-1;
+    int ldiv = (LA_HW_CLK_SAMPLE_RATE / sample_rate) - 1;
     if (ldiv > 160) // > 1mHz
     {
         ldiv = 160;
@@ -177,9 +177,9 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_OUTPUT);
     gpio_matrix_out(CONFIG_ANALYZER_PCLK_PIN, CAM_CLK_PAD_OUT_IDX, false, false);
 
-//    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[8], PIN_FUNC_GPIO);
-//    gpio_set_direction(8, GPIO_MODE_OUTPUT);
-//    gpio_matrix_out(8, CAM_CLK_PAD_OUT_IDX, false, false);
+    //    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[8], PIN_FUNC_GPIO);
+    //    gpio_set_direction(8, GPIO_MODE_OUTPUT);
+    //    gpio_matrix_out(8, CAM_CLK_PAD_OUT_IDX, false, false);
 
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
     if ((LA_HW_CLK_SAMPLE_RATE / sample_rate) > 160)
@@ -187,14 +187,14 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
         ldiv = 8; // cam clk to 20 MHz
         logic_analyzer_ll_set_ledc_pclk(sample_rate);
         logic_analyzer_ll_set_ledc_pclk(sample_rate);
-
     }
 #endif
     // input clk pin  -> pclk
     PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN]);
     gpio_matrix_in(CONFIG_ANALYZER_PCLK_PIN, CAM_PCLK_PAD_IN_IDX, false);
     // enable CLK
-    if(HP_SYS_CLKRST.soc_clk_ctrl3.reg_lcdcam_apb_clk_en == 0){
+    if (HP_SYS_CLKRST.soc_clk_ctrl3.reg_lcdcam_apb_clk_en == 0)
+    {
         HP_SYS_CLKRST.soc_clk_ctrl3.reg_lcdcam_apb_clk_en = 1;
         HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_lcdcam = 1;
         HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_lcdcam = 0;
@@ -202,16 +202,13 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
 
     HP_SYS_CLKRST.ref_clk_ctrl2.reg_ref_160m_clk_en = 1;
     // Configure clock divider
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl119,reg_cam_clk_src_sel,1);
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl119, reg_cam_clk_src_sel, 1);
     HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl120, reg_cam_clk_div_num, ldiv);
     HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl120, reg_cam_clk_div_denominator, 0);
     HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl120, reg_cam_clk_div_numerator, 0);
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl119,reg_cam_clk_en , 1);
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl119, reg_cam_clk_en, 1);
 
-
-    ESP_LOGI(TAG,"ldiv=%d",ldiv);
-
-   
+    ESP_LOGI(TAG, "ldiv=%d", ldiv);
 }
 // set cam mode register -> 8/16 bit, eof control from dma,
 static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
@@ -222,7 +219,7 @@ static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
     LCD_CAM.cam_ctrl1.val = 0;
     LCD_CAM.cam_rgb_yuv.val = 0; // disable converter
 
-    //logic_analyzer_ll_set_clock(sample_rate); // set clock divider
+    // logic_analyzer_ll_set_clock(sample_rate); // set clock divider
 
     LCD_CAM.cam_ctrl.cam_stop_en = 0;            // Camera stop enable signal, 1: camera stops when GDMA Rx FIFO is full. 0: Do not stop. (R/W)
     LCD_CAM.cam_ctrl.cam_vsync_filter_thres = 0; // Filter by LCD_CAM clock
@@ -327,12 +324,14 @@ static esp_err_t logic_analyzer_ll_dma_init(void)
             return ESP_FAIL;
         }
     }
-    //dma_num=2;
+    // dma_num=2;
     ESP_LOGI(TAG, "found dma channel %d", dma_num);
-    if(HP_SYS_CLKRST.soc_clk_ctrl1.reg_ahb_pdma_sys_clk_en == 0){
+    if (HP_SYS_CLKRST.soc_clk_ctrl1.reg_ahb_pdma_sys_clk_en == 0)
+    {
         HP_SYS_CLKRST.soc_clk_ctrl1.reg_ahb_pdma_sys_clk_en = 1;
     }
-    if(HP_SYS_CLKRST.soc_clk_ctrl1.reg_axi_pdma_sys_clk_en == 0){
+    if (HP_SYS_CLKRST.soc_clk_ctrl1.reg_axi_pdma_sys_clk_en == 0)
+    {
         HP_SYS_CLKRST.soc_clk_ctrl1.reg_axi_pdma_sys_clk_en = 1;
         HP_SYS_CLKRST.hp_rst_en1.reg_rst_en_axi_pdma = 1;
         HP_SYS_CLKRST.hp_rst_en1.reg_rst_en_axi_pdma = 0;
@@ -350,16 +349,13 @@ static esp_err_t logic_analyzer_ll_dma_init(void)
     AXI_DMA.in[dma_num].conf.in_conf0.in_burst_size_sel_chn = GDMA_BURST_CONST;
     AXI_DMA.in[dma_num].conf.in_conf0.indscr_burst_en_chn = 0;
 
-
     AXI_DMA.in[dma_num].conf.in_conf1.in_check_owner_chn = 1;
 
-    //AXI_DMA.in[dma_num].conf.in_pri.rx_pri_chn = 5; //0-5
-    //AXI_DMA.in[dma_num].conf.in_pri.rx_ch_arb_weigh_chn = 15; //0-15
-    //AXI_DMA.arb_timeout.arb_timeout_rx = 256; 
+    // AXI_DMA.in[dma_num].conf.in_pri.rx_pri_chn = 5; //0-5
+    // AXI_DMA.in[dma_num].conf.in_pri.rx_ch_arb_weigh_chn = 15; //0-15
+    // AXI_DMA.arb_timeout.arb_timeout_rx = 256;
 
-    //AXI_DMA.in[dma_num].conf.in_pri.rx_arb_weigh_opt_dir_chn = 1; //
-
-
+    // AXI_DMA.in[dma_num].conf.in_pri.rx_arb_weigh_opt_dir_chn = 1; //
 
     return ESP_OK;
 }
@@ -381,23 +377,23 @@ interrupts set in Step 6 will be generated.
 // enable cam module, set cam mode, pin mode, dma mode, dma descr, dma irq
 void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_frame_t *frame)
 {
-    ESP_LOGI(TAG,"clk=%d chn=%d descr=%p dscrlen=%d size=%d ",sample_rate,channels,frame->dma,frame->dma[0].dw0.size,frame->fb.len);
+    ESP_LOGI(TAG, "clk=%d chn=%d descr=%p dscrlen=%d size=%d ", sample_rate, channels, frame->dma, frame->dma[0].dw0.size, frame->fb.len);
     // Enable and configure cam
 
     logic_analyzer_ll_set_clock(sample_rate); // set clock divider
-    //logic_analyzer_ll_set_clock(sample_rate); // set clock divider
+    // logic_analyzer_ll_set_clock(sample_rate); // set clock divider
 
     logic_analyzer_ll_set_pin(data_pins, channels);
     logic_analyzer_ll_set_mode(sample_rate, channels);
     logic_analyzer_ll_dma_init();
 
     // set dma descriptor
-    //AXI_DMA.in[dma_num].conf.in_link2.inlink_addr_chn = ((uint32_t) & (frame->dma[0]));
+    // AXI_DMA.in[dma_num].conf.in_link2.inlink_addr_chn = ((uint32_t) & (frame->dma[0]));
 
-    #ifdef EOF_CTRL
+#ifdef EOF_CTRL
     LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = frame->fb.len - 1; // count in byte
 #else
-    //LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = 64; // eof controlled to DMA linked list cam -> non stop, ( bytelen = any digit )
+    // LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = 64; // eof controlled to DMA linked list cam -> non stop, ( bytelen = any digit )
 #endif
 
     //  pre start
@@ -406,74 +402,72 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
 
     AXI_DMA.in[dma_num].conf.in_conf0.in_rst_chn = 1;
     AXI_DMA.in[dma_num].conf.in_conf0.in_rst_chn = 0;
-    AXI_DMA.in[dma_num].conf.in_link2.inlink_addr_chn = ((uint32_t) & (frame->dma[0]));
+    AXI_DMA.in[dma_num].conf.in_link2.inlink_addr_chn = ((uint32_t)&(frame->dma[0]));
     AXI_DMA.in[dma_num].conf.in_peri_sel.peri_in_sel_chn = 0; // 0:lcdcam. 1: gpspi_2. 2: gpspi_3. 3: parl_io. 4: aes. 5: sha. 6~15: Dummy
-
 }
 // start transfer without trigger -> v_sync to enable
 void logic_analyzer_ll_start()
 {
     AXI_DMA.in[dma_num].conf.in_link1.inlink_start_chn = 1;
     LCD_CAM.cam_ctrl.cam_update_reg = 1;
-    LCD_CAM.cam_ctrl1.cam_start = 1; // enable  transfer
+    LCD_CAM.cam_ctrl1.cam_start = 1;                  // enable  transfer
     gpio_matrix_in(63, CAM_V_SYNC_PAD_IN_IDX, false); // 1
 }
 // start transfer with trigger -> set irq -> v_sync set to enable on irq handler
 
-//static esp_etm_channel_config_t etm_channel_config = {0};
-//static esp_etm_channel_handle_t etm_channel_handle;
-//static gpio_etm_event_config_t gpio_etm_event_config = {0}; 
-//static esp_etm_event_handle_t gpio_etm_event_handle;
-//static gpio_etm_task_config_t gpio_etm_task_config = {0};
-//static  esp_etm_task_handle_t gpio_etm_task_handle;
-
+// static esp_etm_channel_config_t etm_channel_config = {0};
+// static esp_etm_channel_handle_t etm_channel_handle;
+// static gpio_etm_event_config_t gpio_etm_event_config = {0};
+// static esp_etm_event_handle_t gpio_etm_event_handle;
+// static gpio_etm_task_config_t gpio_etm_task_config = {0};
+// static  esp_etm_task_handle_t gpio_etm_task_handle;
 
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
 #ifdef ETM_START
-/*esp_err_t etm_err_ret = 0;
-etm_err_ret = esp_etm_new_channel(&etm_channel_config, &etm_channel_handle);
+    /*esp_err_t etm_err_ret = 0;
+    etm_err_ret = esp_etm_new_channel(&etm_channel_config, &etm_channel_handle);
 
-gpio_etm_event_config.edge = trigger_edge;
-etm_err_ret |= gpio_new_etm_event(&gpio_etm_event_config, &gpio_etm_event_handle);
-etm_err_ret |= gpio_etm_event_bind_gpio(gpio_etm_event_handle, pin_trigger);
+    gpio_etm_event_config.edge = trigger_edge;
+    etm_err_ret |= gpio_new_etm_event(&gpio_etm_event_config, &gpio_etm_event_handle);
+    etm_err_ret |= gpio_etm_event_bind_gpio(gpio_etm_event_handle, pin_trigger);
 
-gpio_etm_task_config.action = GPIO_ETM_TASK_ACTION_SET;
-etm_err_ret |= gpio_new_etm_task(&gpio_etm_task_config,&gpio_etm_task_handle);
-etm_err_ret |= gpio_etm_task_add_gpio(gpio_etm_task_handle, 9);// pin9 ??
+    gpio_etm_task_config.action = GPIO_ETM_TASK_ACTION_SET;
+    etm_err_ret |= gpio_new_etm_task(&gpio_etm_task_config,&gpio_etm_task_handle);
+    etm_err_ret |= gpio_etm_task_add_gpio(gpio_etm_task_handle, 9);// pin9 ??
 
-etm_err_ret |= esp_etm_channel_disable(etm_channel_handle);
-etm_err_ret |= esp_etm_channel_connect(etm_channel_handle, gpio_etm_event_handle, gpio_etm_task_handle);
-etm_err_ret |= esp_etm_channel_enable(etm_channel_handle);
+    etm_err_ret |= esp_etm_channel_disable(etm_channel_handle);
+    etm_err_ret |= esp_etm_channel_connect(etm_channel_handle, gpio_etm_event_handle, gpio_etm_task_handle);
+    etm_err_ret |= esp_etm_channel_enable(etm_channel_handle);
 
-//  stop & remove ETM
-//  esp_etm_channel_disable(etm_channel_handle);
-//  gpio_etm_task_rm_gpio(gpio_etm_task_handle, 9);
-//  esp_etm_del_task(gpio_etm_task_handle);
-//  esp_etm_del_event(gpio_etm_task_handle);
-//  esp_etm_del_channel(tm_channel_handle);
+    //  stop & remove ETM
+    //  esp_etm_channel_disable(etm_channel_handle);
+    //  gpio_etm_task_rm_gpio(gpio_etm_task_handle, 9);
+    //  esp_etm_del_task(gpio_etm_task_handle);
+    //  esp_etm_del_event(gpio_etm_task_handle);
+    //  esp_etm_del_channel(tm_channel_handle);
 
-*/
-// enable clock
-HP_SYS_CLKRST.soc_clk_ctrl1.reg_etm_sys_clk_en = 1;
-HP_SYS_CLKRST.soc_clk_ctrl3.reg_etm_apb_clk_en = 1;
-HP_SYS_CLKRST.hp_rst_en1.reg_rst_en_etm = 1;
-HP_SYS_CLKRST.hp_rst_en1.reg_rst_en_etm = 0;
+    */
+    // enable clock
+    HP_SYS_CLKRST.soc_clk_ctrl1.reg_etm_sys_clk_en = 1;
+    HP_SYS_CLKRST.soc_clk_ctrl3.reg_etm_apb_clk_en = 1;
+    HP_SYS_CLKRST.hp_rst_en1.reg_rst_en_etm = 1;
+    HP_SYS_CLKRST.hp_rst_en1.reg_rst_en_etm = 0;
 
-SOC_ETM.ch_ena_ad0_clr.ch_clr0 = 1; //dis ch0
-// conn gpio pin to gpio etm channel 0-7 //todo find free ch 
-GPIO_ETM.etm_event_chn_cfg[0].etm_chn_event_sel = pin_trigger;
-GPIO_ETM.etm_event_chn_cfg[0].etm_chn_event_en = 1;
+    SOC_ETM.ch_ena_ad0_clr.ch_clr0 = 1; // dis ch0
+    // conn gpio pin to gpio etm channel 0-7 //todo find free ch
+    GPIO_ETM.etm_event_chn_cfg[0].etm_chn_event_sel = pin_trigger;
+    GPIO_ETM.etm_event_chn_cfg[0].etm_chn_event_en = 1;
 
-SOC_ETM.channel[0].eid.evt_id = 1;//9; //gpio ch0 rising on etm ch 0
-SOC_ETM.channel[0].tid.task_id = 193; // gdma axi ch2 start
+    SOC_ETM.channel[0].eid.evt_id = 1;    // 9; //gpio ch0 rising on etm ch 0
+    SOC_ETM.channel[0].tid.task_id = 193; // gdma axi ch2 start
 
-AXI_DMA.in[dma_num].conf.in_conf0.in_etm_en_chn = 1;
-LCD_CAM.cam_ctrl.cam_update_reg = 1;
-LCD_CAM.cam_ctrl1.cam_start = 1; // enable  transfer
-gpio_matrix_in(63, CAM_V_SYNC_PAD_IN_IDX, false);//enable cam_vs
+    AXI_DMA.in[dma_num].conf.in_conf0.in_etm_en_chn = 1;
+    LCD_CAM.cam_ctrl.cam_update_reg = 1;
+    LCD_CAM.cam_ctrl1.cam_start = 1;                  // enable  transfer
+    gpio_matrix_in(63, CAM_V_SYNC_PAD_IN_IDX, false); // enable cam_vs
 
-SOC_ETM.ch_ena_ad0_set.ch_set0 = 1; //ena ch0
+    SOC_ETM.ch_ena_ad0_set.ch_set0 = 1; // ena ch0
 
 #else
 #if 0
@@ -492,26 +486,30 @@ SOC_ETM.ch_ena_ad0_set.ch_set0 = 1; //ena ch0
     LCD_CAM.cam_ctrl.cam_update_reg = 1;
     LCD_CAM.cam_ctrl1.cam_start = 1; // enable  transfer
 
-   esp_err_t ret = esp_intr_alloc(ETS_GPIO_INTR1_SOURCE, ESP_INTR_FLAG_LEVEL3 | ESP_INTR_FLAG_IRAM, la_ll_trigger_isr, (void *)pin_trigger, &gpio_isr_handle);
-   if (ret)
-   {
-      ESP_LOGE(TAG, "GPIO_INT_1 intr alloc fail error=%x capture on non triggered mode", ret);
-      logic_analyzer_ll_start();
-   }
-   else
-   {
-      if (GPIO.pin[pin_trigger].int_ena == 0) // pin not used on other IRQ, set trigger edge
-      {
-         GPIO.pin[pin_trigger].int_type = trigger_edge;
-      }
-      // clear intr status
-      // todo intr1 status ??
-      if(pin_trigger < 32)
-        {GPIO.status_w1tc.val = (0x1 << pin_trigger);}
-      else 
-        {GPIO.status1_w1tc.val = (0x1 << (pin_trigger-32)); }
-      GPIO.pin[pin_trigger].int_ena |= 2;          // enable GPIO_INT_1 intr
-   }
+    esp_err_t ret = esp_intr_alloc(ETS_GPIO_INTR1_SOURCE, ESP_INTR_FLAG_LEVEL3 | ESP_INTR_FLAG_IRAM, la_ll_trigger_isr, (void *)pin_trigger, &gpio_isr_handle);
+    if (ret)
+    {
+        ESP_LOGE(TAG, "GPIO_INT_1 intr alloc fail error=%x capture on non triggered mode", ret);
+        logic_analyzer_ll_start();
+    }
+    else
+    {
+        if (GPIO.pin[pin_trigger].int_ena == 0) // pin not used on other IRQ, set trigger edge
+        {
+            GPIO.pin[pin_trigger].int_type = trigger_edge;
+        }
+        // clear intr status
+        // todo intr1 status ??
+        if (pin_trigger < 32)
+        {
+            GPIO.status_w1tc.val = (0x1 << pin_trigger);
+        }
+        else
+        {
+            GPIO.status1_w1tc.val = (0x1 << (pin_trigger - 32));
+        }
+        GPIO.pin[pin_trigger].int_ena |= 2; // enable GPIO_INT_1 intr
+    }
 
 #endif
 #endif
@@ -519,7 +517,7 @@ SOC_ETM.ch_ena_ad0_set.ch_set0 = 1; //ena ch0
 // full stop cam, dma, int, pclk, reset pclk pin to default
 void logic_analyzer_ll_stop()
 {
-    
+
     AXI_DMA.in[dma_num].conf.in_link2.inlink_addr_chn = 0x0;
 
     LCD_CAM.cam_ctrl1.cam_start = 0;
@@ -529,19 +527,17 @@ void logic_analyzer_ll_stop()
     AXI_DMA.in[dma_num].intr.ena.in_suc_eof_chn_int_ena = 0;
     AXI_DMA.in[dma_num].intr.clr.in_suc_eof_chn_int_clr = 1;
 
-
-
 #ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
     ledc_stop(LEDC_LOW_SPEED_MODE, CONFIG_ANALYZER_LEDC_CHANNEL_NUMBER, 0);
 #endif
     gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_DISABLE);
 
-#if 1    
-   if (gpio_isr_handle)
-   {
-      esp_intr_free(gpio_isr_handle);
-      gpio_isr_handle = NULL;
-   }
+#if 1
+    if (gpio_isr_handle)
+    {
+        esp_intr_free(gpio_isr_handle);
+        gpio_isr_handle = NULL;
+    }
 #endif
 }
 

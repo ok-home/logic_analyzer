@@ -16,6 +16,8 @@
 #include "rom/cache.h"
 #include "esp_cache.h" //esp_mm
 #include "esp_psram.h"
+#include "hal/cache_hal.h"
+#include "hal/cache_ll.h"
 
 #define LA_TASK_STACK 2048
 #define DMA_FRAME (4096-64) //3968
