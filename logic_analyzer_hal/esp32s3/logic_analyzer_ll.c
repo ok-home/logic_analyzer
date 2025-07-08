@@ -287,7 +287,7 @@ static esp_err_t logic_analyzer_ll_dma_init(void)
     GDMA.channel[dma_num].in.conf0.in_rst = 1;
     GDMA.channel[dma_num].in.conf0.in_rst = 0;
 #ifdef LA_HW_PSRAM
-    GDMA.channel[dma_num].in.conf1.in_ext_mem_bk_size = GDMA_PSRAM_BURST >> 5; // 0-> 16 byte burst transfer, 1->32 byte burst transfer
+    GDMA.channel[dma_num].in.conf1.in_ext_mem_bk_size = GDMA_BURST_CONST; // 0-> 16 byte burst transfer, 1->32 byte burst transfer
 #else
     GDMA.channel[dma_num].in.conf0.indscr_burst_en = 1;
     GDMA.channel[dma_num].in.conf0.in_data_burst_en = 1;

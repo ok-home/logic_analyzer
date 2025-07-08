@@ -38,7 +38,7 @@
 */
 
 // ????
-#define GDMA_PSRAM_BURST 32
+#define DMA_ALIGN 32
 
 #define LA_HW_CLK_SAMPLE_RATE 160000000
 #define LA_HW_MIN_GPIO -1

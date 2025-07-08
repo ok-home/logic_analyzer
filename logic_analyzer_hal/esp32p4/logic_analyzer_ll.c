@@ -346,12 +346,10 @@ static esp_err_t logic_analyzer_ll_dma_init(void)
 
     AXI_DMA.in[dma_num].conf.in_conf0.in_rst_chn = 1;
     AXI_DMA.in[dma_num].conf.in_conf0.in_rst_chn = 0;
-#ifdef LA_HW_PSRAM
-    AXI_DMA.in[dma_num].conf.in_conf0.in_burst_size_sel_chn = 3;//GDMA_PSRAM_BURST >> 5; // 0-> 16 byte burst transfer, 1->32 byte burst transfer
-#else
-    AXI_DMA.in[dma_num].conf.in_conf0.in_burst_size_sel_chn = 3; // 0-> 16 byte burst transfer, 1->32 byte burst transfer
+
+    AXI_DMA.in[dma_num].conf.in_conf0.in_burst_size_sel_chn = GDMA_BURST_CONST;
     AXI_DMA.in[dma_num].conf.in_conf0.indscr_burst_en_chn = 0;
-#endif
+
 
     AXI_DMA.in[dma_num].conf.in_conf1.in_check_owner_chn = 1;
 
@@ -426,15 +424,35 @@ void logic_analyzer_ll_start()
 //static esp_etm_channel_handle_t etm_channel_handle;
 //static gpio_etm_event_config_t gpio_etm_event_config = {0}; 
 //static esp_etm_event_handle_t gpio_etm_event_handle;
+//static gpio_etm_task_config_t gpio_etm_task_config = {0};
+//static  esp_etm_task_handle_t gpio_etm_task_handle;
+
 
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
 #ifdef ETM_START
 /*esp_err_t etm_err_ret = 0;
 etm_err_ret = esp_etm_new_channel(&etm_channel_config, &etm_channel_handle);
+
 gpio_etm_event_config.edge = trigger_edge;
 etm_err_ret |= gpio_new_etm_event(&gpio_etm_event_config, &gpio_etm_event_handle);
 etm_err_ret |= gpio_etm_event_bind_gpio(gpio_etm_event_handle, pin_trigger);
+
+gpio_etm_task_config.action = GPIO_ETM_TASK_ACTION_SET;
+etm_err_ret |= gpio_new_etm_task(&gpio_etm_task_config,&gpio_etm_task_handle);
+etm_err_ret |= gpio_etm_task_add_gpio(gpio_etm_task_handle, 9);// pin9 ??
+
+etm_err_ret |= esp_etm_channel_disable(etm_channel_handle);
+etm_err_ret |= esp_etm_channel_connect(etm_channel_handle, gpio_etm_event_handle, gpio_etm_task_handle);
+etm_err_ret |= esp_etm_channel_enable(etm_channel_handle);
+
+//  stop & remove ETM
+//  esp_etm_channel_disable(etm_channel_handle);
+//  gpio_etm_task_rm_gpio(gpio_etm_task_handle, 9);
+//  esp_etm_del_task(gpio_etm_task_handle);
+//  esp_etm_del_event(gpio_etm_task_handle);
+//  esp_etm_del_channel(tm_channel_handle);
+
 */
 // enable clock
 HP_SYS_CLKRST.soc_clk_ctrl1.reg_etm_sys_clk_en = 1;

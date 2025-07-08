@@ -33,10 +33,9 @@
 #define LA_MIN_SAMPLE_RATE 1000000
 #endif
 
-// #ifdef LA_HW_PSRAM
-// 16-32 GDMA BURST
-#define GDMA_PSRAM_BURST 64
-// #endif
+
+#define DMA_ALIGN 64
+#define GDMA_BURST_CONST 3 // 0-8, 1-16, 2-32, 3-64, 4-128 
 
 #define LA_HW_MAX_CHANNELS 16
 #define LA_HW_MIN_CHANNELS 8

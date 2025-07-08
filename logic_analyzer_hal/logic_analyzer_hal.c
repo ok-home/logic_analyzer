@@ -138,8 +138,10 @@ static lldesc_t *allocate_dma_descriptors(uint32_t size, uint8_t *buffer)
     uint32_t last_size = size % DMA_FRAME; // last frame bytes
 
 #ifdef CONFIG_IDF_TARGET_ESP32P4
-    uint32_t cache_line_cnt = ((count + 1) * sizeof(lldesc_t) + 64)/64;
-    lldesc_t *dma = (lldesc_t *)heap_caps_aligned_calloc(64,cache_line_cnt ,64, MALLOC_CAP_DMA);
+    uint32_t cache_line_size = cache_hal_get_cache_line_size(CACHE_LL_LEVEL_INT_MEM, CACHE_TYPE_DATA);
+    size_t alignment = MAX(cache_line_size, DMA_ALIGN);
+    uint32_t cache_line_cnt = ((count + 1) * sizeof(lldesc_t) + alignment)/alignment;
+    lldesc_t *dma = (lldesc_t *)heap_caps_aligned_calloc(alignment,cache_line_cnt ,alignment, MALLOC_CAP_DMA);
 #else
     lldesc_t *dma = (lldesc_t *)heap_caps_calloc((count + 1) , sizeof(lldesc_t), MALLOC_CAP_DMA);
 #endif
@@ -166,7 +168,7 @@ static lldesc_t *allocate_dma_descriptors(uint32_t size, uint8_t *buffer)
     dma[x].next = NULL;
 
 #ifdef CONFIG_IDF_TARGET_ESP32P4
-    esp_cache_msync ( (void*)dma , 64*cache_line_cnt , ESP_CACHE_MSYNC_FLAG_DIR_C2M ) ;
+    esp_cache_msync ( (void*)dma , alignment*cache_line_cnt , ESP_CACHE_MSYNC_FLAG_DIR_C2M ) ;
     ESP_LOGI("dma","x=%d cl=%ld",x,cache_line_cnt);
 #endif
 
@@ -337,6 +339,9 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
     }
 
     // allocate frame buffer
+    uint32_t cache_line_size = cache_hal_get_cache_line_size(CACHE_LL_LEVEL_INT_MEM, CACHE_TYPE_DATA);
+    size_t alignment = MAX(cache_line_size, DMA_ALIGN);
+
     uint32_t bytes_to_alloc = config->number_channels > 4 ? (config->number_of_samples * (config->number_channels / 8)) : (config->number_of_samples / 2);
     if (config->samples_to_psram == 0)
     {
@@ -347,9 +352,9 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
             bytes_to_alloc = largest_free_block - ((bytes_to_alloc / DMA_FRAME) + 2) * sizeof(lldesc_t); // free space with dma lldesc size
         }
         ESP_LOGI("DMA HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
-        la_frame.fb.len = bytes_to_alloc & ~(GDMA_PSRAM_BURST - 1); // 16-32 bytes align // for P4
-        //la_frame.fb.buf = heap_caps_aligned_calloc(GDMA_PSRAM_BURST,la_frame.fb.len, 1, MALLOC_CAP_DMA);
-          la_frame.fb.buf = heap_caps_aligned_alloc(GDMA_PSRAM_BURST,la_frame.fb.len, MALLOC_CAP_DMA);
+        la_frame.fb.len = bytes_to_alloc & ~(alignment - 1); // 16-32 bytes align // for P4
+        //la_frame.fb.buf = heap_caps_aligned_calloc(alignment,la_frame.fb.len, 1, MALLOC_CAP_DMA);
+          la_frame.fb.buf = heap_caps_aligned_alloc(alignment,la_frame.fb.len, MALLOC_CAP_DMA);
         ESP_LOGI("DMA HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
     }
     else
@@ -362,9 +367,9 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
             bytes_to_alloc = largest_free_block; // max free spiram
         }
         ESP_LOGI("DMA PSRAM HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
-        la_frame.fb.len = bytes_to_alloc & ~(GDMA_PSRAM_BURST - 1); // 16-32 bytes align
-          la_frame.fb.buf = heap_caps_aligned_alloc(GDMA_PSRAM_BURST, la_frame.fb.len, MALLOC_CAP_SPIRAM);
-        //la_frame.fb.buf = heap_caps_aligned_calloc(GDMA_PSRAM_BURST, la_frame.fb.len, 1, MALLOC_CAP_SPIRAM);
+        la_frame.fb.len = bytes_to_alloc & ~(alignment - 1); // 16-32 bytes align
+          la_frame.fb.buf = heap_caps_aligned_alloc(alignment, la_frame.fb.len, MALLOC_CAP_SPIRAM);
+        //la_frame.fb.buf = heap_caps_aligned_calloc(alignment, la_frame.fb.len, 1, MALLOC_CAP_SPIRAM);
         ESP_LOGI("DMA PSRAM HEAP After", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM), heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
     }
     if (la_frame.fb.buf == NULL)

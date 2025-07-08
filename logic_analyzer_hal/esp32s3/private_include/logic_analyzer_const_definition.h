@@ -36,7 +36,8 @@
 
 // #ifdef LA_HW_PSRAM
 // 16-32 GDMA BURST
-#define GDMA_PSRAM_BURST 32
+#define DMA_ALIGN 32
+#define GDMA_BURST_CONST 3 // 0-16, 1-32
 // #endif
 
 #define LA_HW_MAX_CHANNELS 16
