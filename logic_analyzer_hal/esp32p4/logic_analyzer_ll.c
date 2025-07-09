@@ -411,15 +411,10 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
     AXI_DMA.in[dma_num].conf.in_link1.inlink_start_chn = 1;
     LCD_CAM.cam_ctrl.cam_update_reg = 1;
     LCD_CAM.cam_ctrl1.cam_start = 1;                  // enable  transfer
-    gpio_matrix_in(62, CAM_V_SYNC_PAD_IN_IDX, false); // 1
-    ESP_LOGE(TAG,"START");
 
-
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[9], PIN_FUNC_GPIO);
     gpio_set_level(9,0);
     gpio_set_direction(9, GPIO_MODE_INPUT_OUTPUT);
-
-        gpio_matrix_in(9, CAM_V_SYNC_PAD_IN_IDX, false); // 1
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[9], PIN_FUNC_GPIO);
 
     esp_err_t etm_err_ret = 0;
     etm_err_ret = esp_etm_new_channel(&etm_channel_config, &etm_channel_handle);
@@ -432,13 +427,10 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
     etm_err_ret |= gpio_new_etm_task(&gpio_etm_task_config,&gpio_etm_task_handle);
     etm_err_ret |= gpio_etm_task_add_gpio(gpio_etm_task_handle, 9);// pin9 ??
 
-//    gpio_matrix_in(9, CAM_V_SYNC_PAD_IN_IDX, false); // 1
+    gpio_matrix_in(9, CAM_V_SYNC_PAD_IN_IDX, false); // 1
 
     etm_err_ret |= esp_etm_channel_connect(etm_channel_handle, gpio_etm_event_handle, gpio_etm_task_handle);
     etm_err_ret |= esp_etm_channel_enable(etm_channel_handle);
-
-
-    ESP_LOGE(TAG, "ETM_START ret=%d",etm_err_ret);
 
 /*
     // enable clock
@@ -497,11 +489,8 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 // full stop cam, dma, int, pclk, reset pclk pin to default
 void logic_analyzer_ll_stop()
 {
-
     AXI_DMA.in[dma_num].conf.in_link2.inlink_addr_chn = 0x0;
-
     LCD_CAM.cam_ctrl1.cam_start = 0;
-
     AXI_DMA.in[dma_num].conf.in_link1.inlink_stop_chn = 1;
     AXI_DMA.in[dma_num].conf.in_link1.inlink_start_chn = 0;
     AXI_DMA.in[dma_num].intr.ena.in_suc_eof_chn_int_ena = 0;
