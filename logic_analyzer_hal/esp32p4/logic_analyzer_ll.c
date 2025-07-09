@@ -50,9 +50,8 @@
 #include "driver/ledc.h"
 #endif
 // eof controls from dma -> EOF_CTRL undefined
-// #define EOF_CTRL 1
 
-//#define ETM_START 1
+#define ETM_START 1
 
 #define TAG "esp32p4_ll"
 
@@ -74,13 +73,8 @@ static int dma_num = 0;
 void IRAM_ATTR la_ll_trigger_isr(void *pin)
 {
     gpio_matrix_in(63, CAM_V_SYNC_PAD_IN_IDX, false); // enable cam
-#if 0
-    gpio_intr_disable((int)pin);
-#endif
-#if 1
     // clear GPIO_INT_1 int bit -> disable GPIO_INT_1
     GPIO.pin[(int)pin].int_ena &= ~2;
-#endif
 }
 // transfer done -> eof isr from dma descr_empty
 static void IRAM_ATTR la_ll_dma_isr(void *handle)
@@ -93,7 +87,7 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
         return;
     }
     AXI_DMA.in[dma_num].intr.clr.val = status.val;
-#ifndef EOF_CTRL
+
     if (status.in_dscr_empty_chn_int_st)
     {
         gpio_matrix_in(62, CAM_V_SYNC_PAD_IN_IDX, false); // enable cam
@@ -106,13 +100,7 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
     {
         ESP_EARLY_LOGI(TAG, "irq status=%x", status.val);
     }
-#endif
-#ifdef EOF_CTRL
-    if (status.in_suc_eof_chn_int_st)
-    {
-        vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
-    }
-#endif
+
     if (HPTaskAwoken == pdTRUE)
     {
         portYIELD_FROM_ISR();
@@ -226,11 +214,9 @@ static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
     LCD_CAM.cam_ctrl.cam_byte_order = 0;         // 1: Invert data byte order, only valid in 16-bit mode. 0: Do not change. (R/W)
     LCD_CAM.cam_ctrl.cam_bit_order = 0;          // 1: Change data bit order, change CAM_DATA_in[7:0] to CAM_DATA_in[0:7] in 8-bit mode, and bits[15:0] to bits[0:15] in 16-bit mode. 0: Do not change. (R/W)
     LCD_CAM.cam_ctrl.cam_line_int_en = 0;        // 1: Enable to generate LCD_CAM_CAM_HS_INT. 0: Disable. (R/W)
-#ifdef EOF_CTRL
-    LCD_CAM.cam_ctrl.cam_vs_eof_en = 0; // 1: Enable CAM_VSYNC to generate in_suc_eof. 0: in_suc_eof is controlled by LCD_CAM_CAM_REC_DATA_BYTELEN. (R/W)
-#else
+
     LCD_CAM.cam_ctrl.cam_vs_eof_en = 1; // 1: Enable CAM_VSYNC to generate in_suc_eof. 0: in_suc_eof is controlled by LCD_CAM_CAM_REC_DATA_BYTELEN. (R/W)
-#endif
+
     LCD_CAM.cam_ctrl1.cam_line_int_num = 0;    // Configure line number. When the number of received lines reaches this value + 1, LCD_CAM_CAM_HS_INT is triggered. (R/W)
     LCD_CAM.cam_ctrl1.cam_clk_inv = 0;         // 1: Invert the input signal CAM_PCLK. 0: Do not invert. (R/W)
     LCD_CAM.cam_ctrl1.cam_vsync_filter_en = 0; // 1: Enable CAM_VSYNC filter function. 0: Bypass. (R/W)
@@ -390,11 +376,7 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
     // set dma descriptor
     // AXI_DMA.in[dma_num].conf.in_link2.inlink_addr_chn = ((uint32_t) & (frame->dma[0]));
 
-#ifdef EOF_CTRL
-    LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = frame->fb.len - 1; // count in byte
-#else
     // LCD_CAM.cam_ctrl1.cam_rec_data_bytelen = 64; // eof controlled to DMA linked list cam -> non stop, ( bytelen = any digit )
-#endif
 
     //  pre start
     AXI_DMA.in[dma_num].intr.ena.in_dscr_empty_chn_int_ena = 1;
@@ -415,17 +397,31 @@ void logic_analyzer_ll_start()
 }
 // start transfer with trigger -> set irq -> v_sync set to enable on irq handler
 
-// static esp_etm_channel_config_t etm_channel_config = {0};
-// static esp_etm_channel_handle_t etm_channel_handle;
-// static gpio_etm_event_config_t gpio_etm_event_config = {0};
-// static esp_etm_event_handle_t gpio_etm_event_handle;
-// static gpio_etm_task_config_t gpio_etm_task_config = {0};
-// static  esp_etm_task_handle_t gpio_etm_task_handle;
+ static esp_etm_channel_config_t etm_channel_config = {0};
+ static esp_etm_channel_handle_t etm_channel_handle;
+ static gpio_etm_event_config_t gpio_etm_event_config = {0};
+ static esp_etm_event_handle_t gpio_etm_event_handle;
+ static gpio_etm_task_config_t gpio_etm_task_config = {0};
+ static  esp_etm_task_handle_t gpio_etm_task_handle;
 
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
 #ifdef ETM_START
-    /*esp_err_t etm_err_ret = 0;
+    //  start ETM
+    AXI_DMA.in[dma_num].conf.in_link1.inlink_start_chn = 1;
+    LCD_CAM.cam_ctrl.cam_update_reg = 1;
+    LCD_CAM.cam_ctrl1.cam_start = 1;                  // enable  transfer
+    gpio_matrix_in(62, CAM_V_SYNC_PAD_IN_IDX, false); // 1
+    ESP_LOGE(TAG,"START");
+
+
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[9], PIN_FUNC_GPIO);
+    gpio_set_level(9,0);
+    gpio_set_direction(9, GPIO_MODE_INPUT_OUTPUT);
+
+        gpio_matrix_in(9, CAM_V_SYNC_PAD_IN_IDX, false); // 1
+
+    esp_err_t etm_err_ret = 0;
     etm_err_ret = esp_etm_new_channel(&etm_channel_config, &etm_channel_handle);
 
     gpio_etm_event_config.edge = trigger_edge;
@@ -436,18 +432,15 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
     etm_err_ret |= gpio_new_etm_task(&gpio_etm_task_config,&gpio_etm_task_handle);
     etm_err_ret |= gpio_etm_task_add_gpio(gpio_etm_task_handle, 9);// pin9 ??
 
-    etm_err_ret |= esp_etm_channel_disable(etm_channel_handle);
+//    gpio_matrix_in(9, CAM_V_SYNC_PAD_IN_IDX, false); // 1
+
     etm_err_ret |= esp_etm_channel_connect(etm_channel_handle, gpio_etm_event_handle, gpio_etm_task_handle);
     etm_err_ret |= esp_etm_channel_enable(etm_channel_handle);
 
-    //  stop & remove ETM
-    //  esp_etm_channel_disable(etm_channel_handle);
-    //  gpio_etm_task_rm_gpio(gpio_etm_task_handle, 9);
-    //  esp_etm_del_task(gpio_etm_task_handle);
-    //  esp_etm_del_event(gpio_etm_task_handle);
-    //  esp_etm_del_channel(tm_channel_handle);
 
-    */
+    ESP_LOGE(TAG, "ETM_START ret=%d",etm_err_ret);
+
+/*
     // enable clock
     HP_SYS_CLKRST.soc_clk_ctrl1.reg_etm_sys_clk_en = 1;
     HP_SYS_CLKRST.soc_clk_ctrl3.reg_etm_apb_clk_en = 1;
@@ -468,20 +461,8 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
     gpio_matrix_in(63, CAM_V_SYNC_PAD_IN_IDX, false); // enable cam_vs
 
     SOC_ETM.ch_ena_ad0_set.ch_set0 = 1; // ena ch0
-
+*/
 #else
-#if 0
-    AXI_DMA.in[dma_num].conf.in_link1.inlink_start_chn = 1;
-    LCD_CAM.cam_ctrl.cam_update_reg = 1;
-    LCD_CAM.cam_ctrl1.cam_start = 1; // enable  transfer
-
-    gpio_install_isr_service(0);                 // default
-    gpio_set_intr_type(pin_trigger, trigger_edge);
-    gpio_isr_handler_add(pin_trigger, la_ll_trigger_isr, (void *)pin_trigger);
-    gpio_intr_disable(pin_trigger);
-    gpio_intr_enable(pin_trigger); // start transfer on irq
-#endif
-#if 1
     AXI_DMA.in[dma_num].conf.in_link1.inlink_start_chn = 1;
     LCD_CAM.cam_ctrl.cam_update_reg = 1;
     LCD_CAM.cam_ctrl1.cam_start = 1; // enable  transfer
@@ -512,7 +493,6 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
     }
 
 #endif
-#endif
 }
 // full stop cam, dma, int, pclk, reset pclk pin to default
 void logic_analyzer_ll_stop()
@@ -532,12 +512,18 @@ void logic_analyzer_ll_stop()
 #endif
     gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_DISABLE);
 
-#if 1
     if (gpio_isr_handle)
     {
         esp_intr_free(gpio_isr_handle);
         gpio_isr_handle = NULL;
     }
+#ifdef ETM_START
+      esp_etm_channel_disable(etm_channel_handle);
+      gpio_etm_task_rm_gpio(gpio_etm_task_handle, 9);
+      esp_etm_del_task(gpio_etm_task_handle);
+      esp_etm_del_event(gpio_etm_event_handle);
+      esp_etm_del_channel(etm_channel_handle);
+      gpio_set_level(9,0);
 #endif
 }
 

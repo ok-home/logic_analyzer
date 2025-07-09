@@ -284,6 +284,49 @@ void gpio_blink(void *p)
         vTaskDelay(1);
     }
 }
+/*
+#include "esp_etm.h"
+#include "driver/gpio_etm.h"
+ static esp_etm_channel_config_t etm_channel_config = {0};
+ static esp_etm_channel_handle_t etm_channel_handle;
+ static gpio_etm_event_config_t gpio_etm_event_config = {0};
+ static esp_etm_event_handle_t gpio_etm_event_handle;
+ static gpio_etm_task_config_t gpio_etm_task_config = {0};
+ static  esp_etm_task_handle_t gpio_etm_task_handle;
+
+void etm_start_stop(void*p){
+    gpio_reset_pin(9);
+    gpio_set_direction(9,GPIO_MODE_OUTPUT);
+    gpio_set_level(9,0);
+    esp_err_t etm_err_ret = 0;
+    while(1){
+    etm_err_ret = esp_etm_new_channel(&etm_channel_config, &etm_channel_handle);
+
+    gpio_etm_event_config.edge = 2;
+    etm_err_ret |= gpio_new_etm_event(&gpio_etm_event_config, &gpio_etm_event_handle);
+    etm_err_ret |= gpio_etm_event_bind_gpio(gpio_etm_event_handle, 6);
+
+    gpio_etm_task_config.action = GPIO_ETM_TASK_ACTION_SET;
+    etm_err_ret |= gpio_new_etm_task(&gpio_etm_task_config,&gpio_etm_task_handle);
+    etm_err_ret |= gpio_etm_task_add_gpio(gpio_etm_task_handle, 9);// pin9 ??
+
+    //etm_err_ret |= esp_etm_channel_disable(etm_channel_handle);
+    etm_err_ret |= esp_etm_channel_connect(etm_channel_handle, gpio_etm_event_handle, gpio_etm_task_handle);
+    etm_err_ret |= esp_etm_channel_enable(etm_channel_handle);
+
+    vTaskDelay(1);
+    //  stop & remove ETM
+      esp_etm_channel_disable(etm_channel_handle);
+      gpio_etm_task_rm_gpio(gpio_etm_task_handle, 9);
+      esp_etm_del_task(gpio_etm_task_handle);
+      esp_etm_del_event(gpio_etm_event_handle);
+      esp_etm_del_channel(etm_channel_handle);
+      gpio_set_level(9,0);
+    }
+    
+
+}
+*/
 void test_sample_init(void)
 {
     // Set the LEDC peripheral configuration
@@ -294,4 +337,6 @@ void test_sample_init(void)
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
     xTaskCreate(gpio_blink, "tt", 2048 * 2, NULL, 1, NULL);
     xTaskCreate(irq_gpio_blink, "irq", 2048 * 2, NULL, 1, NULL);
+    //xTaskCreate(etm_start_stop, "etm", 2048 * 2, NULL, 1, NULL);
+
 }

@@ -1,7 +1,7 @@
 {
  "PyCfg": {
   "dataFile": "laRowBin.bin",
-  "PortName": "/dev/ttyACM1",
+  "PortName": "/dev/ttyACM0",
   "PortSpeed": "921600",
   "PortTimeout":"600"
  },
@@ -10,7 +10,7 @@
   "pin1": "5",
   "pin2": "6",
   "pin3": "7",
-  "pin4": "-1",
+  "pin4": "9",
   "pin5": "-1",
   "pin6": "-1",
   "pin7": "-1",
@@ -22,12 +22,12 @@
   "pin13": "-1",
   "pin14": "-1",
   "pin15": "-1",
-  "trg": "4",
+  "trg": "6",
   "edg": "1",
-  "smp": "1800000",
+  "smp": "20000",
   "clk": "80000000",
   "tmo": "10",
   "chn": "8",
-  "ram": "1"
+  "ram": "0"
  }
 }
