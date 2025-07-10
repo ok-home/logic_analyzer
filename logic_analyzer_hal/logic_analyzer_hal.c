@@ -19,6 +19,7 @@
 #include "hal/cache_hal.h"
 #include "hal/cache_ll.h"
 
+
 #define LA_TASK_STACK 2048
 #define DMA_FRAME (4096-64) //3968
 
@@ -134,7 +135,7 @@ static inline void swap_buf(uint16_t *buf, int cnt)
  * @return
  *     - dma descriptor ( NULL if no mem )
  */
-static lldesc_t *allocate_dma_descriptors(uint32_t size, uint8_t *buffer)
+static dmadesc_t *allocate_dma_descriptors(uint32_t size, uint8_t *buffer)
 {
     uint32_t count = size / DMA_FRAME;     //  dma frames count
     uint32_t last_size = size % DMA_FRAME; // last frame bytes
@@ -142,10 +143,10 @@ static lldesc_t *allocate_dma_descriptors(uint32_t size, uint8_t *buffer)
 #ifdef CONFIG_IDF_TARGET_ESP32P4
     uint32_t cache_line_size = cache_hal_get_cache_line_size(CACHE_LL_LEVEL_INT_MEM, CACHE_TYPE_DATA);
     size_t alignment = MAX(cache_line_size, DMA_ALIGN);
-    uint32_t cache_line_cnt = ((count + 1) * sizeof(lldesc_t) + alignment)/alignment;
-    lldesc_t *dma = (lldesc_t *)heap_caps_aligned_calloc(alignment,cache_line_cnt ,alignment, MALLOC_CAP_DMA);
+    uint32_t cache_line_cnt = ((count + 1) * sizeof(dmadesc_t) + alignment)/alignment;
+    dmadesc_t *dma = (dmadesc_t *)heap_caps_aligned_calloc(alignment,cache_line_cnt ,alignment, MALLOC_CAP_DMA);
 #else
-    lldesc_t *dma = (lldesc_t *)heap_caps_calloc((count + 1) , sizeof(lldesc_t), MALLOC_CAP_DMA);
+    dmadesc_t *dma = (dmadesc_t *)heap_caps_calloc((count + 1) , sizeof(dmadesc_t), MALLOC_CAP_DMA);
 #endif
     if (dma == NULL)
     {
@@ -341,16 +342,16 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
 
     // allocate frame buffer
     uint32_t cache_line_size = cache_hal_get_cache_line_size(CACHE_LL_LEVEL_INT_MEM, CACHE_TYPE_DATA);
-    size_t alignment = MAX(cache_line_size, DMA_ALIGN);
+    size_t alignment = cache_line_size > DMA_ALIGN ? cache_line_size : DMA_ALIGN ;
 
     uint32_t bytes_to_alloc = config->number_channels > 4 ? (config->number_of_samples * (config->number_channels / 8)) : (config->number_of_samples / 2);
     if (config->samples_to_psram == 0)
     {
         // alloc on RAM
         uint32_t largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_DMA); // byte
-        if (largest_free_block < bytes_to_alloc + ((bytes_to_alloc / DMA_FRAME) + 1) * sizeof(lldesc_t))
+        if (largest_free_block < bytes_to_alloc + ((bytes_to_alloc / DMA_FRAME) + 1) * sizeof(dmadesc_t))
         {
-            bytes_to_alloc = largest_free_block - ((bytes_to_alloc / DMA_FRAME) + 2) * sizeof(lldesc_t); // free space with dma lldesc size
+            bytes_to_alloc = largest_free_block - ((bytes_to_alloc / DMA_FRAME) + 2) * sizeof(dmadesc_t); // free space with dma lldesc size
         }
         ESP_LOGD("DMA HEAP Before", "All_dma_heap=%d Largest_dma_heap_block=%d", heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
         la_frame.fb.len = bytes_to_alloc & ~(alignment - 1); // 16-32 bytes align // for P4

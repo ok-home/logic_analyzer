@@ -42,7 +42,10 @@
 			"gpio_ext_struct.h": "c",
 			"soc_etm_source.h": "c",
 			"soc_etm_struct.h": "c",
-			"interrupts.h": "c"
+			"interrupts.h": "c",
+			"stdlib.h": "c",
+			"logic_analyzer_const_definition.h": "c",
+			"spi_ll.h": "c"
 		}
 	}
 }

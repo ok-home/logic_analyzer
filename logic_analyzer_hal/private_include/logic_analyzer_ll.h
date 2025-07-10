@@ -8,7 +8,7 @@ extern "C"
 {
 #endif
 
-typedef struct dma_descriptor_align8_s lldesc_t;
+typedef struct dma_descriptor_align8_s dmadesc_t;
 struct dma_descriptor_align8_s {
     struct {
         uint32_t size : 12;         /*!< Buffer size */
@@ -20,10 +20,10 @@ struct dma_descriptor_align8_s {
         uint32_t owner : 1;         /*!< Who is allowed to access the buffer that this descriptor points to */
     } dw0;                          /*!< Descriptor Word 0 */
     void *buffer;                   /*!< Pointer to the buffer */
-    lldesc_t *next;  /*!< Pointer to the next descriptor (set to NULL if the descriptor is the last one, e.g. suc_eof=1) */
+    dmadesc_t *next;  /*!< Pointer to the next descriptor (set to NULL if the descriptor is the last one, e.g. suc_eof=1) */
     uint32_t free;
 }; //__attribute__((aligned(8)));
-ESP_STATIC_ASSERT(sizeof(lldesc_t) == 16, "dma_descriptor_align8_t should occupy 16 bytes in memory");
+ESP_STATIC_ASSERT(sizeof(dmadesc_t) == 16, "dma_descriptor_align8_t should occupy 16 bytes in memory");
 
 
 
@@ -39,7 +39,7 @@ ESP_STATIC_ASSERT(sizeof(lldesc_t) == 16, "dma_descriptor_align8_t should occupy
     typedef struct
     {
         la_fb_t fb;
-        lldesc_t *dma; // Pointer of dma frame
+        dmadesc_t *dma; // Pointer of dma frame
     } la_frame_t;
 
     /**
