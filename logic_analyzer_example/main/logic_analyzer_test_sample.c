@@ -19,7 +19,7 @@
 // esp32s3 uart -> 43-tx 44-rx
 // esp32c3 uart -> 21-tx 20-rx
 // output pin ledc example
-#if defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32P4)
+#if defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32P4) || defined(CONFIG_IDF_TARGET_ESP32S3)
 
 #define LEDC_OUTPUT_IO (6)
 // output pin gpio blink example
