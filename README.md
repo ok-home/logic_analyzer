@@ -1,30 +1,32 @@
 [Ru](/README-RU.md)
 
 | Supported Targets |  
-| ESP32    ESP32S3 ESP32C3  | 
+| ESP32 ESP32S3 ESP32C3 ESP32P4 | 
 | ----------------- |
 
 # Logic analyzer on ESP32 for self-diagnostics
  - No need to buy and connect an external logic analyzer
  - Connected as a component to your program (ESP IDF)
  - Displaying information on the WEB interface or Sigrok PulseView
- - Supported SOC -> ESP32, ESP32S3, ESP32C3
+ - Supported SOC -> ESP32, ESP32S3, ESP32C3, ESP32P4
 
 ![WebSocket](/la_ws.jpg)
 ![PulseView](/sigrok_esp.jpg)
 
-## Main parameters
+## Основные параметры
 |                      | Channels | Max<br>Sample<br>Count(2) | Max<br>Sample<br>Rate | ESP<br>Module |        Free GPIO & Clock Source<br>Required        |
 |:--------------------:|:--------:|:-------------------------:|:---------------------:|:-------------:|:--------------------------------------------------:|
 |         ESP32        |    16    |          50 000           |         40 MHz        |   I2S0/I2S1   | NO                                                 |
 |        ESP32S3       |  8<br>16 |     140 000<br>70 000     |    80 MHz<br>40 MHz   |    LCD_CAM    | One Free GPIO<br>One LEDC Channel for slow PCLK(3) |
 | ESP32S3<br>PSRAM8(1) |  8<br>16 |   8 000 000<br>4 000 000  |    10 MHz<br>5 MHZ    |    LCD_CAM    | One Free GPIO<br>One LEDC Channel for slow PCLK(3) |
 |       ESP32C3(4)     |    4     |          60 000           |         80 MHz        |    GPSPI2     | NO                                                 |
+|       ESP32P4(5)     |  8<br>16 |16 000 000-32 000 000<br>8 000 000-16 000 000|80 MHz Ram<br>80 MHz Psram   |    LCD_CAM    | One Free GPIO for PCLK<br> One free GPIO for ETM Trigger(Opt)<br>One LEDC Channel for slow PCLK(3) |
 
 1. I do not recommend using this mode unless necessary. PSRAM heavily loads the SPI bus, artifacts and delays in the operation of the main program are possible. Correct work with Cache requires ESP IDF ver 5.2 (in the current  master branch version)
 2. The maximum number of samples depends on the amount of free memory when your program is running, the analyzer will limit the number of samples and return the maximum possible.
 3. ESP32S3 -> requires one GPIO pin not connected anywhere for PCLK signal, for sample rate less than 1 MHz - you can allow 1 LEDC channel connection
 4. ESP32C3 -> trigger does not use HiLevel interrupts, Delay from trigger to start of data is 1.3-1.5 µs. SUMP operates in 8-channel mode, the upper 4 channels are not used.
+5. ESP32P4 -> the maximum number of samples depends on the size of the built-in PSRAM, free RAM memory. The trigger uses regular edge interrupts with a delay before the start of data of 1.3-1.5 µsec or ETM with a delay of 150 nsec. ETM mode requires one free GPIO
 
  - 1 capture trigger channel. The trigger is organized on interrupts along the fronts. In the ESP32, interrupts are processed for about 2 µS (rev0.1) - Accordingly, the delay from the trigger to the start of the data is about 2 µS. In current versions, the trigger has been moved to Hilevel interrupts ( level 5 ), the delay from the trigger to the beginning of the data has been reduced to 0.3 µS.
  - All mode settings are moved to Menuconfig. Channels, Trigger, Sample rate, use PSRAM is additionally configured in the WEB interface
@@ -114,6 +116,14 @@
     - simple GPIO configuration for channels via la_cfg.json  
 
 ![cli interface output](/la_cli.jpg)
+
+## Added support for ESP32P4
+- Only CLI interface is supported
+- Data reading in parallel mode 8/16 bit by LCD/CAM module, one GPIO is required for PCLK signal
+- For sample rate less than 1 MHz, one LEDC channel is required
+- You can select IRQ/ETM trigger mode, ETM mode requires one more additional free GPIO
+- Maximum sampling rate does not depend on the number of channels and the type of memory for the buffer (Ram/Psram) and is 80 MHz (for PSRAM frequency = 200 MHz)
+- The number of samples is limited only by the size of free memory (Ram/Psram), The maximum number of samples can be 32,000,000 for modules with a Psram volume of 32 Mbyte.
 
  ## Parts of the code used in the project
   - [esp32-cam](https://github.com/espressif/esp32-camera) for I2S DMA
