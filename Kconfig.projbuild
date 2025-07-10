@@ -15,6 +15,32 @@ menu "Logic Analyzer Configuration"
 
     endif
 
+    if IDF_TARGET_ESP32P4
+    
+        choice ANALYZER_TRIGGER_CHOICE
+            prompt "Trigger channel GPIO_INT_1 or ETM"
+            default ANALYZER_GPIO_INT_1_TRIGGER
+
+            config ANALYZER_GPIO_INT_1_TRIGGER
+                bool "GPIO_INT_1 Trigger"
+
+            config ANALYZER_ETM_TRIGGER
+                bool "ETM Trigger"
+        endchoice
+
+    endif
+
+    if ANALYZER_ETM_TRIGGER
+
+        config ANALYZER_ETM_TRIGGER_PIN
+            int "GPIO NUM for ETM Trigger"
+            range -1 54
+            default 9
+            help
+                ESP32P4 requires 1 free gpio to form a ETM Trigger
+
+    endif
+
     if IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32P4
 
         config ANALYZER_PCLK_PIN
@@ -22,7 +48,7 @@ menu "Logic Analyzer Configuration"
             range -1 54
             default 40
             help
-                RSP32S3 requires 1 free gpio to form a PCLK
+                ESP32S3 requires 1 free gpio to form a PCLK
 
         config ANALYZER_USE_LEDC_TIMER_FOR_PCLK
             bool "Use ledc timer for PCLK < 1 mHz"
