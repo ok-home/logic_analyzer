@@ -56,9 +56,16 @@ set( priv_require
   endif()
 
     if(IDF_TARGET STREQUAL "esp32p4")
-    list(APPEND srcs
-        logic_analyzer_hal/esp32p4/logic_analyzer_ll.c      
-    )
+        if(CONFIG_ANALYZER_USE_CAM_LCD)
+            list(APPEND srcs
+                logic_analyzer_hal/esp32p4/logic_analyzer_ll_cam.c      
+            )
+        endif()
+    if(CONFIG_ANALYZER_USE_PARLIO)
+        list(APPEND srcs
+            logic_analyzer_hal/esp32p4/logic_analyzer_ll_parlio.c      
+        )
+        endif()
     list(APPEND priv_includedir
         logic_analyzer_hal/esp32p4/private_include
     )

@@ -45,7 +45,9 @@
 			"interrupts.h": "c",
 			"stdlib.h": "c",
 			"logic_analyzer_const_definition.h": "c",
-			"spi_ll.h": "c"
+			"spi_ll.h": "c",
+			"parlio_ll.h": "c",
+			"parl_io_struct.h": "c"
 		}
 	}
 }

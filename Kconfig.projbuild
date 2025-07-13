@@ -16,6 +16,21 @@ menu "Logic Analyzer Configuration"
     endif
 
     if IDF_TARGET_ESP32P4
+
+        choice ANALYZER_P4_USE_CAM_PARLIO
+            prompt "Use LCD_CAM or PARLIO hw module"
+            default ANALYZER_USE_CAM_LCD
+
+            config ANALYZER_USE_CAM_LCD
+                bool "Use CAM hw module"
+            
+            config ANALYZER_USE_PARLIO
+                bool "Use PARLIO module"
+                
+        endchoice
+    endif
+
+    if IDF_TARGET_ESP32P4
     
         choice ANALYZER_TRIGGER_CHOICE
             prompt "Trigger channel GPIO_INT_1 or ETM"
