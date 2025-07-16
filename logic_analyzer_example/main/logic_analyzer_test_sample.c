@@ -327,6 +327,45 @@ void etm_start_stop(void*p){
 
 }
 */
+#define gpio_matrix_in(a, b, c) esp_rom_gpio_connect_in_signal(a, b, c)
+#define gpio_matrix_out(a, b, c, d) esp_rom_gpio_connect_out_signal(a, b, c, d)
+void parlio_clk(void *p)
+{
+    gpio_reset_pin(15);
+    gpio_set_direction(15,GPIO_MODE_OUTPUT);
+    gpio_matrix_out(15, PARLIO_RX_CLK_PAD_OUT_IDX, false, false);
+
+    HP_SYS_CLKRST.soc_clk_ctrl1.reg_parlio_sys_clk_en = 1;
+    HP_SYS_CLKRST.soc_clk_ctrl2.reg_parlio_apb_clk_en = 1;
+
+    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio = 1;
+    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio = 0;
+
+    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio_rx = 1;
+    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio_rx = 0;
+
+    HP_SYS_CLKRST.ref_clk_ctrl2.reg_ref_160m_clk_en = 1;
+    HP_SYS_CLKRST.ref_clk_ctrl2.reg_tm_160m_clk_en = 1;
+    
+    HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_src_sel = 2; // 2-PLL160
+
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl117, reg_parlio_rx_clk_div_num, 8); // 160/8
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_rx_clk_div_denominator,0);
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_rx_clk_div_numerator,0);
+
+    PARL_IO.rx_genrl_cfg.rx_gating_en = 1;
+    PARL_IO.clk.clk_en = 1 ; // ??
+    LP_AON_CLKRST.hp_clk_ctrl.hp_pad_parlio_rx_clk_en = 1;
+    HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_en = 1;
+
+
+    while(1)
+    {
+        vTaskDelay(1);
+    }
+
+}
+
 void test_sample_init(void)
 {
     // Set the LEDC peripheral configuration
@@ -338,5 +377,6 @@ void test_sample_init(void)
     xTaskCreate(gpio_blink, "tt", 2048 * 2, NULL, 1, NULL);
     xTaskCreate(irq_gpio_blink, "irq", 2048 * 2, NULL, 1, NULL);
     //xTaskCreate(etm_start_stop, "etm", 2048 * 2, NULL, 1, NULL);
+    xTaskCreate(parlio_clk,"parlio",2048*2,NULL,1,NULL);
 
 }
