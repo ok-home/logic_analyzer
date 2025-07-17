@@ -330,46 +330,162 @@ void etm_start_stop(void*p){
 #include "soc/hp_sys_clkrst_struct.h"
 #include "soc/lp_clkrst_struct.h"
 #include "soc/parl_io_struct.h"
+#include "soc/parlio_periph.h"
+#include "soc/gpio_sig_map.h"
+#include "soc/axi_dma_struct.h"
+#include "soc/gdma_periph.h"
+#include "soc/axi_dma_reg.h"
+
+typedef struct dma_descriptor_align8_s dmadesc_t;
+struct dma_descriptor_align8_s {
+    struct {
+        uint32_t size : 12;         /*!< Buffer size */
+        uint32_t length : 12;       /*!< Number of valid bytes in the buffer */
+        uint32_t reversed24_27 : 4; /*!< Reserved */
+        uint32_t err_eof : 1;       /*!< Whether the received buffer contains error */
+        uint32_t reserved29 : 1;    /*!< Reserved */
+        uint32_t suc_eof : 1;       /*!< Whether the descriptor is the last one in the link */
+        uint32_t owner : 1;         /*!< Who is allowed to access the buffer that this descriptor points to */
+    } dw0;                          /*!< Descriptor Word 0 */
+    void *buffer;                   /*!< Pointer to the buffer */
+    dmadesc_t *next;  /*!< Pointer to the next descriptor (set to NULL if the descriptor is the last one, e.g. suc_eof=1) */
+    uint32_t free;
+}; //__attribute__((aligned(8)));
+ESP_STATIC_ASSERT(sizeof(dmadesc_t) == 16, "dma_descriptor_align8_t should occupy 16 bytes in memory");
+
+
 #include "esp_log.h"
 #define gpio_matrix_in(a, b, c) esp_rom_gpio_connect_in_signal(a, b, c)
 #define gpio_matrix_out(a, b, c, d) esp_rom_gpio_connect_out_signal(a, b, c, d)
+
+uint8_t inbuf[512];
+dmadesc_t dma_ll = {
+        .dw0.size = 64,
+        .dw0.length = 64,
+        .dw0.owner = 1,
+        .dw0.suc_eof = 0,
+        .buffer = inbuf,
+        .next = NULL,
+        .free = 0,
+};
+
+
+void IRAM_ATTR parlio_isr(void *arg){
+    uint32_t stat = PARL_IO.int_st.val;
+    PARL_IO.rx_start_cfg.rx_start = 0;
+    ESP_EARLY_LOGE("parlio irq","%lx",stat);
+    PARL_IO.int_clr.val = stat;
+}
+void IRAM_ATTR dma_isr(void *arg){
+
+    typeof(AXI_DMA.in[0].intr.st) status = AXI_DMA.in[0].intr.st;
+    uint32_t stat = status.val;
+    ESP_EARLY_LOGE("dma irq", "irq status=%lx", stat);
+    AXI_DMA.in[0].intr.clr.val = stat;
+
+}
+
 void parlio_clk(void *p)
 {
     gpio_reset_pin(15);
     gpio_set_direction(15,GPIO_MODE_OUTPUT);
     gpio_matrix_out(15, PARLIO_RX_CLK_PAD_OUT_IDX, false, false);
 
-    HP_SYS_CLKRST.ref_clk_ctrl2.reg_ref_160m_clk_en = 1;
+//    gpio_reset_pin(14);
+//    gpio_set_direction(14,GPIO_MODE_OUTPUT);
+//    gpio_matrix_out(14, PARLIO_TX_CLK_PAD_OUT_IDX, false, false);
     
+
+    HP_SYS_CLKRST.ref_clk_ctrl2.reg_ref_160m_clk_en = 1;
     HP_SYS_CLKRST.soc_clk_ctrl1.reg_parlio_sys_clk_en = 1;
     HP_SYS_CLKRST.soc_clk_ctrl2.reg_parlio_apb_clk_en = 1;
 
-    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio = 1;
-    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio = 0;
-
-    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio_rx = 1;
-    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio_rx = 0;
-
-    
     HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_src_sel = 2; // 2-PLL160
+//    HP_SYS_CLKRST.peri_clk_ctrl118.reg_parlio_tx_clk_src_sel = 2; // 2-PLL160
 
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl117, reg_parlio_rx_clk_d); // 160/8
+    //rx
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl117, reg_parlio_rx_clk_div_num,16-1); // 160/8
     HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_rx_clk_div_denominator,0);
     HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_rx_clk_div_numerator,0);
+    //tx
+//    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_tx_clk_div_num,10); // 160/8
+//    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl119, reg_parlio_tx_clk_div_denominator,0);
+//    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl119, reg_parlio_tx_clk_div_numerator,0);
 
-    LP_AON_CLKRST.hp_clk_ctrl.hp_pad_parlio_rx_clk_en = 1;
+
+    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio = 1;
+    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio = 0;
+    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio_rx = 1;
+    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio_rx = 0;
+//    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio_tx = 1;
+//    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio_tx = 0;
+
+//    LP_AON_CLKRST.hp_clk_ctrl.hp_pad_parlio_rx_clk_en = 1;
     HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_en = 1;
+//    LP_AON_CLKRST.hp_clk_ctrl.hp_pad_parlio_rx_clk_en = 1;
+//    HP_SYS_CLKRST.peri_clk_ctrl118.reg_parlio_tx_clk_en = 1;
 
-
-    PARL_IO.clk.clk_en = 1 ; // ??
+    PARL_IO.clk.clk_en = 0 ; // ??
     PARL_IO.rx_genrl_cfg.rx_gating_en = 0;
+//    PARL_IO.tx_genrl_cfg.tx_gating_en = 0;
 
 
-    ESP_LOGI("parlio", "GATE %d clk %d",PARL_IO.rx_genrl_cfg.rx_gating_en,PARL_IO.rx_genrl_cfg.rx_gating_en);
+    esp_intr_alloc(ETS_HP_PARLIO_RX_INTR_SOURCE,
+                         ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
+                         parlio_isr, NULL, NULL);
+    esp_intr_alloc(gdma_periph_signals.groups[1].pairs[0].rx_irq_id,
+                         ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
+                         dma_isr, NULL, NULL);
+
+
+    PARL_IO.int_clr.val = ~0;
+    PARL_IO.int_ena.val = 0;
+
+    PARL_IO.rx_mode_cfg.rx_sw_en = 1; // 1-soft start mode
+    PARL_IO.rx_data_cfg.rx_bitlen = 64; // any on ext level mode
+    PARL_IO.rx_data_cfg.rx_bus_wid_sel = 3;//8
+    PARL_IO.rx_genrl_cfg.rx_eof_gen_sel = 0; //bit lenght eof
+
+    HP_SYS_CLKRST.soc_clk_ctrl1.reg_ahb_pdma_sys_clk_en = 1;
+    HP_SYS_CLKRST.soc_clk_ctrl1.reg_axi_pdma_sys_clk_en = 1;
+    HP_SYS_CLKRST.hp_rst_en1.reg_rst_en_axi_pdma = 1;
+    HP_SYS_CLKRST.hp_rst_en1.reg_rst_en_axi_pdma = 0;
+
+    AXI_DMA.in[0].intr.clr.val = ~0;
+    AXI_DMA.in[0].intr.ena.val = 0;
+
+    AXI_DMA.in[0].conf.in_conf0.in_rst_chn = 1;
+    AXI_DMA.in[0].conf.in_conf0.in_rst_chn = 0;
+    AXI_DMA.in[0].conf.in_conf1.in_check_owner_chn = 1;
+
+    AXI_DMA.in[0].conf.in_peri_sel.peri_in_sel_chn = 3; // 0:lcdcam. 1: gpspi_2. 2: gpspi_3. 3: parl_io. 4: aes. 5: sha. 6~15: Dummy
+    AXI_DMA.in[0].conf.in_link2.inlink_addr_chn =(uint32_t)&dma_ll; // set dma descriptor
+
+
 
     while(1)
     {
-        vTaskDelay(1);
+        vTaskDelay(2);
+        PARL_IO.rx_start_cfg.rx_start = 0;
+        AXI_DMA.in[0].intr.clr.val = ~0;
+        AXI_DMA.in[0].intr.ena.val = 0;
+
+        AXI_DMA.in[0].conf.in_conf0.in_rst_chn = 1;
+        AXI_DMA.in[0].conf.in_conf0.in_rst_chn = 0;
+        AXI_DMA.in[0].conf.in_link2.inlink_addr_chn = (uint32_t)&dma_ll; // set dma descriptor
+        AXI_DMA.in[0].conf.in_peri_sel.peri_in_sel_chn = 3; // 0:lcdcam. 1: gpspi_2. 2: gpspi_3. 3: parl_io. 4: aes. 5: sha. 6~15: Dummy
+
+        PARL_IO.fifo_cfg.rx_fifo_srst = 1; // reset fifo
+        PARL_IO.fifo_cfg.rx_fifo_srst = 0; // reset fifo
+
+        PARL_IO.rx_data_cfg.rx_bitlen = 64; // any on ext level mode
+        PARL_IO.reg_update.rx_reg_update = 1;
+
+        AXI_DMA.in[0].intr.ena.val = ~0;
+        AXI_DMA.in[0].intr.clr.val = ~0;
+
+        AXI_DMA.in[0].conf.in_link1.inlink_start_chn = 1;
+        PARL_IO.rx_start_cfg.rx_start = 1;
     }
 
 }

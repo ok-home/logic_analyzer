@@ -47,7 +47,8 @@
 			"logic_analyzer_const_definition.h": "c",
 			"spi_ll.h": "c",
 			"parlio_ll.h": "c",
-			"parl_io_struct.h": "c"
+			"parl_io_struct.h": "c",
+			"parlio_periph.h": "c"
 		}
 	}
 }
