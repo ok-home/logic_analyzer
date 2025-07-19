@@ -176,7 +176,7 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
 //    PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN]);
 //    gpio_matrix_in(CONFIG_ANALYZER_PCLK_PIN, PARLIO_RX_CLK_PAD_IN_IDX, false);
     // enable CLK
-
+/*
 //    if (HP_SYS_CLKRST.soc_clk_ctrl2.reg_parlio_apb_clk_en == 0)
 //    {
         HP_SYS_CLKRST.soc_clk_ctrl1.reg_parlio_sys_clk_en = 1;
@@ -200,13 +200,48 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
 // on or off ??
     LP_AON_CLKRST.hp_clk_ctrl.hp_pad_parlio_rx_clk_en = 1;
     HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_en = 1;
+*/
+
+    HP_SYS_CLKRST.ref_clk_ctrl2.reg_ref_160m_clk_en = 1;
+    HP_SYS_CLKRST.soc_clk_ctrl1.reg_parlio_sys_clk_en = 1;
+    HP_SYS_CLKRST.soc_clk_ctrl2.reg_parlio_apb_clk_en = 1;
+
+    HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_src_sel = 2; // 2-PLL160
+    //rx
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl117, reg_parlio_rx_clk_div_num,ldiv); // 160/8
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_rx_clk_div_denominator,0);
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_rx_clk_div_numerator,0);
+
+    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio = 1;
+    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio = 0;
+    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio_rx = 1;
+    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio_rx = 0;
+
+    HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_en = 0;
+
 
 }
 // set cam mode register -> 8/16 bit, eof control from dma,
 static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
 {
 
+    PARL_IO.clk.clk_en = 0 ; // ??
+    PARL_IO.rx_genrl_cfg.rx_gating_en = 0;
+    PARL_IO.rx_mode_cfg.rx_sw_en = 0; // 1-soft start mode
+    PARL_IO.rx_mode_cfg.rx_smp_mode_sel = 0; //0 - lvl
+    PARL_IO.rx_mode_cfg.rx_ext_en_sel = 0xf; // datapin 15
+    PARL_IO.rx_genrl_cfg.rx_eof_gen_sel = 1; //bit lenght eof - any
 
+    if (channels == 8)
+        {PARL_IO.rx_data_cfg.rx_bus_wid_sel = 3;} //8 bit 
+    else 
+        {PARL_IO.rx_data_cfg.rx_bus_wid_sel = 4;} //16 bit
+
+        PARL_IO.rx_start_cfg.rx_start = 0;
+        PARL_IO.fifo_cfg.rx_fifo_srst = 1; // reset fifo
+        PARL_IO.fifo_cfg.rx_fifo_srst = 0; // reset fifo
+
+/*
     PARL_IO.rx_mode_cfg.rx_ext_en_sel = 0xf; //data15 as ext en signal
     PARL_IO.rx_mode_cfg.rx_smp_mode_sel = 2; //ext level mode
     PARL_IO.rx_mode_cfg.rx_sw_en = 1; // 1-soft start mode
@@ -232,7 +267,7 @@ static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
     PARL_IO.clk.clk_en = 1 ; // ??
     PARL_IO.rx_start_cfg.rx_start = 0;
     PARL_IO.reg_update.rx_reg_update = 1;
-
+*/
 
 
 }
@@ -273,9 +308,9 @@ static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
 #endif
 
     // stop transfer - set to 0 - set to 1 on start function - other set to 1 enable transfer
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_ETM_TRIGGER_PIN], PIN_FUNC_GPIO);
-    PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_ETM_TRIGGER_PIN]);
-    gpio_matrix_in(CONFIG_ANALYZER_ETM_TRIGGER_PIN, PARLIO_RX_DATA15_PAD_IN_IDX, false);
+    //PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_ETM_TRIGGER_PIN], PIN_FUNC_GPIO);
+    //PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_ETM_TRIGGER_PIN]);
+    //gpio_matrix_in(CONFIG_ANALYZER_ETM_TRIGGER_PIN, PARLIO_RX_DATA15_PAD_IN_IDX, false);
 
     gpio_matrix_in(62, PARLIO_RX_DATA15_PAD_IN_IDX, false);   // 0
 }
@@ -366,16 +401,8 @@ void logic_analyzer_ll_start()
 {
     AXI_DMA.in[dma_num].conf.in_link1.inlink_start_chn = 1;
     PARL_IO.reg_update.rx_reg_update = 1;
-
-    LP_AON_CLKRST.hp_clk_ctrl.hp_pad_parlio_rx_clk_en = 0;
-    HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_en = 0;
-
     PARL_IO.rx_start_cfg.rx_start = 1;
-
-    LP_AON_CLKRST.hp_clk_ctrl.hp_pad_parlio_rx_clk_en = 1;
     HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_en = 1;
-
-    ESP_LOGI(TAG,"START DMA %d start %d",dma_num, PARL_IO.rx_start_cfg.rx_start);
 
     gpio_matrix_in(63, PARLIO_RX_DATA15_PAD_IN_IDX, false); // 1
 }
@@ -395,6 +422,7 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
     AXI_DMA.in[dma_num].conf.in_link1.inlink_start_chn = 1;
     PARL_IO.reg_update.rx_reg_update = 1;
     PARL_IO.rx_start_cfg.rx_start = 1;
+    HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_en = 1;
 
     gpio_set_level(CONFIG_ANALYZER_ETM_TRIGGER_PIN,0);
     gpio_set_direction(CONFIG_ANALYZER_ETM_TRIGGER_PIN, GPIO_MODE_INPUT_OUTPUT);
@@ -441,8 +469,9 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 */
 #else
     AXI_DMA.in[dma_num].conf.in_link1.inlink_start_chn = 1;
-    LCD_CAM.cam_ctrl.cam_update_reg = 1;
-    LCD_CAM.cam_ctrl1.cam_start = 1; // enable  transfer
+    PARL_IO.reg_update.rx_reg_update = 1;
+    PARL_IO.rx_start_cfg.rx_start = 1;
+    HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_en = 1;
 
     esp_err_t ret = esp_intr_alloc(ETS_GPIO_INTR1_SOURCE, ESP_INTR_FLAG_LEVEL3 | ESP_INTR_FLAG_IRAM, la_ll_trigger_isr, (void *)pin_trigger, &gpio_isr_handle);
     if (ret)

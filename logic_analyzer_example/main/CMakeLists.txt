@@ -5,4 +5,5 @@ idf_component_register(
                 REQUIRES  
                     logic_analyzer
                     driver
+                    esp_mm
 )
