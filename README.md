@@ -20,7 +20,8 @@
 |        ESP32S3       |  8<br>16 |     140 000<br>70 000     |    80 MHz<br>40 MHz   |    LCD_CAM    | One Free GPIO<br>One LEDC Channel for slow PCLK(3) |
 | ESP32S3<br>PSRAM8(1) |  8<br>16 |   8 000 000<br>4 000 000  |    10 MHz<br>5 MHZ    |    LCD_CAM    | One Free GPIO<br>One LEDC Channel for slow PCLK(3) |
 |       ESP32C3(4)     |    4     |          60 000           |         80 MHz        |    GPSPI2     | NO                                                 |
-|       ESP32P4(5)     |  8<br>16 |16 000 000-32 000 000<br>8 000 000-16 000 000|80 MHz Ram<br>80 MHz Psram   |    LCD_CAM    | One Free GPIO for PCLK<br> One free GPIO for ETM Trigger(Opt)<br>One LEDC Channel for slow PCLK(3) |
+|       ESP32P4(5)     |  8<br>16 |16 000 000-32 000 000<br>8 000 000-16 000 000|80 MHz Ram<br>80 MHz Psram   |    LCD_CAM    | One Free GPIO for PCLK<br> One free GPIO for ETM Trigger(Opt)<br> |
+|       ESP32P4(5)     |  8<br>16 |16 000 000-32 000 000<br>8 000 000-16 000 000|80 MHz Ram<br>80 MHz Psram   |    PARL_IO    |  One free GPIO for ETM Trigger(Opt)<br> |
 
 1. I do not recommend using this mode unless necessary. PSRAM heavily loads the SPI bus, artifacts and delays in the operation of the main program are possible. Correct work with Cache requires ESP IDF ver 5.2 (in the current  master branch version)
 2. The maximum number of samples depends on the amount of free memory when your program is running, the analyzer will limit the number of samples and return the maximum possible.
@@ -119,11 +120,12 @@
 
 ## Added support for ESP32P4
 - Only CLI interface is supported
-- Data reading in parallel mode 8/16 bit by LCD/CAM module, one GPIO is required for PCLK signal
-- For sample rate less than 1 MHz, one LEDC channel is required
-- You can select IRQ/ETM trigger mode, ETM mode requires one more additional free GPIO
+- Data reading in parallel mode 8/16 bit.
+- For LCD_CAM module, one GPIO is required for PCLK signal
+- PARL_IO module supports 8/15 bit. Bit 15 is used for trigger (HW limitation)
+- IRQ/ETM trigger mode can be selected, ETM mode requires one additional free GPIO
 - Maximum sampling rate does not depend on the number of channels and the type of memory for the buffer (Ram/Psram) and is 80 MHz (for PSRAM frequency = 200 MHz)
-- The number of samples is limited only by the size of free memory (Ram/Psram), The maximum number of samples can be 32,000,000 for modules with a Psram volume of 32 Mbyte.
+- The number of samples is limited only by the size of free memory (Ram/Psram), The maximum number of samples can be 32,000,000 for modules with 32 Mbyte Psram.
 
  ## Parts of the code used in the project
   - [esp32-cam](https://github.com/espressif/esp32-camera) for I2S DMA

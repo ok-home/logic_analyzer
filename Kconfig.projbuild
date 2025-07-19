@@ -56,7 +56,7 @@ menu "Logic Analyzer Configuration"
 
     endif
 
-    if IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32P4
+    if IDF_TARGET_ESP32S3 || ANALYZER_USE_CAM_LCD
 
         config ANALYZER_PCLK_PIN
             int "GPIO NUM for PCLK"

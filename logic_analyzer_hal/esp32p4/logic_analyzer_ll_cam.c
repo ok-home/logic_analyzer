@@ -44,7 +44,6 @@
 #define SOC_GDMA_PAIRS_PER_GROUP SOC_GDMA_PAIRS_PER_GROUP_MAX
 #endif
 
-
 #define TAG "esp32p4_ll"
 
 #include "logic_analyzer_ll.h"
@@ -84,7 +83,7 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
     {
         gpio_matrix_in(62, CAM_V_SYNC_PAD_IN_IDX, false); // enable cam
 #ifdef CONFIG_ANALYZER_ETM_TRIGGER
-        //SOC_ETM.ch_ena_ad0_clr.ch_clr0 = 1; // dis ch0 -> low lewel stop ETM
+        // SOC_ETM.ch_ena_ad0_clr.ch_clr0 = 1; // dis ch0 -> low lewel stop ETM
 #endif
         vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
     }
@@ -130,17 +129,19 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
 
     HP_SYS_CLKRST.ref_clk_ctrl2.reg_ref_160m_clk_en = 1;
     // Configure clock divider
-if(ldiv<160){
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl119, reg_cam_clk_src_sel, 1);
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl120, reg_cam_clk_div_num, ldiv-1);
-} else {
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl119, reg_cam_clk_src_sel, 0);
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl120, reg_cam_clk_div_num, ldiv/4-1);
-}
+    if (ldiv < 160)
+    {
+        HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl119, reg_cam_clk_src_sel, 1);
+        HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl120, reg_cam_clk_div_num, ldiv - 1);
+    }
+    else
+    {
+        HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl119, reg_cam_clk_src_sel, 0);
+        HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl120, reg_cam_clk_div_num, ldiv / 4 - 1);
+    }
     HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl120, reg_cam_clk_div_denominator, 0);
     HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl120, reg_cam_clk_div_numerator, 0);
     HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl119, reg_cam_clk_en, 1);
-
 }
 // set cam mode register -> 8/16 bit, eof control from dma,
 static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
@@ -318,7 +319,7 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
     AXI_DMA.in[dma_num].conf.in_conf0.in_rst_chn = 1;
     AXI_DMA.in[dma_num].conf.in_conf0.in_rst_chn = 0;
     AXI_DMA.in[dma_num].conf.in_link2.inlink_addr_chn = ((uint32_t)&(frame->dma[0])); // set dma descriptor
-    AXI_DMA.in[dma_num].conf.in_peri_sel.peri_in_sel_chn = 0; // 0:lcdcam. 1: gpspi_2. 2: gpspi_3. 3: parl_io. 4: aes. 5: sha. 6~15: Dummy
+    AXI_DMA.in[dma_num].conf.in_peri_sel.peri_in_sel_chn = 0;                         // 0:lcdcam. 1: gpspi_2. 2: gpspi_3. 3: parl_io. 4: aes. 5: sha. 6~15: Dummy
 }
 // start transfer without trigger -> v_sync to enable
 void logic_analyzer_ll_start()
@@ -330,12 +331,12 @@ void logic_analyzer_ll_start()
 }
 // start transfer with trigger -> set irq -> v_sync set to enable on irq handler
 #ifdef CONFIG_ANALYZER_ETM_TRIGGER
- static esp_etm_channel_config_t etm_channel_config = {0};
- static esp_etm_channel_handle_t etm_channel_handle;
- static gpio_etm_event_config_t gpio_etm_event_config = {0};
- static esp_etm_event_handle_t gpio_etm_event_handle;
- static gpio_etm_task_config_t gpio_etm_task_config = {0};
- static  esp_etm_task_handle_t gpio_etm_task_handle;
+static esp_etm_channel_config_t etm_channel_config = {0};
+static esp_etm_channel_handle_t etm_channel_handle;
+static gpio_etm_event_config_t gpio_etm_event_config = {0};
+static esp_etm_event_handle_t gpio_etm_event_handle;
+static gpio_etm_task_config_t gpio_etm_task_config = {0};
+static esp_etm_task_handle_t gpio_etm_task_handle;
 #endif
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
@@ -343,9 +344,9 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
     //  start ETM
     AXI_DMA.in[dma_num].conf.in_link1.inlink_start_chn = 1;
     LCD_CAM.cam_ctrl.cam_update_reg = 1;
-    LCD_CAM.cam_ctrl1.cam_start = 1;                  // enable  transfer
+    LCD_CAM.cam_ctrl1.cam_start = 1; // enable  transfer
 
-    gpio_set_level(CONFIG_ANALYZER_ETM_TRIGGER_PIN,0);
+    gpio_set_level(CONFIG_ANALYZER_ETM_TRIGGER_PIN, 0);
     gpio_set_direction(CONFIG_ANALYZER_ETM_TRIGGER_PIN, GPIO_MODE_INPUT_OUTPUT);
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_ETM_TRIGGER_PIN], PIN_FUNC_GPIO);
 
@@ -357,8 +358,8 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
     etm_err_ret |= gpio_etm_event_bind_gpio(gpio_etm_event_handle, pin_trigger);
 
     gpio_etm_task_config.action = GPIO_ETM_TASK_ACTION_SET;
-    etm_err_ret |= gpio_new_etm_task(&gpio_etm_task_config,&gpio_etm_task_handle);
-    etm_err_ret |= gpio_etm_task_add_gpio(gpio_etm_task_handle, CONFIG_ANALYZER_ETM_TRIGGER_PIN);// pin9 ??
+    etm_err_ret |= gpio_new_etm_task(&gpio_etm_task_config, &gpio_etm_task_handle);
+    etm_err_ret |= gpio_etm_task_add_gpio(gpio_etm_task_handle, CONFIG_ANALYZER_ETM_TRIGGER_PIN); // pin9 ??
 
     gpio_matrix_in(CONFIG_ANALYZER_ETM_TRIGGER_PIN, CAM_V_SYNC_PAD_IN_IDX, false); // connect task gpio pin to vsync
 
@@ -438,12 +439,12 @@ void logic_analyzer_ll_stop()
         gpio_isr_handle = NULL;
     }
 #ifdef CONFIG_ANALYZER_ETM_TRIGGER
-      esp_etm_channel_disable(etm_channel_handle);
-      gpio_etm_task_rm_gpio(gpio_etm_task_handle, CONFIG_ANALYZER_ETM_TRIGGER_PIN);
-      esp_etm_del_task(gpio_etm_task_handle);
-      esp_etm_del_event(gpio_etm_event_handle);
-      esp_etm_del_channel(etm_channel_handle);
-      gpio_set_level(CONFIG_ANALYZER_ETM_TRIGGER_PIN,0);
+    esp_etm_channel_disable(etm_channel_handle);
+    gpio_etm_task_rm_gpio(gpio_etm_task_handle, CONFIG_ANALYZER_ETM_TRIGGER_PIN);
+    esp_etm_del_task(gpio_etm_task_handle);
+    esp_etm_del_event(gpio_etm_event_handle);
+    esp_etm_del_channel(etm_channel_handle);
+    gpio_set_level(CONFIG_ANALYZER_ETM_TRIGGER_PIN, 0);
 #endif
 }
 

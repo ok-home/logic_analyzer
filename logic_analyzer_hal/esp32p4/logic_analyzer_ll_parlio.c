@@ -47,7 +47,6 @@
 #define SOC_GDMA_PAIRS_PER_GROUP SOC_GDMA_PAIRS_PER_GROUP_MAX
 #endif
 
-
 #define TAG "esp32p4_ll"
 
 #include "logic_analyzer_ll.h"
@@ -86,7 +85,7 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
     {
         gpio_matrix_in(62, PARLIO_RX_DATA15_PAD_IN_IDX, false); // stop transmit
 #ifdef CONFIG_ANALYZER_ETM_TRIGGER
-        //SOC_ETM.ch_ena_ad0_clr.ch_clr0 = 1; // dis ch0 -> low lewel stop ETM
+        // SOC_ETM.ch_ena_ad0_clr.ch_clr0 = 1; // dis ch0 -> low lewel stop ETM
 #endif
         vTaskNotifyGiveFromISR((TaskHandle_t)handle, &HPTaskAwoken);
     }
@@ -118,17 +117,19 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     HP_SYS_CLKRST.soc_clk_ctrl1.reg_parlio_sys_clk_en = 1;
     HP_SYS_CLKRST.soc_clk_ctrl2.reg_parlio_apb_clk_en = 1;
 
-    if(ldiv<160){
-    HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_src_sel = 2; // 2-PLL160 0-pll40
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl117, reg_parlio_rx_clk_div_num,ldiv-1); // 160/8
-}
-else{
-    HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_src_sel = 0; // 2-PLL160 0-pll40
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl117, reg_parlio_rx_clk_div_num,ldiv/4-1); // 160/8
-}
+    if (ldiv < 160)
+    {
+        HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_src_sel = 2;                                        // 2-PLL160 0-pll40
+        HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl117, reg_parlio_rx_clk_div_num, ldiv - 1); // 160/8
+    }
+    else
+    {
+        HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_src_sel = 0;                                            // 2-PLL160 0-pll40
+        HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl117, reg_parlio_rx_clk_div_num, ldiv / 4 - 1); // 160/8
+    }
 
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_rx_clk_div_denominator,0);
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_rx_clk_div_numerator,0);
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_rx_clk_div_denominator, 0);
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_rx_clk_div_numerator, 0);
 
     HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio = 1;
     HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio = 0;
@@ -136,29 +137,30 @@ else{
     HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio_rx = 0;
 
     HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_en = 0;
-
 }
 // set cam mode register -> 8/16 bit, eof control from dma,
 static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
 {
 
-    PARL_IO.clk.clk_en = 0 ; // ??
+    PARL_IO.clk.clk_en = 0; // ??
     PARL_IO.rx_genrl_cfg.rx_gating_en = 0;
-    PARL_IO.rx_mode_cfg.rx_sw_en = 0; // 1-soft start mode
-    PARL_IO.rx_mode_cfg.rx_smp_mode_sel = 0; //0 - lvl
+    PARL_IO.rx_mode_cfg.rx_sw_en = 0;        // 1-soft start mode
+    PARL_IO.rx_mode_cfg.rx_smp_mode_sel = 0; // 0 - lvl
     PARL_IO.rx_mode_cfg.rx_ext_en_sel = 0xf; // datapin 15
-    PARL_IO.rx_genrl_cfg.rx_eof_gen_sel = 1; //bit lenght eof - any
+    PARL_IO.rx_genrl_cfg.rx_eof_gen_sel = 1; // bit lenght eof - any
 
     if (channels == 8)
-        {PARL_IO.rx_data_cfg.rx_bus_wid_sel = 3;} //8 bit 
-    else 
-        {PARL_IO.rx_data_cfg.rx_bus_wid_sel = 4;} //16 bit
+    {
+        PARL_IO.rx_data_cfg.rx_bus_wid_sel = 3;
+    } // 8 bit
+    else
+    {
+        PARL_IO.rx_data_cfg.rx_bus_wid_sel = 4;
+    } // 16 bit
 
-        PARL_IO.rx_start_cfg.rx_start = 0;
-        PARL_IO.fifo_cfg.rx_fifo_srst = 1; // reset fifo
-        PARL_IO.fifo_cfg.rx_fifo_srst = 0; // reset fifo
-
-
+    PARL_IO.rx_start_cfg.rx_start = 0;
+    PARL_IO.fifo_cfg.rx_fifo_srst = 1; // reset fifo
+    PARL_IO.fifo_cfg.rx_fifo_srst = 0; // reset fifo
 }
 // set cam input pin & vsync, hsynk, henable to const to stop transfer
 static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
@@ -196,7 +198,7 @@ static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
     }
 #endif
 
-    gpio_matrix_in(62, PARLIO_RX_DATA15_PAD_IN_IDX, false);   // 0
+    gpio_matrix_in(62, PARLIO_RX_DATA15_PAD_IN_IDX, false); // 0
 }
 /*
 1. Set GDMA_IN_RST_CHn first to 1 and then to 0, to reset the state machine of GDMA’s receive channel and FIFO pointer;
@@ -258,7 +260,7 @@ static esp_err_t logic_analyzer_ll_dma_init(void)
     return ESP_OK;
 }
 /*
-*/
+ */
 // enable cam module, set cam mode, pin mode, dma mode, dma descr, dma irq
 void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_frame_t *frame)
 {
@@ -278,7 +280,7 @@ void logic_analyzer_ll_config(int *data_pins, int sample_rate, int channels, la_
     AXI_DMA.in[dma_num].conf.in_conf0.in_rst_chn = 1;
     AXI_DMA.in[dma_num].conf.in_conf0.in_rst_chn = 0;
     AXI_DMA.in[dma_num].conf.in_link2.inlink_addr_chn = ((uint32_t)&(frame->dma[0])); // set dma descriptor
-    AXI_DMA.in[dma_num].conf.in_peri_sel.peri_in_sel_chn = 3; // 0:lcdcam. 1: gpspi_2. 2: gpspi_3. 3: parl_io. 4: aes. 5: sha. 6~15: Dummy
+    AXI_DMA.in[dma_num].conf.in_peri_sel.peri_in_sel_chn = 3;                         // 0:lcdcam. 1: gpspi_2. 2: gpspi_3. 3: parl_io. 4: aes. 5: sha. 6~15: Dummy
 }
 // start transfer without trigger -> v_sync to enable
 void logic_analyzer_ll_start()
@@ -292,12 +294,12 @@ void logic_analyzer_ll_start()
 }
 // start transfer with trigger -> set irq -> v_sync set to enable on irq handler
 #ifdef CONFIG_ANALYZER_ETM_TRIGGER
- static esp_etm_channel_config_t etm_channel_config = {0};
- static esp_etm_channel_handle_t etm_channel_handle = 0;
- static gpio_etm_event_config_t gpio_etm_event_config = {0};
- static esp_etm_event_handle_t gpio_etm_event_handle;
- static gpio_etm_task_config_t gpio_etm_task_config = {0};
- static  esp_etm_task_handle_t gpio_etm_task_handle;
+static esp_etm_channel_config_t etm_channel_config = {0};
+static esp_etm_channel_handle_t etm_channel_handle = 0;
+static gpio_etm_event_config_t gpio_etm_event_config = {0};
+static esp_etm_event_handle_t gpio_etm_event_handle;
+static gpio_etm_task_config_t gpio_etm_task_config = {0};
+static esp_etm_task_handle_t gpio_etm_task_handle;
 #endif
 void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
 {
@@ -308,7 +310,7 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
     PARL_IO.rx_start_cfg.rx_start = 1;
     HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_en = 1;
 
-    gpio_set_level(CONFIG_ANALYZER_ETM_TRIGGER_PIN,0);
+    gpio_set_level(CONFIG_ANALYZER_ETM_TRIGGER_PIN, 0);
     gpio_set_direction(CONFIG_ANALYZER_ETM_TRIGGER_PIN, GPIO_MODE_INPUT_OUTPUT);
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_ETM_TRIGGER_PIN], PIN_FUNC_GPIO);
 
@@ -320,14 +322,13 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
     etm_err_ret |= gpio_etm_event_bind_gpio(gpio_etm_event_handle, pin_trigger);
 
     gpio_etm_task_config.action = GPIO_ETM_TASK_ACTION_SET;
-    etm_err_ret |= gpio_new_etm_task(&gpio_etm_task_config,&gpio_etm_task_handle);
-    etm_err_ret |= gpio_etm_task_add_gpio(gpio_etm_task_handle, CONFIG_ANALYZER_ETM_TRIGGER_PIN);// pin9 ??
+    etm_err_ret |= gpio_new_etm_task(&gpio_etm_task_config, &gpio_etm_task_handle);
+    etm_err_ret |= gpio_etm_task_add_gpio(gpio_etm_task_handle, CONFIG_ANALYZER_ETM_TRIGGER_PIN); // pin9 ??
 
     gpio_matrix_in(CONFIG_ANALYZER_ETM_TRIGGER_PIN, PARLIO_RX_DATA15_PAD_IN_IDX, false); // connect task gpio pin to vsync
 
     etm_err_ret |= esp_etm_channel_connect(etm_channel_handle, gpio_etm_event_handle, gpio_etm_task_handle);
     etm_err_ret |= esp_etm_channel_enable(etm_channel_handle);
-
 
 #else
     AXI_DMA.in[dma_num].conf.in_link1.inlink_start_chn = 1;
@@ -372,22 +373,24 @@ void logic_analyzer_ll_stop()
     AXI_DMA.in[dma_num].intr.ena.in_dscr_empty_chn_int_ena = 0;
     AXI_DMA.in[dma_num].intr.clr.in_dscr_empty_chn_int_clr = 1;
 
+#ifdef CONFIG_ANALYZER_PCLK_PIN     
     gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_DISABLE);
-
+#endif
     if (gpio_isr_handle)
     {
         esp_intr_free(gpio_isr_handle);
         gpio_isr_handle = NULL;
     }
 #ifdef CONFIG_ANALYZER_ETM_TRIGGER
-    if(etm_channel_handle){
-      esp_etm_channel_disable(etm_channel_handle);
-      gpio_etm_task_rm_gpio(gpio_etm_task_handle, CONFIG_ANALYZER_ETM_TRIGGER_PIN);
-      esp_etm_del_task(gpio_etm_task_handle);
-      esp_etm_del_event(gpio_etm_event_handle);
-      esp_etm_del_channel(etm_channel_handle);
-      gpio_set_level(CONFIG_ANALYZER_ETM_TRIGGER_PIN,0);
-      etm_channel_handle = 0;
+    if (etm_channel_handle)
+    {
+        esp_etm_channel_disable(etm_channel_handle);
+        gpio_etm_task_rm_gpio(gpio_etm_task_handle, CONFIG_ANALYZER_ETM_TRIGGER_PIN);
+        esp_etm_del_task(gpio_etm_task_handle);
+        esp_etm_del_event(gpio_etm_event_handle);
+        esp_etm_del_channel(etm_channel_handle);
+        gpio_set_level(CONFIG_ANALYZER_ETM_TRIGGER_PIN, 0);
+        etm_channel_handle = 0;
     }
 #endif
 }
