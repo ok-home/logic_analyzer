@@ -44,9 +44,6 @@
 #define SOC_GDMA_PAIRS_PER_GROUP SOC_GDMA_PAIRS_PER_GROUP_MAX
 #endif
 
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-#include "driver/ledc.h"
-#endif
 
 #define TAG "esp32p4_ll"
 
@@ -102,72 +99,24 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
     }
 }
 
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-// for sample rate less then 1 MHz -> use ledc
-static void logic_analyzer_ll_set_ledc_pclk(int sample_rate)
-{
-    // Prepare and then apply the LEDC PWM timer configuration
-    ledc_timer_config_t ledc_timer = {
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .timer_num = CONFIG_ANALYZER_LEDC_TIMER_NUMBER,
-        .duty_resolution = LEDC_TIMER_2_BIT,
-        .freq_hz = sample_rate, // Set output frequency at 5 kHz
-        .clk_cfg = LEDC_AUTO_CLK};
-    ledc_timer_config(&ledc_timer);
-
-    // Prepare and then apply the LEDC PWM channel configuration
-    ledc_channel_config_t ledc_channel = {
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .channel = CONFIG_ANALYZER_LEDC_CHANNEL_NUMBER,
-        .timer_sel = CONFIG_ANALYZER_LEDC_TIMER_NUMBER,
-        .intr_type = LEDC_INTR_DISABLE,
-        .gpio_num = CONFIG_ANALYZER_PCLK_PIN,
-        .duty = 1, // Set duty to 50%
-        .hpoint = 0};
-    ledc_channel_config(&ledc_channel);
-}
-#endif
 // sample rate may be not equal to config sample rate -> return real sample rate
 int logic_analyzer_ll_get_sample_rate(int sample_rate)
 {
     int ldiv = (LA_HW_CLK_SAMPLE_RATE / sample_rate);
 
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-    if (ldiv > 160)
-    {
-        return ((int)ledc_get_freq(LEDC_LOW_SPEED_MODE, CONFIG_ANALYZER_LEDC_TIMER_NUMBER));
-    }
-#endif
-    if (ldiv > 160)
-    {
-        ldiv = 160;
-    }
     return LA_HW_CLK_SAMPLE_RATE / ldiv;
 }
 // set cam pclk, clock & pin.  clock from cam clk or ledclk if clock < 1 MHz
 static void logic_analyzer_ll_set_clock(int sample_rate)
 {
 
-    int ldiv = (LA_HW_CLK_SAMPLE_RATE / sample_rate) - 1;
-    if (ldiv > 160) // > 1mHz
-    {
-        ldiv = 160;
-    }
+    int ldiv = (LA_HW_CLK_SAMPLE_RATE / sample_rate);
     // clk out xclk -> pclk=clk
 
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN], PIN_FUNC_GPIO);
     gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_OUTPUT);
     gpio_matrix_out(CONFIG_ANALYZER_PCLK_PIN, CAM_CLK_PAD_OUT_IDX, false, false);
 
-
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-    if ((LA_HW_CLK_SAMPLE_RATE / sample_rate) > 160)
-    {
-        ldiv = 8; // cam clk to 20 MHz
-        logic_analyzer_ll_set_ledc_pclk(sample_rate);
-        logic_analyzer_ll_set_ledc_pclk(sample_rate);
-    }
-#endif
     // input clk pin  -> pclk
     PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN]);
     gpio_matrix_in(CONFIG_ANALYZER_PCLK_PIN, CAM_PCLK_PAD_IN_IDX, false);
@@ -181,8 +130,13 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
 
     HP_SYS_CLKRST.ref_clk_ctrl2.reg_ref_160m_clk_en = 1;
     // Configure clock divider
+if(ldiv<160){
     HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl119, reg_cam_clk_src_sel, 1);
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl120, reg_cam_clk_div_num, ldiv);
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl120, reg_cam_clk_div_num, ldiv-1);
+} else {
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl119, reg_cam_clk_src_sel, 0);
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl120, reg_cam_clk_div_num, ldiv/4-1);
+}
     HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl120, reg_cam_clk_div_denominator, 0);
     HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl120, reg_cam_clk_div_numerator, 0);
     HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl119, reg_cam_clk_en, 1);
@@ -476,9 +430,6 @@ void logic_analyzer_ll_stop()
     AXI_DMA.in[dma_num].intr.ena.in_dscr_empty_chn_int_ena = 0;
     AXI_DMA.in[dma_num].intr.clr.in_dscr_empty_chn_int_clr = 1;
 
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-    ledc_stop(LEDC_LOW_SPEED_MODE, CONFIG_ANALYZER_LEDC_CHANNEL_NUMBER, 0);
-#endif
     gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_DISABLE);
 
     if (gpio_isr_handle)

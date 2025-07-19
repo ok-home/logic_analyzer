@@ -380,7 +380,7 @@ esp_err_t start_logic_analyzer(logic_analyzer_config_t *config)
         goto _retcode;
     }
     // FOR CALLOC !!!!!!!!!!!!!!!
-    //esp_cache_msync(la_frame.fb.buf, la_frame.fb.len, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
+    esp_cache_msync(la_frame.fb.buf, la_frame.fb.len, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
 
     ESP_LOGD("DMA HEAP", "Allocated %d bytes", la_frame.fb.len);
     //  allocate dma descriptor buffer

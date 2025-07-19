@@ -47,9 +47,6 @@
 #define SOC_GDMA_PAIRS_PER_GROUP SOC_GDMA_PAIRS_PER_GROUP_MAX
 #endif
 
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-#include "driver/ledc.h"
-#endif
 
 #define TAG "esp32p4_ll"
 
@@ -79,8 +76,6 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
 {
     BaseType_t HPTaskAwoken = pdFALSE;
     typeof(AXI_DMA.in[dma_num].intr.st) status = AXI_DMA.in[dma_num].intr.st;
-    ESP_EARLY_LOGE(TAG, "irq status=%x", status.val);
-
     if (status.val == 0)
     {
         return;
@@ -106,109 +101,32 @@ static void IRAM_ATTR la_ll_dma_isr(void *handle)
     }
 }
 
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-// for sample rate less then 1 MHz -> use ledc
-static void logic_analyzer_ll_set_ledc_pclk(int sample_rate)
-{
-    // Prepare and then apply the LEDC PWM timer configuration
-    ledc_timer_config_t ledc_timer = {
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .timer_num = CONFIG_ANALYZER_LEDC_TIMER_NUMBER,
-        .duty_resolution = LEDC_TIMER_2_BIT,
-        .freq_hz = sample_rate, // Set output frequency at 5 kHz
-        .clk_cfg = LEDC_AUTO_CLK};
-    ledc_timer_config(&ledc_timer);
-
-    // Prepare and then apply the LEDC PWM channel configuration
-    ledc_channel_config_t ledc_channel = {
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .channel = CONFIG_ANALYZER_LEDC_CHANNEL_NUMBER,
-        .timer_sel = CONFIG_ANALYZER_LEDC_TIMER_NUMBER,
-        .intr_type = LEDC_INTR_DISABLE,
-        .gpio_num = CONFIG_ANALYZER_PCLK_PIN,
-        .duty = 1, // Set duty to 50%
-        .hpoint = 0};
-    ledc_channel_config(&ledc_channel);
-}
-#endif
 // sample rate may be not equal to config sample rate -> return real sample rate
 int logic_analyzer_ll_get_sample_rate(int sample_rate)
 {
     int ldiv = (LA_HW_CLK_SAMPLE_RATE / sample_rate);
 
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-    if (ldiv > 160)
-    {
-        return ((int)ledc_get_freq(LEDC_LOW_SPEED_MODE, CONFIG_ANALYZER_LEDC_TIMER_NUMBER));
-    }
-#endif
-    if (ldiv > 160)
-    {
-        ldiv = 160;
-    }
     return LA_HW_CLK_SAMPLE_RATE / ldiv;
 }
 // set cam pclk, clock & pin.  clock from cam clk or ledclk if clock < 1 MHz
 static void logic_analyzer_ll_set_clock(int sample_rate)
 {
 
-    int ldiv = (LA_HW_CLK_SAMPLE_RATE / sample_rate) - 1;
-    if (ldiv > 160) // > 1mHz
-    {
-        ldiv = 160;
-    }
-    // clk out xclk -> pclk=clk
-
-//    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN], PIN_FUNC_GPIO);
-//    gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_OUTPUT);
-//    gpio_matrix_out(CONFIG_ANALYZER_PCLK_PIN, PARLIO_RX_CLK_PAD_OUT_IDX, false, false);
-
-
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-    if ((LA_HW_CLK_SAMPLE_RATE / sample_rate) > 160)
-    {
-        ldiv = 8; // cam clk to 20 MHz
-        logic_analyzer_ll_set_ledc_pclk(sample_rate);
-        logic_analyzer_ll_set_ledc_pclk(sample_rate);
-    }
-#endif
-    // input clk pin  -> pclk
-//    PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_PCLK_PIN]);
-//    gpio_matrix_in(CONFIG_ANALYZER_PCLK_PIN, PARLIO_RX_CLK_PAD_IN_IDX, false);
-    // enable CLK
-/*
-//    if (HP_SYS_CLKRST.soc_clk_ctrl2.reg_parlio_apb_clk_en == 0)
-//    {
-        HP_SYS_CLKRST.soc_clk_ctrl1.reg_parlio_sys_clk_en = 1;
-        HP_SYS_CLKRST.soc_clk_ctrl2.reg_parlio_apb_clk_en = 1;
-//    }
-    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio = 1;
-    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio = 0;
-
-    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio_rx = 1;
-    HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio_rx = 0;
-
-    HP_SYS_CLKRST.ref_clk_ctrl2.reg_ref_160m_clk_en = 1;
-    HP_SYS_CLKRST.ref_clk_ctrl2.reg_tm_160m_clk_en = 1;
-    
-    // Configure clock divider
-    HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_src_sel = 2; // 2-PLL160
-
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl117, reg_parlio_rx_clk_div_num, ldiv);
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_rx_clk_div_denominator,0);
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_rx_clk_div_numerator,0);
-// on or off ??
-    LP_AON_CLKRST.hp_clk_ctrl.hp_pad_parlio_rx_clk_en = 1;
-    HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_en = 1;
-*/
+    int ldiv = (LA_HW_CLK_SAMPLE_RATE / sample_rate);
 
     HP_SYS_CLKRST.ref_clk_ctrl2.reg_ref_160m_clk_en = 1;
     HP_SYS_CLKRST.soc_clk_ctrl1.reg_parlio_sys_clk_en = 1;
     HP_SYS_CLKRST.soc_clk_ctrl2.reg_parlio_apb_clk_en = 1;
 
-    HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_src_sel = 2; // 2-PLL160
-    //rx
-    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl117, reg_parlio_rx_clk_div_num,ldiv); // 160/8
+    if(ldiv<160){
+    HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_src_sel = 2; // 2-PLL160 0-pll40
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl117, reg_parlio_rx_clk_div_num,ldiv-1); // 160/8
+}
+else{
+    HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_src_sel = 0; // 2-PLL160 0-pll40
+    HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl117, reg_parlio_rx_clk_div_num,ldiv/4-1); // 160/8
+}
+
     HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_rx_clk_div_denominator,0);
     HAL_FORCE_MODIFY_U32_REG_FIELD(HP_SYS_CLKRST.peri_clk_ctrl118, reg_parlio_rx_clk_div_numerator,0);
 
@@ -218,7 +136,6 @@ static void logic_analyzer_ll_set_clock(int sample_rate)
     HP_SYS_CLKRST.hp_rst_en2.reg_rst_en_parlio_rx = 0;
 
     HP_SYS_CLKRST.peri_clk_ctrl117.reg_parlio_rx_clk_en = 0;
-
 
 }
 // set cam mode register -> 8/16 bit, eof control from dma,
@@ -240,34 +157,6 @@ static void logic_analyzer_ll_set_mode(int sample_rate, int channels)
         PARL_IO.rx_start_cfg.rx_start = 0;
         PARL_IO.fifo_cfg.rx_fifo_srst = 1; // reset fifo
         PARL_IO.fifo_cfg.rx_fifo_srst = 0; // reset fifo
-
-/*
-    PARL_IO.rx_mode_cfg.rx_ext_en_sel = 0xf; //data15 as ext en signal
-    PARL_IO.rx_mode_cfg.rx_smp_mode_sel = 2; //ext level mode
-    PARL_IO.rx_mode_cfg.rx_sw_en = 1; // 1-soft start mode
-    PARL_IO.rx_mode_cfg.rx_ext_en_inv = 0; //
-    PARL_IO.rx_mode_cfg.rx_pulse_submode_sel = 0; // any val  on ext level mode
-
-    PARL_IO.rx_data_cfg.rx_bitlen = 0XFFFF; // any on ext level mode
-    PARL_IO.rx_data_cfg.rx_data_order_inv = 0; // bit order
-    if (channels == 8)
-        {PARL_IO.rx_data_cfg.rx_bus_wid_sel = 3;} //8 bit 
-    else 
-        {PARL_IO.rx_data_cfg.rx_bus_wid_sel = 4;} //16 bit
-
-    PARL_IO.rx_genrl_cfg.rx_eof_gen_sel = 0; // eof generate ext level signal
-    PARL_IO.rx_genrl_cfg.rx_gating_en = 0; // no clock gate
-    PARL_IO.rx_genrl_cfg.rx_timeout_en = 0; // timeout disable
-    PARL_IO.rx_genrl_cfg.rx_timeout_thres = 0;//
-
-    PARL_IO.fifo_cfg.rx_fifo_srst = 1; // reset fifo
-    PARL_IO.fifo_cfg.rx_fifo_srst = 0; // reset fifo
-
-    PARL_IO.int_ena.val = 0; //disable int
-    PARL_IO.clk.clk_en = 1 ; // ??
-    PARL_IO.rx_start_cfg.rx_start = 0;
-    PARL_IO.reg_update.rx_reg_update = 1;
-*/
 
 
 }
@@ -306,11 +195,6 @@ static void logic_analyzer_ll_set_pin(int *data_pins, int channels)
         }
     }
 #endif
-
-    // stop transfer - set to 0 - set to 1 on start function - other set to 1 enable transfer
-    //PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_ETM_TRIGGER_PIN], PIN_FUNC_GPIO);
-    //PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[CONFIG_ANALYZER_ETM_TRIGGER_PIN]);
-    //gpio_matrix_in(CONFIG_ANALYZER_ETM_TRIGGER_PIN, PARLIO_RX_DATA15_PAD_IN_IDX, false);
 
     gpio_matrix_in(62, PARLIO_RX_DATA15_PAD_IN_IDX, false);   // 0
 }
@@ -409,7 +293,7 @@ void logic_analyzer_ll_start()
 // start transfer with trigger -> set irq -> v_sync set to enable on irq handler
 #ifdef CONFIG_ANALYZER_ETM_TRIGGER
  static esp_etm_channel_config_t etm_channel_config = {0};
- static esp_etm_channel_handle_t etm_channel_handle;
+ static esp_etm_channel_handle_t etm_channel_handle = 0;
  static gpio_etm_event_config_t gpio_etm_event_config = {0};
  static esp_etm_event_handle_t gpio_etm_event_handle;
  static gpio_etm_task_config_t gpio_etm_task_config = {0};
@@ -444,29 +328,7 @@ void logic_analyzer_ll_triggered_start(int pin_trigger, int trigger_edge)
     etm_err_ret |= esp_etm_channel_connect(etm_channel_handle, gpio_etm_event_handle, gpio_etm_task_handle);
     etm_err_ret |= esp_etm_channel_enable(etm_channel_handle);
 
-/*
-    // low level  etm with gdma starter - not used
-    // enable clock
-    HP_SYS_CLKRST.soc_clk_ctrl1.reg_etm_sys_clk_en = 1;
-    HP_SYS_CLKRST.soc_clk_ctrl3.reg_etm_apb_clk_en = 1;
-    HP_SYS_CLKRST.hp_rst_en1.reg_rst_en_etm = 1;
-    HP_SYS_CLKRST.hp_rst_en1.reg_rst_en_etm = 0;
 
-    SOC_ETM.ch_ena_ad0_clr.ch_clr0 = 1; // dis ch0
-    // conn gpio pin to gpio etm channel 0-7 //todo find free ch
-    GPIO_ETM.etm_event_chn_cfg[0].etm_chn_event_sel = pin_trigger;
-    GPIO_ETM.etm_event_chn_cfg[0].etm_chn_event_en = 1;
-
-    SOC_ETM.channel[0].eid.evt_id = 1;    // 9; //gpio ch0 rising on etm ch 0
-    SOC_ETM.channel[0].tid.task_id = 193; // gdma axi ch2 start
-
-    AXI_DMA.in[dma_num].conf.in_conf0.in_etm_en_chn = 1;
-    LCD_CAM.cam_ctrl.cam_update_reg = 1;
-    LCD_CAM.cam_ctrl1.cam_start = 1;                  // enable  transfer
-    gpio_matrix_in(63, CAM_V_SYNC_PAD_IN_IDX, false); // enable cam_vs
-
-    SOC_ETM.ch_ena_ad0_set.ch_set0 = 1; // ena ch0
-*/
 #else
     AXI_DMA.in[dma_num].conf.in_link1.inlink_start_chn = 1;
     PARL_IO.reg_update.rx_reg_update = 1;
@@ -510,9 +372,6 @@ void logic_analyzer_ll_stop()
     AXI_DMA.in[dma_num].intr.ena.in_dscr_empty_chn_int_ena = 0;
     AXI_DMA.in[dma_num].intr.clr.in_dscr_empty_chn_int_clr = 1;
 
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-    ledc_stop(LEDC_LOW_SPEED_MODE, CONFIG_ANALYZER_LEDC_CHANNEL_NUMBER, 0);
-#endif
     gpio_set_direction(CONFIG_ANALYZER_PCLK_PIN, GPIO_MODE_DISABLE);
 
     if (gpio_isr_handle)
@@ -521,12 +380,15 @@ void logic_analyzer_ll_stop()
         gpio_isr_handle = NULL;
     }
 #ifdef CONFIG_ANALYZER_ETM_TRIGGER
+    if(etm_channel_handle){
       esp_etm_channel_disable(etm_channel_handle);
       gpio_etm_task_rm_gpio(gpio_etm_task_handle, CONFIG_ANALYZER_ETM_TRIGGER_PIN);
       esp_etm_del_task(gpio_etm_task_handle);
       esp_etm_del_event(gpio_etm_event_handle);
       esp_etm_del_channel(etm_channel_handle);
       gpio_set_level(CONFIG_ANALYZER_ETM_TRIGGER_PIN,0);
+      etm_channel_handle = 0;
+    }
 #endif
 }
 

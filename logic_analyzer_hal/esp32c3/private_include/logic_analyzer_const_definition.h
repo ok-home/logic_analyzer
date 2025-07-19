@@ -29,15 +29,8 @@
 
 #define LA_HW_MIN_GPIO -1
 #define LA_HW_MAX_GPIO 21
-/*
-#ifdef CONFIG_ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-#define LA_MIN_SAMPLE_RATE 20000
-#else
-#define LA_MIN_SAMPLE_RATE 1000000
-#endif
-*/
 
-// ????
+
 #define DMA_ALIGN 32
 
 #define LA_HW_CLK_SAMPLE_RATE 160000000

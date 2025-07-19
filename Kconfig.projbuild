@@ -65,11 +65,15 @@ menu "Logic Analyzer Configuration"
             help
                 ESP32S3 requires 1 free gpio to form a PCLK
 
-        config ANALYZER_USE_LEDC_TIMER_FOR_PCLK
-            bool "Use ledc timer for PCLK < 1 mHz"
-            default n
-            help
-                for PCLK from 1 mHz to 80 mHz, an internal divider  is used, if PCLK are needed less, we use a separate channel LEDC_PWM
+        if IDF_TARGET_ESP32S3
+
+            config ANALYZER_USE_LEDC_TIMER_FOR_PCLK
+                bool "Use ledc timer for PCLK < 1 mHz"
+                default n
+                help
+                    for PCLK from 1 mHz to 80 mHz, an internal divider  is used, if PCLK are needed less, we use a separate channel LEDC_PWM
+
+        endif
 
         if ANALYZER_USE_LEDC_TIMER_FOR_PCLK
 
