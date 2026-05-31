@@ -184,13 +184,17 @@ class PulseViewApp(QMainWindow):
     def parse_binary_data(self):
         if self.data is None:
             return
-        max_channels = 16
-        bytes_per_sample = (max_channels + 7) // 8
+        num_channels = self.config.get('num_channels', 16)   # из настроек (8 или 16)
+        bytes_per_sample = (num_channels + 7) // 8           # 1 для 8, 2 для 16
         total_samples = len(self.data) // bytes_per_sample
         if total_samples == 0:
-            QMessageBox.critical(self, "Error", "Not enough data for 16 channels.")
+            QMessageBox.critical(self, "Error", "Not enough data for the selected channel count.")
             return
+
+        # Обрезаем данные до целого числа сэмплов
         data = self.data[:total_samples * bytes_per_sample]
+
+        # Преобразуем сырые байты в целые числа (uint32 для удобства)
         samples_int = np.zeros(total_samples, dtype=np.uint32)
         for i in range(total_samples):
             val = 0
@@ -199,11 +203,13 @@ class PulseViewApp(QMainWindow):
                 val |= (byte << (8 * b))
             samples_int[i] = val
 
-        self.samples = np.zeros((max_channels, total_samples), dtype=np.uint8)
-        for ch in range(max_channels):
+        # Извлекаем отдельные каналы
+        self.samples = np.zeros((num_channels, total_samples), dtype=np.uint8)
+        for ch in range(num_channels):
             self.samples[ch, :] = (samples_int >> ch) & 1
 
-        self.time_axis = np.arange(total_samples) / self.config.get('sample_rate', 1000000)
+        sample_rate = self.config.get('sample_rate', 1_000_000)
+        self.time_axis = np.arange(total_samples) / sample_rate
 
     def start_acquisition(self):
         if self.acquisition_in_progress:

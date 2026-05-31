@@ -1,3 +1,4 @@
+# settings_dialog.py
 import sys
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
                              QTableWidget, QTableWidgetItem, QCheckBox, QLineEdit,
@@ -5,7 +6,6 @@ from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBo
                              QHeaderView, QDialogButtonBox, QWidget)
 from PyQt5.QtCore import Qt, QTimer
 import serial.tools.list_ports
-
 
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
@@ -30,7 +30,7 @@ class SettingsDialog(QDialog):
         top_layout = QHBoxLayout()
         top_layout.addWidget(QLabel("Number of channels:"))
         self.channel_count_combo = QComboBox()
-        self.channel_count_combo.addItems(["4", "8", "16"])
+        self.channel_count_combo.addItems(["8", "16"])
         self.channel_count_combo.currentTextChanged.connect(self.update_channel_table)
         top_layout.addWidget(self.channel_count_combo)
         top_layout.addStretch()
@@ -99,7 +99,6 @@ class SettingsDialog(QDialog):
         conn_layout.addRow("Data file:", self.data_file_edit)
         tabs.addTab(conn_widget, "Connection")
 
-        # Кнопки OK/Cancel
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
