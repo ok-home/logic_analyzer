@@ -17,7 +17,7 @@ class Decoder:
         self.samplenum = 0
         self.output_queue = deque()
         self.channels = []          # индексы каналов (0,1,…)
-        self.channel_bits = []      # соответствующие номера битов
+        self.channel_bits = []      # соответствующие номера битов, -1 если канал не подключён
         self.options = {}
         self.matched = []
 
@@ -29,9 +29,12 @@ class Decoder:
         return output_id
 
     def has_channel(self, channel_index):
-        if not hasattr(self, 'channels'):
-            self.channels = []
-        return channel_index in self.channels
+        """Возвращает True, если канал с указанным индексом существует и подключён."""
+        if not hasattr(self, 'channels') or not hasattr(self, 'channel_bits'):
+            return False
+        if channel_index < 0 or channel_index >= len(self.channels):
+            return False
+        return self.channel_bits[channel_index] >= 0
 
     def start(self):
         pass
@@ -45,16 +48,31 @@ class Decoder:
         self.output_queue.append((startsample, endsample, output_type, data))
 
     def _get_channel_values(self, index):
+        """Возвращает словарь {ch: value} только для подключённых каналов."""
+        if index < 0 or index >= len(self.samples):
+            return {}
         word = self.samples[index]
-        return {ch: (word >> self.channel_bits[ch]) & 1 for ch in self.channels}
+        result = {}
+        for ch in range(len(self.channels)):
+            bit = self.channel_bits[ch]
+            if bit >= 0:
+                result[ch] = (word >> bit) & 1
+        return result
 
     def _get_return_tuple(self, index):
+        """Возвращает кортеж значений каналов, None для отключённых."""
+        if index < 0 or index >= len(self.samples):
+            return tuple(None for _ in range(self.num_channels))
         word = self.samples[index]
         result = []
         for ch in range(self.num_channels):
             if ch in self.channels:
-                bit = self.channel_bits[ch]
-                result.append((word >> bit) & 1)
+                idx = self.channels.index(ch)
+                bit = self.channel_bits[idx]
+                if bit >= 0:
+                    result.append((word >> bit) & 1)
+                else:
+                    result.append(None)
             else:
                 result.append(None)
         return tuple(result)
@@ -92,12 +110,13 @@ class Decoder:
                     continue
                 matched_all = True
                 for ch, edge in cond.items():
-                    if ch not in curr_vals:
+                    # Если канал не подключён, условие не может быть выполнено
+                    if not self.has_channel(ch):
                         matched_all = False
                         break
                     if edge in ('h', 'l'):
                         target = 1 if edge == 'h' else 0
-                        if curr_vals[ch] != target:
+                        if curr_vals.get(ch) != target:
                             matched_all = False
                             break
                     elif prev_vals is not None and ch in prev_vals:
@@ -171,7 +190,7 @@ def run_decoder(decoder_instance, samples, metadata=None):
     if metadata and 'channel_bits' in metadata:
         decoder_instance.channel_bits = metadata['channel_bits']
     else:
-        decoder_instance.channel_bits = metadata.get('channels', [0]) if metadata else [0]
+        decoder_instance.channel_bits = [0] * len(decoder_instance.channels)
 
     if metadata and 'num_channels' in metadata:
         decoder_instance.num_channels = metadata['num_channels']

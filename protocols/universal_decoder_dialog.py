@@ -3,21 +3,21 @@ import os
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QComboBox, QSpinBox,
     QDoubleSpinBox, QCheckBox, QPushButton, QLabel, QWidget, QHBoxLayout,
-    QDialogButtonBox, QLineEdit, QGroupBox
+    QDialogButtonBox, QLineEdit, QGroupBox, QMessageBox
 )
 from protocol_scanner import scan_decoders
-from config import load_la_config, save_la_config
+from config import AnalyzerConfig, save_la_config
 
 class UniversalDecoderDialog(QDialog):
-    def __init__(self, parent=None, config=None, save_config_callback=None):
+    def __init__(self, parent=None, config: AnalyzerConfig = None, save_config_callback=None, instance_id=None):
         super().__init__(parent)
         self.setWindowTitle("Configure Protocol Decoder")
         self.setModal(True)
-        self.resize(500, 400)
+        self.resize(500, 450)
 
-        # Всегда читаем самый свежий конфиг из файла
-        self.config = load_la_config()
-        self.save_config = save_config_callback if save_config_callback else save_la_config
+        self.config = config if config else AnalyzerConfig()
+        self.save_config = save_config_callback if save_config_callback else (lambda cfg: save_la_config(cfg))
+        self.instance_id = instance_id  # может быть None для старых вызовов, но сейчас всегда передаётся
 
         self.decoders = scan_decoders()
         self.current_info = None
@@ -29,6 +29,9 @@ class UniversalDecoderDialog(QDialog):
         self.protocol_combo.addItems(list(self.decoders.keys()))
         self.protocol_combo.currentTextChanged.connect(self.on_protocol_changed)
         self.form_layout.addRow("Protocol:", self.protocol_combo)
+
+        self.enable_checkbox = QCheckBox("Enable decoder (show annotation window)")
+        self.form_layout.addRow(self.enable_checkbox)
 
         self.channels_group = QGroupBox("Channels")
         self.channels_form = QFormLayout()
@@ -44,7 +47,7 @@ class UniversalDecoderDialog(QDialog):
         layout.addLayout(self.form_layout)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.accept)
+        buttons.accepted.connect(self.validate_and_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
@@ -58,12 +61,14 @@ class UniversalDecoderDialog(QDialog):
             self.on_protocol_changed(self.protocol_combo.currentText())
 
     def on_protocol_changed(self, proto_id):
-        for i in reversed(range(self.channels_form.count())):
-            w = self.channels_form.itemAt(i).widget()
-            if w: w.deleteLater()
-        for i in reversed(range(self.options_form.count())):
-            w = self.options_form.itemAt(i).widget()
-            if w: w.deleteLater()
+        while self.channels_form.count():
+            item = self.channels_form.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        while self.options_form.count():
+            item = self.options_form.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
 
         self.channel_spinboxes.clear()
         self.channel_checks.clear()
@@ -74,9 +79,24 @@ class UniversalDecoderDialog(QDialog):
         info = self.decoders[proto_id]
         self.current_info = info
 
-        decoder_cfg = self.config.get('decoder_settings', {}).get(proto_id, {})
-        saved_channels = decoder_cfg.get('channels', {})
-        saved_options = decoder_cfg.get('options', {})
+        # Загружаем сохранённые настройки: если есть instance_id, ищем в active_decoders
+        saved_channels = {}
+        saved_options = {}
+        saved_enabled = False
+        if self.instance_id:
+            for ad in self.config.active_decoders:
+                if ad.get('id') == self.instance_id:
+                    saved_channels = ad.get('channels', {})
+                    saved_options = ad.get('options', {})
+                    saved_enabled = True
+                    break
+        if not saved_channels:
+            # Запасной вариант: последние настройки для протокола из decoder_settings
+            saved = self.config.decoder_settings.get(proto_id, {})
+            saved_channels = saved.get('channels', {})
+            saved_options = saved.get('options', {})
+
+        self.enable_checkbox.setChecked(saved_enabled)
 
         for idx, ch in enumerate(info.all_channels):
             row = QHBoxLayout()
@@ -160,13 +180,17 @@ class UniversalDecoderDialog(QDialog):
         for opt in info.options:
             oid = opt['id']
             w = self.option_widgets.get(oid)
-            if w is None: continue
+            if w is None:
+                continue
             if isinstance(w, QComboBox):
                 val = w.currentText()
-                try: val = int(val)
+                try:
+                    val = int(val)
                 except ValueError:
-                    try: val = float(val)
-                    except ValueError: pass
+                    try:
+                        val = float(val)
+                    except ValueError:
+                        pass
                 options[oid] = val
             elif isinstance(w, (QSpinBox, QDoubleSpinBox)):
                 options[oid] = w.value()
@@ -182,9 +206,17 @@ class UniversalDecoderDialog(QDialog):
             'protocol_info': info,
         }
 
-    def accept(self):
-        # Сохраняем текущие настройки в конфиг перед закрытием
-        if self.current_info and self.config is not None:
+    def validate_and_accept(self):
+        bits_used = []
+        for ch_id, spin in self.channel_spinboxes.items():
+            if ch_id in self.channel_checks and not self.channel_checks[ch_id].isChecked():
+                continue
+            bits_used.append(spin.value())
+        if len(set(bits_used)) != len(bits_used):
+            QMessageBox.warning(self, "Channel Conflict", "GPIO bits must be unique for each channel.")
+            return
+
+        if self.current_info:
             proto_id = self.current_info.id
             channels_state = {}
             for ch in self.current_info.all_channels:
@@ -200,21 +232,39 @@ class UniversalDecoderDialog(QDialog):
             for opt in self.current_info.options:
                 oid = opt['id']
                 w = self.option_widgets.get(oid)
-                if w is None: continue
+                if w is None:
+                    continue
                 if isinstance(w, QComboBox):
-                    options_state[oid] = w.currentText()
+                    val = w.currentText()
+                    try:
+                        val = int(val)
+                    except ValueError:
+                        try:
+                            val = float(val)
+                        except ValueError:
+                            pass
+                    options_state[oid] = val
                 elif isinstance(w, (QSpinBox, QDoubleSpinBox)):
                     options_state[oid] = w.value()
                 elif isinstance(w, QLineEdit):
                     options_state[oid] = w.text()
 
-            if 'decoder_settings' not in self.config:
-                self.config['decoder_settings'] = {}
-            self.config['decoder_settings'][proto_id] = {
+            new_decoder = {
+                'id': self.instance_id,
+                'proto_id': proto_id,
                 'channels': channels_state,
                 'options': options_state
             }
-            if self.save_config:
-                self.save_config(self.config)   # теперь передаём конфиг
+            # Обновляем active_decoders
+            self.config.active_decoders = [ad for ad in self.config.active_decoders if ad.get('id') != self.instance_id]
+            if self.enable_checkbox.isChecked():
+                self.config.active_decoders.append(new_decoder)
 
-        super().accept()
+            # Сохраняем как последние настройки протокола
+            self.config.decoder_settings[proto_id] = {
+                'channels': channels_state,
+                'options': options_state
+            }
+            self.save_config(self.config)
+
+        self.accept()

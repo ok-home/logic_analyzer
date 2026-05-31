@@ -1,16 +1,16 @@
 {
  "PyCfg": {
   "dataFile": "laRowBin.bin",
-  "PortName": "",
+  "PortName": "COM4",
   "PortSpeed": "115200",
   "PortTimeout": "120.0"
  },
  "EspCfg": {
-  "pin0": "1",
-  "pin1": "2",
-  "pin2": "3",
-  "pin3": "4",
-  "pin4": "5",
+  "pin0": "4",
+  "pin1": "5",
+  "pin2": "6",
+  "pin3": "7",
+  "pin4": "-1",
   "pin5": "-1",
   "pin6": "-1",
   "pin7": "-1",
@@ -22,31 +22,16 @@
   "pin13": "-1",
   "pin14": "-1",
   "pin15": "-1",
-  "trg": "-1",
-  "edg": "3",
-  "smp": "10000",
-  "clk": "10000000",
+  "trg": "7",
+  "edg": "1",
+  "smp": "100000",
+  "clk": "80000000",
   "tmo": "20.0",
-  "chn": "16",
+  "chn": "8",
   "ram": "0"
  },
+ "active_decoders": [],
  "decoder_settings": {
-  "counter": {
-   "channels": {
-    "data": 2,
-    "reset": 1,
-    "reset_enabled": false
-   },
-   "options": {
-    "data_edge": "any",
-    "divider": 0,
-    "reset_edge": "falling",
-    "edge_off": 0,
-    "word_off": 0,
-    "dead_cycles": 0,
-    "start_with_reset": "no"
-   }
-  },
   "uart": {
    "channels": {
     "rx": 0,
@@ -56,11 +41,11 @@
    },
    "options": {
     "baudrate": 115200,
-    "data_bits": "8",
+    "data_bits": 8,
     "parity": "none",
-    "stop_bits": "1.0",
+    "stop_bits": 1.0,
     "bit_order": "lsb-first",
-    "format": "ascii",
+    "format": "hex",
     "invert_rx": "no",
     "invert_tx": "no",
     "rx_packet_delim": -1,
@@ -78,30 +63,30 @@
     "address_format": "shifted"
    }
   },
-  "i2s": {
+  "counter": {
    "channels": {
-    "sck": 4,
-    "ws": 5,
-    "sd": 6
-   },
-   "options": {}
-  },
-  "spi": {
-   "channels": {
-    "clk": 7,
-    "miso": 9,
-    "miso_enabled": true,
-    "mosi": 8,
-    "mosi_enabled": true,
-    "cs": 10,
-    "cs_enabled": true
+    "data": 0,
+    "reset": 1,
+    "reset_enabled": true
    },
    "options": {
-    "cs_polarity": "active-low",
-    "cpol": "0",
-    "cpha": "0",
-    "bitorder": "msb-first",
-    "wordsize": 8
+    "data_edge": "any",
+    "divider": 0,
+    "reset_edge": "falling",
+    "edge_off": 0,
+    "word_off": 0,
+    "dead_cycles": 0,
+    "start_with_reset": "no"
+   }
+  },
+  "timing": {
+   "channels": {
+    "data": 3
+   },
+   "options": {
+    "avg_period": 100,
+    "edge": "any",
+    "delta": "no"
    }
   }
  }

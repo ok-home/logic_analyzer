@@ -1,3 +1,4 @@
+# protocol_scanner.py
 import os
 import sys
 import importlib
@@ -38,17 +39,19 @@ def scan_decoders(decoders_path='decoders'):
         print(f"Folder {decoders_path} not found")
         return protocols
 
-    # Удаляем предыдущие импортированные модули, чтобы обновить их при повторном вызове
-    sys.path.insert(0, decoders_path)
-    for entry in list(sys.modules.keys()):
-        if entry.startswith('decoders.') or entry.startswith('pd.'):
-            del sys.modules[entry]
+    if decoders_path not in sys.path:
+        sys.path.insert(0, decoders_path)
 
-    for entry in os.listdir(decoders_path):
+    # Удаляем ранее загруженные модули из этой директории для возможности перезагрузки
+    prefix = 'decoders.'
+    to_remove = [m for m in sys.modules if m.startswith(prefix)]
+    for m in to_remove:
+        del sys.modules[m]
+
+    entries = sorted(os.listdir(decoders_path))
+    for entry in entries:
         entry_path = os.path.join(decoders_path, entry)
-        if not os.path.isdir(entry_path):
-            continue
-        if entry.startswith('_') or entry.startswith('.'):
+        if not os.path.isdir(entry_path) or entry.startswith('_') or entry.startswith('.'):
             continue
         pd_file = os.path.join(entry_path, 'pd.py')
         if not os.path.isfile(pd_file):

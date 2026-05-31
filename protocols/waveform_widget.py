@@ -30,17 +30,14 @@ class WaveformWidget(QWidget):
         self.graph_widget.setMouseEnabled(x=True, y=False)
         self.splitter.addWidget(self.graph_widget)
 
-        self.annotation_plot = pg.PlotWidget()
-        self.annotation_plot.setLabel('bottom', 'Time', 's')
-        self.annotation_plot.setLabel('left', 'Annotations')
-        self.annotation_plot.showAxis('left', True)
-        self.annotation_plot.showGrid(x=True, y=False, alpha=0.3)
-        self.annotation_plot.setMouseEnabled(x=True, y=False)
-        self.annotation_plot.hide()
-        self.splitter.addWidget(self.annotation_plot)
+        self.annotation_container = QWidget()
+        self.annotation_layout = QVBoxLayout()
+        self.annotation_layout.setContentsMargins(0, 0, 0, 0)
+        self.annotation_container.setLayout(self.annotation_layout)
+        self.annotation_container.hide()
+        self.splitter.addWidget(self.annotation_container)
 
-        self.annotation_plot.setXLink(self.graph_widget)
-        self.splitter.setSizes([500, 200])
+        self.splitter.setSizes([1, 0])
 
         self.vline = InfiniteLine(angle=90, movable=False, pen=pg.mkPen('r', width=1, style=Qt.DashLine))
         self.graph_widget.addItem(self.vline)
@@ -51,35 +48,25 @@ class WaveformWidget(QWidget):
         self.reference_line.hide()
 
         self.curves = []
-        self.annotation_items = []
-        self.text_items = []
-        self.text_annotations = []  # (t_start, t_end, ann_texts, row, color, is_point_event)
         self.reference_time = None
 
-        self.text_font = QFont('sans-serif', 9)
-        self.font_metrics = QFontMetrics(self.text_font)
-
-        self._cached_sec_per_px = None
-        self.update_timer = QTimer()
-        self.update_timer.setSingleShot(True)
-        self.update_timer.setInterval(100)
-        self.update_timer.timeout.connect(self._on_timer_timeout)
-
-        self.annotation_plot.plotItem.vb.sigRangeChanged.connect(self._on_range_changed)
+        self.decoder_plots = {}  # key: instance_id
 
         self.graph_widget.scene().sigMouseMoved.connect(self.on_mouse_move)
         self.graph_widget.scene().sigMouseClicked.connect(self.on_mouse_click)
 
-    # ---------- сигналы ----------
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._update_splitter_sizes()
+
     def plot_signals(self, samples, time_axis, config):
         if samples is None or time_axis is None:
             return
         for c in self.curves:
             self.graph_widget.removeItem(c)
         self.curves.clear()
-        self.clear_annotations()
 
-        show = config.get('show_channels', list(range(16)))
+        show = config.show_channels
         if not show:
             return
 
@@ -103,8 +90,8 @@ class WaveformWidget(QWidget):
         label_pos = y_offsets + ch_height / 2.0
         ticks = []
         for idx, ch in enumerate(show):
-            gpio = config.get('gpio', {}).get(ch, '-1')
-            label = f"GPIO{gpio}" if gpio != '-1' else f"CH{ch}"
+            gpio = config.gpio.get(ch, -1)
+            label = f"GPIO{gpio}" if gpio != -1 else f"CH{ch}"
             ticks.append((label_pos[idx], label))
         self.graph_widget.getAxis('left').setTicks([ticks])
 
@@ -113,41 +100,109 @@ class WaveformWidget(QWidget):
         self.reference_line.hide()
         self.reference_time = None
 
-    def clear_annotations(self):
-        for item in self.annotation_items:
-            self.annotation_plot.removeItem(item)
-        self.annotation_items.clear()
-        for item in self.text_items:
-            self.annotation_plot.removeItem(item)
-        self.text_items.clear()
-        self.text_annotations.clear()
-        self.annotation_plot.getAxis('left').setTicks([])
-        self.annotation_plot.hide()
+    def clear_all_annotations(self):
+        for inst_id in list(self.decoder_plots.keys()):
+            self.remove_decoder_plot(inst_id)
 
-    def add_annotations(self, results, out_map, info, samplerate):
-        self.clear_annotations()
+    def add_decoder_plot(self, instance_id, proto_name):
+        if instance_id in self.decoder_plots:
+            return self.decoder_plots[instance_id]['plot']
 
-        # Расширенная палитра (можно добавлять новые цвета)
+        plot = pg.PlotWidget()
+        short_id = instance_id[:8]
+        plot.setLabel('left', f"{proto_name} ({short_id})")
+        plot.showAxis('left', True)
+        plot.showGrid(x=True, y=False, alpha=0.3)
+        plot.setMouseEnabled(x=True, y=False)
+        plot.setXLink(self.graph_widget)
+
+        self.decoder_plots[instance_id] = {
+            'plot': plot,
+            'annotation_items': [],
+            'text_items': [],
+            'text_annotations': [],
+            'font': QFont('sans-serif', 9),
+            'font_metrics': QFontMetrics(QFont('sans-serif', 9)),
+            'update_timer': QTimer(),
+            'cached_sec_per_px': None,
+            'samplerate': 1.0,
+            'info': None,
+            'out_map': None,
+        }
+        timer = self.decoder_plots[instance_id]['update_timer']
+        timer.setSingleShot(True)
+        timer.setInterval(100)
+        timer.timeout.connect(lambda iid=instance_id: self._on_timer_timeout(iid))
+
+        # Исправленные лямбды, игнорирующие аргументы сигналов
+        plot.plotItem.vb.sigRangeChanged.connect(lambda *args, iid=instance_id: self._schedule_text_update(iid))
+        plot.plotItem.vb.sigResized.connect(lambda *args, iid=instance_id: self._on_resized(iid))
+
+        self.annotation_layout.addWidget(plot)
+        self._update_splitter_sizes()
+        return plot
+
+    def remove_decoder_plot(self, instance_id):
+        if instance_id not in self.decoder_plots:
+            return
+        data = self.decoder_plots[instance_id]
+        for item in data['annotation_items']:
+            data['plot'].removeItem(item)
+        for item in data['text_items']:
+            data['plot'].removeItem(item)
+        self.annotation_layout.removeWidget(data['plot'])
+        data['plot'].deleteLater()
+        del self.decoder_plots[instance_id]
+        self._update_splitter_sizes()
+
+    def _update_splitter_sizes(self):
+        num_decoders = len(self.decoder_plots)
+        total_height = self.height()
+        if num_decoders == 0 or total_height == 0:
+            self.annotation_container.hide()
+            self.splitter.setSizes([1, 0])
+            return
+        if not self.annotation_container.isVisible():
+            self.annotation_container.show()
+        single_annot_height = int(total_height * 0.2)
+        desired_annot_height = single_annot_height * num_decoders
+        max_annot_height = int(total_height * 0.7)
+        annot_height = min(desired_annot_height, max_annot_height)
+        signal_height = total_height - annot_height
+        self.splitter.setSizes([signal_height, annot_height])
+
+    def update_decoder_annotations(self, instance_id, results, out_map, info, samplerate):
+        if instance_id not in self.decoder_plots:
+            self.add_decoder_plot(instance_id, info.name)
+        data = self.decoder_plots[instance_id]
+        plot = data['plot']
+        for item in data['annotation_items']:
+            plot.removeItem(item)
+        data['annotation_items'].clear()
+        for item in data['text_items']:
+            plot.removeItem(item)
+        data['text_items'].clear()
+        data['text_annotations'].clear()
+        plot.getAxis('left').setTicks([])
+
+        if not results:
+            return
+
+        data['samplerate'] = samplerate
+        data['info'] = info
+        data['out_map'] = out_map
+
         colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
                   '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
-
         ann_color_map = {}
         if info.annotation_rows:
             for row_idx, row in enumerate(info.annotation_rows):
                 _, _, indices = row
                 for i in indices:
-                    if i == 4:   # предупреждения (UART)
-                        ann_color_map[i] = '#d62728'
-                    else:
-                        # Для всех остальных аннотаций используем общую палитру
-                        ann_color_map[i] = colors[i % len(colors)]
+                    ann_color_map[i] = colors[i % len(colors)] if i != 4 else '#d62728'
 
-        # Если для какого-то класса нет цвета, добавляем fallback
         def get_color(ann_class):
-            if ann_class in ann_color_map:
-                return ann_color_map[ann_class]
-            # Fallback: используем цвет по индексу класса
-            return colors[ann_class % len(colors)]
+            return ann_color_map.get(ann_class, colors[ann_class % len(colors)])
 
         row_assign = {}
         row_names = []
@@ -162,13 +217,13 @@ class WaveformWidget(QWidget):
         rows_data = {r: [] for r in range(num_rows_total)}
         point_events = []
 
-        for start, end, out_id, data in results:
+        for start, end, out_id, ann_data in results:
             if out_map.get(out_id) != 'ann':
                 continue
-            if not (isinstance(data, list) and len(data) >= 2):
+            if not (isinstance(ann_data, list) and len(ann_data) >= 2):
                 continue
-            ann_class = data[0]
-            ann_texts = data[1]
+            ann_class = ann_data[0]
+            ann_texts = ann_data[1]
             t_start = start / samplerate
             t_end = end / samplerate
             row = row_assign.get(ann_class, 0)
@@ -188,34 +243,34 @@ class WaveformWidget(QWidget):
 
         row_height = 2.0
         total_height = len(used_rows) * row_height
-        self.annotation_plot.setYRange(0, total_height)
-        self.annotation_plot.show()
+        plot.setYRange(0, total_height)
 
         tick_labels = []
         for i, original_row in enumerate(used_rows):
-            name = "?"
-            for orig_idx, n in row_names:
-                if orig_idx == original_row:
-                    name = n
-                    break
+            name = next((n for orig, n in row_names if orig == original_row), "?")
             y_pos = i * row_height + row_height / 2.0
             tick_labels.append((y_pos, name))
-        self.annotation_plot.getAxis('left').setTicks([tick_labels])
+        plot.getAxis('left').setTicks([tick_labels])
 
-        self.text_annotations = []
+        data['text_annotations'] = []
 
-        # Обычные полигоны
+        self._draw_interval_annotations(instance_id, rows_data, used_rows, row_height)
+        self._draw_point_events(instance_id, point_events, used_rows, row_height)
+
+        QTimer.singleShot(0, lambda: self._create_text_items(instance_id))
+
+    def _draw_interval_annotations(self, instance_id, rows_data, used_rows, row_height):
+        data = self.decoder_plots[instance_id]
+        plot = data['plot']
         for actual_row, original_row in enumerate(used_rows):
             anns = rows_data.get(original_row, [])
             anns.sort(key=lambda x: x[0])
-
             y_base = actual_row * row_height
             prev_end = None
-            for (t_start, t_end, qcolor, ann_texts) in anns:
+            for t_start, t_end, qcolor, ann_texts in anns:
                 width = t_end - t_start
                 if width <= 0:
                     continue
-
                 if prev_end is not None and t_start > prev_end:
                     sep_line = pg.PlotDataItem(
                         [t_start, t_start],
@@ -223,55 +278,35 @@ class WaveformWidget(QWidget):
                         connect='pairs',
                         pen=pg.mkPen('k', width=1, style=Qt.DashLine)
                     )
-                    self.annotation_plot.addItem(sep_line)
-                    self.annotation_items.append(sep_line)
+                    plot.addItem(sep_line)
+                    data['annotation_items'].append(sep_line)
 
                 slant = min(0.05 * row_height, width * 0.05)
-                x_p = [
-                    t_start,
-                    t_start + slant,
-                    t_end - slant,
-                    t_end,
-                    t_end - slant,
-                    t_start + slant,
-                    t_start
-                ]
-                y_p = [
-                    y_base + row_height/2,
-                    y_base + row_height,
-                    y_base + row_height,
-                    y_base + row_height/2,
-                    y_base,
-                    y_base,
-                    y_base + row_height/2
-                ]
+                x_p = [t_start, t_start+slant, t_end-slant, t_end, t_end-slant, t_start+slant, t_start]
+                y_p = [y_base+row_height/2, y_base+row_height, y_base+row_height,
+                       y_base+row_height/2, y_base, y_base, y_base+row_height/2]
                 fill_color = QColor(qcolor)
                 fill_color.setAlpha(100)
                 border_color = QColor(qcolor).darker(120)
-                polygon = pg.PlotDataItem(
-                    x_p, y_p,
-                    pen=pg.mkPen(border_color, width=1),
-                    brush=pg.mkBrush(fill_color)
-                )
-                self.annotation_plot.addItem(polygon)
-                self.annotation_items.append(polygon)
-
-                self.text_annotations.append((t_start, t_end, ann_texts, actual_row, qcolor, False))
+                polygon = pg.PlotDataItem(x_p, y_p, pen=pg.mkPen(border_color, width=1),
+                                          brush=pg.mkBrush(fill_color))
+                plot.addItem(polygon)
+                data['annotation_items'].append(polygon)
+                data['text_annotations'].append((t_start, t_end, ann_texts, actual_row, qcolor, False))
                 prev_end = t_end
 
-        self.annotation_plot.setXRange(*self.graph_widget.viewRange()[0])
-        QApplication.processEvents()
-
-        # Точечные события: фиксированный размер в пикселях
+    def _draw_point_events(self, instance_id, point_events, used_rows, row_height):
+        data = self.decoder_plots[instance_id]
+        plot = data['plot']
         marker_size_px = 10
-        for (t_center, orig_row, qcolor, ann_texts) in point_events:
+        for t_center, orig_row, qcolor, ann_texts in point_events:
             actual_row = used_rows.index(orig_row) if orig_row in used_rows else 0
             y_base = actual_row * row_height
             path = QPainterPath()
             pts = []
             for i in range(6):
                 angle = np.pi/2 - i * np.pi/3
-                pts.append(QPointF(np.cos(angle) * marker_size_px, -np.sin(angle) * marker_size_px))
+                pts.append(QPointF(np.cos(angle)*marker_size_px, -np.sin(angle)*marker_size_px))
             poly = QPolygonF(pts)
             path.addPolygon(poly)
             item = QGraphicsPathItem(path)
@@ -279,51 +314,33 @@ class WaveformWidget(QWidget):
             item.setBrush(QBrush(qcolor.lighter(150)))
             item.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
             item.setPos(t_center, y_base + row_height/2)
-            self.annotation_plot.addItem(item)
-            self.annotation_items.append(item)
+            plot.addItem(item)
+            data['annotation_items'].append(item)
 
             short_text = sorted(ann_texts, key=len)[0]
             one_char = short_text[0] if short_text else ''
-            self.text_annotations.append((t_center, t_center, [one_char], actual_row, qcolor, True))
+            data['text_annotations'].append((t_center, t_center, [one_char], actual_row, qcolor, True))
 
-        self._create_text_items()
+    def _create_text_items(self, instance_id):
+        data = self.decoder_plots[instance_id]
+        plot = data['plot']
+        for item in data['text_items']:
+            plot.removeItem(item)
+        data['text_items'].clear()
 
-    def _choose_text(self, texts, max_width_px):
-        if not texts:
-            return ''
-        sorted_texts = sorted(texts, key=len)
-        for text in reversed(sorted_texts):
-            if self.font_metrics.width(text) <= max_width_px:
-                return text
-        return sorted_texts[0]
-
-    def _truncate_text(self, text, max_width_px):
-        if not text or max_width_px <= 0:
-            return ''
-        if self.font_metrics.width(text) <= max_width_px:
-            return text
-        max_chars = len(text)
-        while max_chars > 0 and self.font_metrics.width(text[:max_chars]) > max_width_px:
-            max_chars -= 1
-        return text[:max_chars] if max_chars > 0 else ''
-
-    def _create_text_items(self):
-        for item in self.text_items:
-            self.annotation_plot.removeItem(item)
-        self.text_items.clear()
-
-        vb = self.annotation_plot.plotItem.vb
+        vb = plot.plotItem.vb
         view_range = vb.viewRange()
         x_min, x_max = view_range[0]
         view_width_sec = x_max - x_min
         widget_width_px = vb.width()
         if widget_width_px == 0 or view_width_sec == 0:
-            QTimer.singleShot(50, self._create_text_items)
+            QTimer.singleShot(50, lambda: self._create_text_items(instance_id))
             return
         sec_per_px = view_width_sec / widget_width_px
         row_height = 2.0
+        fm = data['font_metrics']
 
-        for (t_start, t_end, ann_texts, row, qcolor, is_point) in self.text_annotations:
+        for (t_start, t_end, ann_texts, row, qcolor, is_point) in data['text_annotations']:
             width = t_end - t_start
             width_px = width / sec_per_px if width > 0 else 0
 
@@ -333,18 +350,20 @@ class WaveformWidget(QWidget):
                 if len(ann_texts[0]) == 1:
                     displayed_text = ann_texts[0]
                 else:
-                    text = self._choose_text(ann_texts, width_px)
-                    displayed_text = self._truncate_text(text, width_px)
+                    text = self._choose_text(ann_texts, width_px, fm)
+                    displayed_text = self._truncate_text(text, width_px, fm)
 
             y_pos = row * row_height + row_height / 2.0
             text_item = pg.TextItem(displayed_text if displayed_text else '', anchor=(0.5, 0.5), color=qcolor.name())
-            text_item.setFont(self.text_font)
+            text_item.setFont(data['font'])
             text_item.setPos((t_start + t_end) / 2, y_pos)
-            self.annotation_plot.addItem(text_item)
-            self.text_items.append(text_item)
+            plot.addItem(text_item)
+            data['text_items'].append(text_item)
 
-    def _update_text_items(self):
-        vb = self.annotation_plot.plotItem.vb
+    def _update_text_items(self, instance_id):
+        data = self.decoder_plots[instance_id]
+        plot = data['plot']
+        vb = plot.plotItem.vb
         view_range = vb.viewRange()
         x_min, x_max = view_range[0]
         view_width_sec = x_max - x_min
@@ -352,9 +371,10 @@ class WaveformWidget(QWidget):
         if widget_width_px == 0 or view_width_sec == 0:
             return
         sec_per_px = view_width_sec / widget_width_px
+        fm = data['font_metrics']
 
-        for i, (t_start, t_end, ann_texts, row, qcolor, is_point) in enumerate(self.text_annotations):
-            if i >= len(self.text_items):
+        for i, (t_start, t_end, ann_texts, row, qcolor, is_point) in enumerate(data['text_annotations']):
+            if i >= len(data['text_items']):
                 continue
             if not is_point and (t_end < x_min or t_start > x_max):
                 continue
@@ -368,18 +388,43 @@ class WaveformWidget(QWidget):
                 if len(ann_texts[0]) == 1:
                     displayed_text = ann_texts[0]
                 else:
-                    text = self._choose_text(ann_texts, width_px)
-                    displayed_text = self._truncate_text(text, width_px)
+                    text = self._choose_text(ann_texts, width_px, fm)
+                    displayed_text = self._truncate_text(text, width_px, fm)
 
-            self.text_items[i].setText(displayed_text if displayed_text else '')
+            data['text_items'][i].setText(displayed_text if displayed_text else '')
 
-    def _on_range_changed(self, vb, ranges):
-        if self.text_annotations:
-            if not self.update_timer.isActive():
-                self.update_timer.start()
+    def _choose_text(self, texts, max_width_px, fm):
+        if not texts:
+            return ''
+        sorted_texts = sorted(texts, key=len)
+        for text in reversed(sorted_texts):
+            if fm.width(text) <= max_width_px:
+                return text
+        return sorted_texts[0]
 
-    def _on_timer_timeout(self):
-        vb = self.annotation_plot.plotItem.vb
+    def _truncate_text(self, text, max_width_px, fm):
+        if not text or max_width_px <= 0:
+            return ''
+        if fm.width(text) <= max_width_px:
+            return text
+        max_chars = len(text)
+        while max_chars > 0 and fm.width(text[:max_chars]) > max_width_px:
+            max_chars -= 1
+        return text[:max_chars] if max_chars > 0 else ''
+
+    def _schedule_text_update(self, instance_id):
+        data = self.decoder_plots[instance_id]
+        if data['text_annotations'] and not data['update_timer'].isActive():
+            data['update_timer'].start()
+
+    def _on_resized(self, instance_id):
+        data = self.decoder_plots[instance_id]
+        data['cached_sec_per_px'] = None
+        self._schedule_text_update(instance_id)
+
+    def _on_timer_timeout(self, instance_id):
+        data = self.decoder_plots[instance_id]
+        vb = data['plot'].plotItem.vb
         view_range = vb.viewRange()
         x_min, x_max = view_range[0]
         view_width_sec = x_max - x_min
@@ -388,16 +433,15 @@ class WaveformWidget(QWidget):
             return
         new_sec_per_px = view_width_sec / widget_width_px
 
-        if self._cached_sec_per_px is None:
-            self._cached_sec_per_px = new_sec_per_px
-            self._update_text_items()
+        if data['cached_sec_per_px'] is None:
+            data['cached_sec_per_px'] = new_sec_per_px
+            self._update_text_items(instance_id)
         else:
-            change = abs(new_sec_per_px - self._cached_sec_per_px) / self._cached_sec_per_px
+            change = abs(new_sec_per_px - data['cached_sec_per_px']) / data['cached_sec_per_px']
             if change > 0.05:
-                self._cached_sec_per_px = new_sec_per_px
-                self._update_text_items()
+                data['cached_sec_per_px'] = new_sec_per_px
+                self._update_text_items(instance_id)
 
-    # ---------- события мыши ----------
     def on_mouse_move(self, pos):
         vb = self.graph_widget.plotItem.vb
         if vb.sceneBoundingRect().contains(pos):

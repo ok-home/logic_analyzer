@@ -3,18 +3,22 @@ import sys
 import os
 import json
 import numpy as np
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QVBoxLayout, QHBoxLayout,
-                             QWidget, QPushButton, QFileDialog, QMessageBox,
-                             QMenuBar, QAction, QStatusBar, QDialog, QTextEdit,
-                             QVBoxLayout as QVBoxLayout2, QTableWidget, QTableWidgetItem)
+from PyQt5.QtWidgets import (
+    QMainWindow, QApplication, QVBoxLayout, QHBoxLayout,
+    QWidget, QPushButton, QFileDialog, QMessageBox,
+    QMenuBar, QAction, QStatusBar, QDialog, QTextEdit,
+    QTableWidget, QTableWidgetItem
+)
 from PyQt5.QtCore import Qt
 
-from config import load_la_config, save_la_config
+from config import load_la_config, save_la_config, AnalyzerConfig
 from settings_dialog import SettingsDialog
 from serial_worker import SerialWorker
 from waveform_widget import WaveformWidget
-from universal_decoder_dialog import UniversalDecoderDialog
+from decoder_manager_dialog import DecoderManagerDialog
 import sigrokdecode_stub as srd
+from protocol_scanner import scan_decoders
+
 
 class PulseViewApp(QMainWindow):
     def __init__(self):
@@ -22,16 +26,15 @@ class PulseViewApp(QMainWindow):
         self.setWindowTitle("PulseView Clone - Logic Analyzer Viewer")
         self.resize(1200, 700)
 
-        self.data = None
-        self.samples = None
-        self.time_axis = None
-        self.config = {}
+        self.data: bytes = None
+        self.samples: np.ndarray = None
+        self.time_axis: np.ndarray = None
+        self.config: AnalyzerConfig = None
         self.serial_thread = None
         self.acquisition_in_progress = False
 
         self.waveform_widget = WaveformWidget()
         self.waveform_widget.vline.hide()
-
         self.waveform_widget.reference_marker_changed.connect(self.update_reference_marker)
         self.waveform_widget.mouse_moved_with_time.connect(self.on_waveform_mouse_move)
 
@@ -39,30 +42,27 @@ class PulseViewApp(QMainWindow):
         self.setStatusBar(self.status_bar)
         self.status_bar.showMessage("Ready. Left click to set reference marker. Right click to clear.")
 
-        self.reset_btn = QPushButton("Reset View")
+        self.reset_btn = QPushButton("Zoom to Fit")
         self.reset_btn.clicked.connect(self.reset_view)
         self.start_btn = QPushButton("Start Acquisition")
         self.start_btn.clicked.connect(self.start_acquisition)
-        self.decode_btn = QPushButton("Decode Protocol...")
-        self.decode_btn.clicked.connect(self.decode_protocol)
         self.clear_ref_btn = QPushButton("Clear Reference")
         self.clear_ref_btn.clicked.connect(self.clear_reference)
 
         btn_layout = QHBoxLayout()
         btn_layout.addWidget(self.reset_btn)
         btn_layout.addWidget(self.start_btn)
-        btn_layout.addWidget(self.decode_btn)
         btn_layout.addWidget(self.clear_ref_btn)
 
         central = QWidget()
         self.setCentralWidget(central)
         layout = QVBoxLayout()
-        layout.addWidget(self.waveform_widget)
+        layout.addWidget(self.waveform_widget, stretch=1)
         layout.addLayout(btn_layout)
         central.setLayout(layout)
 
         self.create_menu()
-        self.load_la_config()
+        self.config = load_la_config()
 
     def create_menu(self):
         menubar = self.menuBar()
@@ -82,6 +82,22 @@ class PulseViewApp(QMainWindow):
         settings_action = QAction('Configuration', self)
         settings_action.triggered.connect(self.show_settings_dialog)
         settings_menu.addAction(settings_action)
+
+        # Меню Decoders
+        decoders_menu = menubar.addMenu('Decoders')
+        manage_action = QAction('Manage Decoders...', self)
+        manage_action.triggered.connect(self.open_decoder_manager)
+        decoders_menu.addAction(manage_action)
+        decode_all_action = QAction('Decode All', self)
+        decode_all_action.triggered.connect(self._sync_decoder_plots)
+        decoders_menu.addAction(decode_all_action)
+
+    def open_decoder_manager(self):
+        dlg = DecoderManagerDialog(self.config, self._save_current_config, self)
+        dlg.decoders_changed.connect(self._sync_decoder_plots)
+        if dlg.exec_():
+            self._sync_decoder_plots()
+            self.status_bar.showMessage("Decoders configuration updated.")
 
     def clear_reference(self):
         self.waveform_widget.clear_reference_marker()
@@ -141,13 +157,11 @@ class PulseViewApp(QMainWindow):
         else:
             return f"{freq/1e9:.1f} GHz"
 
-    def load_la_config(self):
-        self.config = load_la_config()
-
-    def save_la_config(self, config=None):
+    def _save_current_config(self, config=None):
+        cfg_to_save = config if config is not None else self.config
+        save_la_config(cfg_to_save)
         if config is not None:
             self.config = config
-        save_la_config(self.config)
 
     def show_settings_dialog(self):
         dlg = SettingsDialog(self)
@@ -155,8 +169,8 @@ class PulseViewApp(QMainWindow):
         if dlg.exec_():
             new_cfg = dlg.get_config()
             if new_cfg:
-                self.config.update(new_cfg)
-                self.save_la_config()
+                self.config = new_cfg
+                self._save_current_config()
                 self.status_bar.showMessage("Configuration saved. You can start acquisition.")
 
     def open_file(self):
@@ -166,8 +180,11 @@ class PulseViewApp(QMainWindow):
                 with open(path, "rb") as f:
                     self.data = f.read()
                 self.status_bar.showMessage(f"Loaded: {os.path.basename(path)} ({len(self.data)} bytes)")
-                self.parse_binary_data()
+                if not self.parse_binary_data():
+                    QMessageBox.warning(self, "Warning", "No data to display.")
+                    return
                 self.waveform_widget.plot_signals(self.samples, self.time_axis, self.config)
+                self._sync_decoder_plots()
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Cannot load file:\n{e}")
 
@@ -181,35 +198,30 @@ class PulseViewApp(QMainWindow):
                 f.write(self.data)
             self.status_bar.showMessage(f"Saved: {os.path.basename(path)}")
 
-    def parse_binary_data(self):
-        if self.data is None:
-            return
-        num_channels = self.config.get('num_channels', 16)   # из настроек (8 или 16)
-        bytes_per_sample = (num_channels + 7) // 8           # 1 для 8, 2 для 16
+    def parse_binary_data(self) -> bool:
+        if self.data is None or len(self.data) == 0:
+            return False
+        num_channels = self.config.num_channels
+        bytes_per_sample = (num_channels + 7) // 8
         total_samples = len(self.data) // bytes_per_sample
         if total_samples == 0:
             QMessageBox.critical(self, "Error", "Not enough data for the selected channel count.")
-            return
+            return False
 
-        # Обрезаем данные до целого числа сэмплов
-        data = self.data[:total_samples * bytes_per_sample]
+        valid_len = total_samples * bytes_per_sample
+        raw = self.data[:valid_len]
 
-        # Преобразуем сырые байты в целые числа (uint32 для удобства)
-        samples_int = np.zeros(total_samples, dtype=np.uint32)
-        for i in range(total_samples):
-            val = 0
-            for b in range(bytes_per_sample):
-                byte = data[i * bytes_per_sample + b]
-                val |= (byte << (8 * b))
-            samples_int[i] = val
+        if bytes_per_sample == 1:
+            arr = np.frombuffer(raw, dtype=np.uint8).astype(np.uint32)
+        elif bytes_per_sample == 2:
+            arr = np.frombuffer(raw, dtype=np.uint16).astype(np.uint32)
+        else:
+            arr = np.frombuffer(raw, dtype=np.uint32)
 
-        # Извлекаем отдельные каналы
-        self.samples = np.zeros((num_channels, total_samples), dtype=np.uint8)
-        for ch in range(num_channels):
-            self.samples[ch, :] = (samples_int >> ch) & 1
-
-        sample_rate = self.config.get('sample_rate', 1_000_000)
-        self.time_axis = np.arange(total_samples) / sample_rate
+        bit_masks = np.array([1 << ch for ch in range(num_channels)], dtype=np.uint32)
+        self.samples = ((arr[np.newaxis, :] & bit_masks[:, np.newaxis]) != 0).astype(np.uint8)
+        self.time_axis = np.arange(total_samples) / self.config.sample_rate
+        return True
 
     def start_acquisition(self):
         if self.acquisition_in_progress:
@@ -219,7 +231,7 @@ class PulseViewApp(QMainWindow):
             self.serial_thread.stop()
             self.serial_thread = None
 
-        port_name = self.config.get('port', '')
+        port_name = self.config.port
         if not port_name:
             QMessageBox.critical(self, "Error", "No COM port selected. Please configure in Settings.")
             return
@@ -244,8 +256,11 @@ class PulseViewApp(QMainWindow):
 
     def on_data_received(self, data):
         self.data = data
-        self.parse_binary_data()
-        self.waveform_widget.plot_signals(self.samples, self.time_axis, self.config)
+        if self.parse_binary_data():
+            self.waveform_widget.plot_signals(self.samples, self.time_axis, self.config)
+            self._sync_decoder_plots()
+        else:
+            QMessageBox.warning(self, "Acquisition", "Received empty data.")
 
     def on_transfer_done(self):
         self.acquisition_in_progress = False
@@ -256,7 +271,7 @@ class PulseViewApp(QMainWindow):
         dialog = QDialog(self)
         dialog.setWindowTitle("Analyzer Configuration")
         dialog.resize(500, 300)
-        layout = QVBoxLayout2()
+        layout = QVBoxLayout()
         text_edit = QTextEdit()
         if "text" in config_dict:
             text_edit.setPlainText(config_dict["text"])
@@ -269,75 +284,91 @@ class PulseViewApp(QMainWindow):
         dialog.setLayout(layout)
         dialog.exec_()
 
-    # ========== Универсальный декодер протоколов ==========
-    def decode_protocol(self):
-        if self.samples is None:
-            QMessageBox.warning(self, "Decode", "No data loaded.")
-            return
-        dlg = UniversalDecoderDialog(self, config=self.config, save_config_callback=self.save_la_config)
-        if not dlg.exec_():
-            return
-        settings = dlg.get_settings()
-        info = settings['protocol_info']
-        decoder = settings['decoder_class']()
+    # ========== Управление декодерами ==========
+    def _sanitize_options(self, info, options):
+        """Приводит значения опций к правильным типам согласно спецификации протокола."""
+        clean = {}
+        for opt in info.options:
+            oid = opt['id']
+            if oid not in options:
+                continue
+            val = options[oid]
+            default = opt.get('default')
+            values = opt.get('values')
+            if values is not None:
+                try:
+                    if isinstance(values[0], int):
+                        val = int(val)
+                    elif isinstance(values[0], float):
+                        val = float(val)
+                except (ValueError, TypeError):
+                    pass
+            elif isinstance(default, (int, float)):
+                try:
+                    if isinstance(default, int):
+                        val = int(val)
+                    else:
+                        val = float(val)
+                except (ValueError, TypeError):
+                    pass
+            clean[oid] = val
+        return clean
 
+    def _sync_decoder_plots(self):
+        """Синхронизирует список активных декодеров с виджетами аннотаций."""
+        active_ids = {ad['id'] for ad in self.config.active_decoders}
+        current_plots = set(self.waveform_widget.decoder_plots.keys())
+
+        for inst_id in current_plots - active_ids:
+            self.waveform_widget.remove_decoder_plot(inst_id)
+
+        if self.samples is None or self.samples.shape[1] == 0:
+            return
+
+        protocols = scan_decoders()
+        num_channels = self.samples.shape[0]
         total_samples = self.samples.shape[1]
-        words = []
-        for i in range(total_samples):
-            word = 0
-            for ch in range(self.samples.shape[0]):
-                if self.samples[ch, i]:
-                    word |= (1 << ch)
-            words.append(word)
+        weights = 2 ** np.arange(num_channels, dtype=np.uint32)
+        words = np.dot(self.samples.T, weights).tolist()
 
-        metadata = {
-            'samplerate': self.config.get('sample_rate', 1_000_000),
-            'channels': settings['channels'],
-            'channel_bits': settings['channel_bits'],
-            'num_channels': settings['num_channels'],
-            'options': settings['options'],
-        }
+        for ad in self.config.active_decoders:
+            proto_id = ad['proto_id']
+            instance_id = ad['id']
+            if proto_id not in protocols:
+                continue
+            info = protocols[proto_id]
+            decoder = info.module.Decoder()
 
-        try:
-            results = srd.run_decoder(decoder, words, metadata=metadata)
-        except Exception as e:
-            QMessageBox.critical(self, "Decode Error", str(e))
-            return
+            channels = ad.get('channels', {})
+            all_indices = list(range(len(info.all_channels)))
+            all_bits = []
+            for idx, ch in enumerate(info.all_channels):
+                ch_id = ch['id']
+                is_optional = ch in info.optional_channels
+                if is_optional and not channels.get(ch_id + '_enabled', True):
+                    all_bits.append(-1)
+                else:
+                    all_bits.append(channels.get(ch_id, idx))
+            if all(b < 0 for b in all_bits):
+                continue
 
-        if not results:
-            QMessageBox.information(self, "Decode", "No data decoded.")
-            return
+            raw_options = ad.get('options', {})
+            options = self._sanitize_options(info, raw_options)
 
-        self.waveform_widget.add_annotations(results, decoder.output_protocols, info,
-                                             self.config.get('sample_rate', 1_000_000))
-        self.show_decoder_results(results, decoder.output_protocols, info)
+            metadata = {
+                'samplerate': self.config.sample_rate,
+                'channels': all_indices,
+                'channel_bits': all_bits,
+                'num_channels': info.num_channels,
+                'options': options,
+            }
+            try:
+                results = srd.run_decoder(decoder, words, metadata=metadata)
+            except Exception as e:
+                QMessageBox.critical(self, "Decode Error", f"{info.name} ({instance_id[:8]}): {e}")
+                continue
 
-    def show_decoder_results(self, results, out_map, info):
-        win = QDialog(self)
-        win.setWindowTitle("Decoder Results")
-        win.resize(800, 500)
-        layout = QVBoxLayout2()
-        table = QTableWidget()
-        table.setColumnCount(4)
-        table.setHorizontalHeaderLabels(["Start", "End", "Type", "Data"])
-
-        filtered = [(s, e, oid, data) for s, e, oid, data in results
-                    if out_map.get(oid) in ('ann', 'python')]
-        table.setRowCount(len(filtered))
-        for i, (start, end, out_id, data) in enumerate(filtered):
-            typ = out_map.get(out_id, 'unknown')
-            table.setItem(i, 0, QTableWidgetItem(f"{start}"))
-            table.setItem(i, 1, QTableWidgetItem(f"{end}"))
-            if typ == 'ann' and isinstance(data, list) and len(data) >= 2:
-                table.setItem(i, 2, QTableWidgetItem("ANN"))
-                table.setItem(i, 3, QTableWidgetItem(data[1][0] if data[1] else ''))
-            else:
-                table.setItem(i, 2, QTableWidgetItem(typ.upper()))
-                table.setItem(i, 3, QTableWidgetItem(str(data)))
-        table.resizeColumnsToContents()
-        layout.addWidget(table)
-        win.setLayout(layout)
-        win.exec_()
+            self.waveform_widget.update_decoder_annotations(instance_id, results, decoder.output_protocols, info, self.config.sample_rate)
 
     def reset_view(self):
         if self.time_axis is not None:

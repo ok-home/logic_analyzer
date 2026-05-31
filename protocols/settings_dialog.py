@@ -1,11 +1,14 @@
 # settings_dialog.py
 import sys
-from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-                             QTableWidget, QTableWidgetItem, QCheckBox, QLineEdit,
-                             QPushButton, QGroupBox, QFormLayout, QTabWidget,
-                             QHeaderView, QDialogButtonBox, QWidget)
+from PyQt5.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
+    QTableWidget, QTableWidgetItem, QCheckBox, QLineEdit,
+    QPushButton, QGroupBox, QFormLayout, QTabWidget,
+    QHeaderView, QDialogButtonBox, QWidget, QSpinBox, QMessageBox
+)
 from PyQt5.QtCore import Qt, QTimer
 import serial.tools.list_ports
+from config import AnalyzerConfig
 
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
@@ -15,9 +18,7 @@ class SettingsDialog(QDialog):
         self.resize(700, 600)
 
         self._current_trig_gpio = None
-        self.update_timer = QTimer()
-        self.update_timer.setSingleShot(True)
-        self.update_timer.timeout.connect(self.update_trigger_gpio_list)
+        self._initial_config = None  # будет установлен в set_config
 
         main_layout = QVBoxLayout()
         tabs = QTabWidget()
@@ -100,26 +101,27 @@ class SettingsDialog(QDialog):
         tabs.addTab(conn_widget, "Connection")
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.accept)
+        buttons.accepted.connect(self.validate_and_accept)
         buttons.rejected.connect(self.reject)
         main_layout.addWidget(buttons)
 
         self.setLayout(main_layout)
 
-        # Таблица каналов
+        # Таблица каналов: теперь используем SpinBox для GPIO
         self.checkboxes = []
-        self.gpio_edits = []
+        self.gpio_spinboxes = []
         for i in range(16):
             chk = QCheckBox()
             chk.setChecked(True)
             self.checkboxes.append(chk)
             self.table.setCellWidget(i, 0, chk)
 
-            gpio_edit = QLineEdit()
-            gpio_edit.setPlaceholderText("GPIO number")
-            gpio_edit.textChanged.connect(self.on_gpio_text_changed)
-            self.gpio_edits.append(gpio_edit)
-            self.table.setCellWidget(i, 1, gpio_edit)
+            spin = QSpinBox()
+            spin.setRange(-1, 39)   # допустимые номера GPIO, -1 = не используется
+            spin.setValue(-1)
+            spin.valueChanged.connect(self.on_gpio_changed)
+            self.gpio_spinboxes.append(spin)
+            self.table.setCellWidget(i, 1, spin)
 
             label = QLabel(f"CH{i}")
             self.table.setCellWidget(i, 2, label)
@@ -127,19 +129,20 @@ class SettingsDialog(QDialog):
         self.current_num_channels = 16
         self.update_channel_table()
 
-    def on_gpio_text_changed(self):
-        self.update_timer.start(100)
+    def on_gpio_changed(self):
+        # Мгновенно обновляем список триггерных GPIO
+        self._update_trig_gpio_list()
 
-    def update_trigger_gpio_list(self):
+    def _update_trig_gpio_list(self):
         gpio_list = []
         for i in range(self.current_num_channels):
-            text = self.gpio_edits[i].text().strip()
-            if text and text != "-1":
-                gpio_list.append(text)
+            val = self.gpio_spinboxes[i].value()
+            if val >= 0:
+                gpio_list.append(str(val))
         self.trig_gpio.clear()
         self.trig_gpio.addItem("None")
         self.trig_gpio.addItems(gpio_list)
-        if self._current_trig_gpio:
+        if self._current_trig_gpio is not None:
             idx = self.trig_gpio.findText(self._current_trig_gpio)
             if idx >= 0:
                 self.trig_gpio.setCurrentIndex(idx)
@@ -149,7 +152,7 @@ class SettingsDialog(QDialog):
         self.current_num_channels = num
         for i in range(16):
             self.table.setRowHidden(i, i >= num)
-        self.update_trigger_gpio_list()
+        self._update_trig_gpio_list()
 
     def trigger_enable_changed(self, state):
         enabled = (state == Qt.Checked)
@@ -160,111 +163,107 @@ class SettingsDialog(QDialog):
         for i in range(self.current_num_channels):
             self.checkboxes[i].setChecked(state)
 
-    def get_config(self):
-        try:
-            num = int(self.channel_count_combo.currentText())
-            show = []
-            gpio_map = {}
-            for i in range(num):
-                if self.checkboxes[i].isChecked():
-                    show.append(i)
-                gpio_text = self.gpio_edits[i].text().strip()
-                gpio_map[i] = gpio_text if gpio_text else "-1"
+    def get_config(self) -> AnalyzerConfig:
+        """Собрать и вернуть новый объект конфигурации (без сохранения в файл)."""
+        num = int(self.channel_count_combo.currentText())
+        show = []
+        gpio_map = {}
+        for i in range(num):
+            if self.checkboxes[i].isChecked():
+                show.append(i)
+            gpio_map[i] = self.gpio_spinboxes[i].value()
 
-            smp = int(self.sample_count_edit.text())
-            clk = float(self.rate_edit.text())
-            ram = self.ram_combo.currentIndex()
-            tmo = float(self.timeout_edit.text()) if self.timeout_edit.text() else 20.0
+        smp = int(self.sample_count_edit.text())
+        clk = float(self.rate_edit.text())
+        ram = self.ram_combo.currentIndex()
+        tmo = float(self.timeout_edit.text()) if self.timeout_edit.text() else 20.0
 
-            trig_en = self.trigger_enable.isChecked()
-            trig_gpio = self.trig_gpio.currentText() if trig_en else None
-            if trig_gpio == "None":
+        trig_en = self.trigger_enable.isChecked()
+        trig_gpio_str = self.trig_gpio.currentText() if trig_en else "None"
+        trig_gpio = None
+        if trig_gpio_str != "None":
+            try:
+                trig_gpio = int(trig_gpio_str)
+            except:
                 trig_gpio = None
-            trig_edge = self.trig_edge.currentText() if trig_en else None
-            if trig_edge == "posedge":
-                edge_num = 1
-            elif trig_edge == "negedge":
-                edge_num = 2
-            else:
-                edge_num = 3
+        trig_edge_str = self.trig_edge.currentText() if trig_en else "posedge"
+        edge_num = {"posedge": 1, "negedge": 2, "both": 3}.get(trig_edge_str, 1)
 
-            port = self.port_combo.currentText()
-            baud = int(self.baud_combo.currentText())
-            data_file = self.data_file_edit.text()
+        port = self.port_combo.currentText()
+        baud = int(self.baud_combo.currentText())
+        data_file = self.data_file_edit.text()
 
-            return {
-                'num_channels': num,
-                'show_channels': show,
-                'sample_rate': clk,
-                'sample_count': smp,
-                'gpio': gpio_map,
-                'ram_type': ram,
-                'timeout_ms': tmo,
-                'trigger_enabled': trig_en,
-                'trigger_gpio': trig_gpio,
-                'trigger_edge': trig_edge,
-                'trigger_edge_num': edge_num,
-                'port': port,
-                'baudrate': baud,
-                'data_file': data_file,
-                'timeout': 120,
-            }
-        except Exception as e:
-            print("Config error:", e)
-            return None
+        # Берем decoder_settings из исходного конфига, чтобы не потерять другие протоколы
+        decoder_settings = {}
+        if self._initial_config is not None:
+            decoder_settings = self._initial_config.decoder_settings.copy()
 
-    def set_config(self, cfg):
-        num = cfg.get('num_channels', 16)
-        idx = self.channel_count_combo.findText(str(num))
+        config = AnalyzerConfig(
+            num_channels=num,
+            show_channels=show,
+            sample_rate=clk,
+            sample_count=smp,
+            gpio=gpio_map,
+            ram_type=ram,
+            timeout_ms=tmo,
+            trigger_enabled=trig_en,
+            trigger_gpio=trig_gpio,
+            trigger_edge_num=edge_num,
+            trigger_edge=trig_edge_str,
+            port=port,
+            baudrate=baud,
+            data_file=data_file,
+            timeout=120.0,
+            decoder_settings=decoder_settings
+        )
+        return config
+
+    def set_config(self, cfg: AnalyzerConfig):
+        self._initial_config = cfg  # сохраняем для последующего использования в get_config
+        idx = self.channel_count_combo.findText(str(cfg.num_channels))
         if idx >= 0:
             self.channel_count_combo.setCurrentIndex(idx)
         self.update_channel_table()
 
-        show_set = set(cfg.get('show_channels', list(range(num))))
-        for i in range(num):
+        show_set = set(cfg.show_channels)
+        for i in range(cfg.num_channels):
             self.checkboxes[i].setChecked(i in show_set)
-            gpio_val = cfg.get('gpio', {}).get(i, "-1")
-            if gpio_val != "-1":
-                self.gpio_edits[i].setText(str(gpio_val))
-            else:
-                self.gpio_edits[i].clear()
+            self.gpio_spinboxes[i].setValue(cfg.gpio.get(i, -1))
 
-        self.sample_count_edit.setText(str(cfg.get('sample_count', 10000)))
-        self.rate_edit.setText(str(cfg.get('sample_rate', 1000000)))
-        self.ram_combo.setCurrentIndex(cfg.get('ram_type', 0))
-        self.timeout_edit.setText(str(cfg.get('timeout_ms', 20)))
+        self.sample_count_edit.setText(str(cfg.sample_count))
+        self.rate_edit.setText(str(cfg.sample_rate))
+        self.ram_combo.setCurrentIndex(cfg.ram_type)
+        self.timeout_edit.setText(str(cfg.timeout_ms))
 
-        self.trigger_enable.setChecked(cfg.get('trigger_enabled', False))
-        if cfg.get('trigger_enabled'):
-            self._current_trig_gpio = cfg.get('trigger_gpio')
-            if self._current_trig_gpio:
-                self.update_trigger_gpio_list()
-                idx = self.trig_gpio.findText(self._current_trig_gpio)
-                if idx >= 0:
-                    self.trig_gpio.setCurrentIndex(idx)
-            edge_num = cfg.get('trigger_edge_num', 1)
-            if edge_num == 1:
-                edge_str = "posedge"
-            elif edge_num == 2:
-                edge_str = "negedge"
-            else:
-                edge_str = "both"
-            idx = self.trig_edge.findText(edge_str)
+        self.trigger_enable.setChecked(cfg.trigger_enabled)
+        if cfg.trigger_enabled:
+            self._current_trig_gpio = str(cfg.trigger_gpio) if cfg.trigger_gpio is not None else "None"
+            self._update_trig_gpio_list()
+            idx = self.trig_gpio.findText(self._current_trig_gpio)
             if idx >= 0:
-                self.trig_edge.setCurrentIndex(idx)
+                self.trig_gpio.setCurrentIndex(idx)
+            edge_idx = self.trig_edge.findText(cfg.trigger_edge)
+            if edge_idx >= 0:
+                self.trig_edge.setCurrentIndex(edge_idx)
         else:
             self._current_trig_gpio = None
-            self.update_trigger_gpio_list()
+            self._update_trig_gpio_list()
 
-        self.port_combo.setCurrentText(cfg.get('port', ''))
-        baud = str(cfg.get('baudrate', 115200))
-        idx = self.baud_combo.findText(baud)
+        self.port_combo.setCurrentText(cfg.port)
+        baud_str = str(cfg.baudrate)
+        idx = self.baud_combo.findText(baud_str)
         if idx >= 0:
             self.baud_combo.setCurrentIndex(idx)
-        self.data_file_edit.setText(cfg.get('data_file', 'laRowBin.bin'))
+        self.data_file_edit.setText(cfg.data_file)
 
-    def accept(self):
-        self._current_trig_gpio = self.trig_gpio.currentText()
-        if self._current_trig_gpio == "None":
-            self._current_trig_gpio = None
-        super().accept()
+    def validate_and_accept(self):
+        # Создаём временный конфиг для проверки
+        try:
+            cfg = self.get_config()
+            valid, errors = cfg.validate()
+            if not valid:
+                QMessageBox.warning(self, "Validation Error", "\n".join(errors))
+                return
+            self.accept()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Invalid configuration: {e}")
