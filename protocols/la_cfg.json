@@ -1,0 +1,108 @@
+{
+ "PyCfg": {
+  "dataFile": "laRowBin.bin",
+  "PortName": "",
+  "PortSpeed": "115200",
+  "PortTimeout": "120.0"
+ },
+ "EspCfg": {
+  "pin0": "1",
+  "pin1": "2",
+  "pin2": "3",
+  "pin3": "4",
+  "pin4": "5",
+  "pin5": "-1",
+  "pin6": "-1",
+  "pin7": "-1",
+  "pin8": "-1",
+  "pin9": "-1",
+  "pin10": "-1",
+  "pin11": "-1",
+  "pin12": "-1",
+  "pin13": "-1",
+  "pin14": "-1",
+  "pin15": "-1",
+  "trg": "-1",
+  "edg": "3",
+  "smp": "10000",
+  "clk": "10000000",
+  "tmo": "20.0",
+  "chn": "16",
+  "ram": "0"
+ },
+ "decoder_settings": {
+  "counter": {
+   "channels": {
+    "data": 2,
+    "reset": 1,
+    "reset_enabled": false
+   },
+   "options": {
+    "data_edge": "any",
+    "divider": 0,
+    "reset_edge": "falling",
+    "edge_off": 0,
+    "word_off": 0,
+    "dead_cycles": 0,
+    "start_with_reset": "no"
+   }
+  },
+  "uart": {
+   "channels": {
+    "rx": 0,
+    "rx_enabled": true,
+    "tx": 1,
+    "tx_enabled": true
+   },
+   "options": {
+    "baudrate": 115200,
+    "data_bits": "8",
+    "parity": "none",
+    "stop_bits": "1.0",
+    "bit_order": "lsb-first",
+    "format": "ascii",
+    "invert_rx": "no",
+    "invert_tx": "no",
+    "rx_packet_delim": -1,
+    "tx_packet_delim": -1,
+    "rx_packet_len": -1,
+    "tx_packet_len": -1
+   }
+  },
+  "i2c": {
+   "channels": {
+    "scl": 3,
+    "sda": 2
+   },
+   "options": {
+    "address_format": "shifted"
+   }
+  },
+  "i2s": {
+   "channels": {
+    "sck": 4,
+    "ws": 5,
+    "sd": 6
+   },
+   "options": {}
+  },
+  "spi": {
+   "channels": {
+    "clk": 7,
+    "miso": 9,
+    "miso_enabled": true,
+    "mosi": 8,
+    "mosi_enabled": true,
+    "cs": 10,
+    "cs_enabled": true
+   },
+   "options": {
+    "cs_polarity": "active-low",
+    "cpol": "0",
+    "cpha": "0",
+    "bitorder": "msb-first",
+    "wordsize": 8
+   }
+  }
+ }
+}
